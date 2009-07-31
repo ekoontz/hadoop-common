@@ -1909,6 +1909,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     } catch (Throwable t) {
       LOG.warn("Recovery manager crashed! Ignoring.", t);
     }
+    // refresh the node list as the recovery manager might have added 
+    // disallowed trackers
+    refreshHosts();
     
     this.expireTrackersThread = new Thread(this.expireTrackers,
                                           "expireTrackers");
@@ -3787,7 +3790,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized void refreshNodes() throws IOException {
     // check access
     PermissionChecker.checkSuperuserPrivilege(mrOwner, supergroup);
-
+    
+    // call the actual api
+    refreshHosts();
+  }
+  
+  private synchronized void refreshHosts() throws IOException {
     // Reread the config to get mapred.hosts and mapred.hosts.exclude filenames.
     // Update the file names and refresh internal includes and excludes list
     LOG.info("Refreshing hosts information");
