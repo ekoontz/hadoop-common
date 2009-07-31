@@ -3192,7 +3192,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       throw new AccessControlException("User " 
                             + ugi.getUserName() 
                             + " cannot perform "
-                            + "operation " + oper + " on queue " + queue);
+                            + "operation " + oper + " on queue " + queue +
+                            ".\n Please run \"hadoop queue -showacls\" " +
+                            "command to find the queues you have access" +
+                            " to .");
     }
   }
 
@@ -3789,6 +3792,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return getJobStatus(jips,false);
   }
   
+  @Override
+  public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException{
+    return queueManager.getQueueAcls(
+            UserGroupInformation.getCurrentUGI());
+  }
   private synchronized JobStatus[] getJobStatus(Collection<JobInProgress> jips,
       boolean toComplete) {
     if(jips == null || jips.isEmpty()) {
