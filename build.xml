@@ -25,9 +25,9 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Hadoop"/>
+  <property name="Name" value="Yahoo! Distribution of Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.20.1-dev"/>
+  <property name="version" value="0.20.0.2902658002"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="year" value="2009"/>
 
@@ -538,7 +538,7 @@
         <section name="org/apache/hadoop">
           <attribute name="Implementation-Title" value="Hadoop"/>
           <attribute name="Implementation-Version" value="${version}"/>
-          <attribute name="Implementation-Vendor" value="Apache"/>
+          <attribute name="Implementation-Vendor" value="Yahoo!"/>
         </section>
       </manifest>
       <fileset file="${conf.dir}/commons-logging.properties"/>
@@ -693,7 +693,7 @@
           <section name="org/apache/hadoop">
             <attribute name="Implementation-Title" value="Hadoop"/>
             <attribute name="Implementation-Version" value="${version}"/>
-            <attribute name="Implementation-Vendor" value="Apache"/>
+            <attribute name="Implementation-Vendor" value="Yahoo!"/>
           </section>
          </manifest>
     </jar>
@@ -906,7 +906,7 @@
       use="true"
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} Developer API"
-      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      bottom="This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!&lt;br>Copyright &amp;copy; ${year} The Apache Software Foundation."
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
@@ -948,7 +948,7 @@
       use="true"
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} API"
-      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      bottom="This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!&lt;br>Copyright &amp;copy; ${year} The Apache Software Foundation."
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>

@@ -22,16 +22,6 @@ which will be used to configure the chosen Forrest skin.
 
 <!DOCTYPE skinconfig PUBLIC "-//APACHE//DTD Skin Configuration V0.6-3//EN" "http://forrest.apache.org/dtd/skinconfig-v06-3.dtd">
 <skinconfig>
-  <!-- To enable lucene search add provider="lucene" (default is google).
-    Add box-location="alt" to move the search box to an alternate location
-    (if the skin supports it) and box-location="all" to show it in all
-    available locations on the page.  Remove the <search> element to show
-    no search box. @domain will enable sitesearch for the specific domain with google.
-    In other words google will search the @domain for the query string.
-
-  -->
-  <search name="Lucene" domain="hadoop.apache.org" provider="google"/>
-
   <!-- Disable the print link? If enabled, invalid HTML 4.0.1 -->
   <disable-print-link>true</disable-print-link>  
   <!-- Disable the PDF link? -->
@@ -84,9 +74,8 @@ which will be used to configure the chosen Forrest skin.
   <favicon-url>images/favicon.ico</favicon-url>
 
   <!-- The following are used to construct a copyright statement -->
-  <year>2008</year>
-  <vendor>The Apache Software Foundation.</vendor>
-  <copyright-link>http://www.apache.org/licenses/</copyright-link>
+  <year>2009</year>
+  <vendor>The Apache Software Foundation. This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!</vendor>
 
   <!-- Some skins use this to form a 'breadcrumb trail' of links.
     Use location="alt" to move the trail to an alternate location

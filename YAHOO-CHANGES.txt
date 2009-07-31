@@ -1,0 +1,7 @@
+Yahoo! Distribution of Hadoop Change Log
+
+Patches from the following Apache Jira issues have been applied
+to this release. This is in addition to the patches applied from
+issues referenced in CHANGES.txt.
+
+
