@@ -96,6 +96,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  *******************************************************/
 public class TaskTracker 
              implements MRConstants, TaskUmbilicalProtocol, Runnable {
+  
   static final long WAIT_FOR_DONE = 3 * 1000;
   private int httpPort;
 
@@ -132,6 +133,8 @@ public class TaskTracker
     
   // last heartbeat response recieved
   short heartbeatResponseId = -1;
+  
+  static final String TASK_CLEANUP_SUFFIX = ".cleanup";
 
   /*
    * This is the last 'status' report sent by this tracker to the JobTracker.
@@ -215,7 +218,12 @@ public class TaskTracker
   private int probe_sample_size = 500;
 
   private IndexCache indexCache;
-    
+
+  /**
+  * Handle to the specific instance of the {@link TaskController} class
+  */
+  private TaskController taskController;
+  
   /*
    * A list of commitTaskActions for whom commit response has been received 
    */
@@ -323,7 +331,11 @@ public class TaskTracker
           }
         }
       }, "taskCleanup");
-    
+
+  TaskController getTaskController() {
+    return taskController;
+  }
+  
   private RunningJob addTaskToJob(JobID jobId, 
                                   TaskInProgress tip) {
     synchronized (runningJobs) {
@@ -383,7 +395,7 @@ public class TaskTracker
                                 boolean isCleanupAttempt) {
 	String taskDir = getLocalJobDir(jobid) + Path.SEPARATOR + taskid;
 	if (isCleanupAttempt) { 
-      taskDir = taskDir + ".cleanup";
+      taskDir = taskDir + TASK_CLEANUP_SUFFIX;
 	}
 	return taskDir;
   }
@@ -520,6 +532,15 @@ public class TaskTracker
     reduceLauncher = new TaskLauncher(maxCurrentReduceTasks);
     mapLauncher.start();
     reduceLauncher.start();
+    Class<? extends TaskController> taskControllerClass 
+                          = fConf.getClass("mapred.task.tracker.task-controller",
+                                            DefaultTaskController.class, 
+                                            TaskController.class); 
+    taskController = (TaskController)ReflectionUtils.newInstance(
+                                                      taskControllerClass, fConf);
+    
+    //setup and create jobcache directory with appropriate permissions
+    taskController.setup();
   }
   
   public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(Configuration conf) {
@@ -804,6 +825,7 @@ public class TaskTracker
                              localJobConf.getKeepFailedTaskFiles());
         rjob.localized = true;
         rjob.jobConf = localJobConf;
+        taskController.initializeJob(jobId);
       }
     }
     launchTaskForJob(tip, new JobConf(rjob.jobConf)); 
@@ -1353,6 +1375,7 @@ public class TaskTracker
     synchronized(runningJobs) {
       runningJobs.remove(jobId);
     }
+    
   }      
     
     
