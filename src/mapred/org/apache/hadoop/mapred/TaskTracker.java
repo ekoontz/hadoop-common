@@ -67,6 +67,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.pipes.Submitter;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsException;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -189,8 +190,8 @@ public class TaskTracker
   private static final String OUTPUT = "output";
   private JobConf originalConf;
   private JobConf fConf;
-  private int maxCurrentMapTasks;
-  private int maxCurrentReduceTasks;
+  private int maxMapSlots;
+  private int maxReduceSlots;
   private int failures;
   private MapEventsFetcherThread mapEventsFetcher;
   int workerThreads;
@@ -489,8 +490,8 @@ public class TaskTracker
     }
     
     // RPC initialization
-    int max = maxCurrentMapTasks > maxCurrentReduceTasks ? 
-                       maxCurrentMapTasks : maxCurrentReduceTasks;
+    int max = maxMapSlots > maxReduceSlots ? 
+                       maxMapSlots : maxReduceSlots;
     //set the num handlers to max*2 since canCommit may wait for the duration
     //of a heartbeat RPC
     this.taskReportServer =
@@ -528,8 +529,8 @@ public class TaskTracker
 
     this.indexCache = new IndexCache(this.fConf);
 
-    mapLauncher = new TaskLauncher(maxCurrentMapTasks);
-    reduceLauncher = new TaskLauncher(maxCurrentReduceTasks);
+    mapLauncher = new TaskLauncher(TaskType.MAP, maxMapSlots);
+    reduceLauncher = new TaskLauncher(TaskType.REDUCE, maxReduceSlots);
     mapLauncher.start();
     reduceLauncher.start();
     Class<? extends TaskController> taskControllerClass 
@@ -905,9 +906,9 @@ public class TaskTracker
    */
   public TaskTracker(JobConf conf) throws IOException {
     originalConf = conf;
-    maxCurrentMapTasks = conf.getInt(
+    maxMapSlots = conf.getInt(
                   "mapred.tasktracker.map.tasks.maximum", 2);
-    maxCurrentReduceTasks = conf.getInt(
+    maxReduceSlots = conf.getInt(
                   "mapred.tasktracker.reduce.tasks.maximum", 2);
     this.jobTrackAddr = JobTracker.getAddress(conf);
     String infoAddr = 
@@ -1181,8 +1182,8 @@ public class TaskTracker
                                        cloneAndResetRunningTaskStatuses(
                                          sendCounters), 
                                        failures, 
-                                       maxCurrentMapTasks,
-                                       maxCurrentReduceTasks); 
+                                       maxMapSlots,
+                                       maxReduceSlots); 
       }
     } else {
       LOG.info("Resending 'status' to '" + jobTrackAddr.getHostName() +
@@ -1195,9 +1196,10 @@ public class TaskTracker
     boolean askForNewTask;
     long localMinSpaceStart;
     synchronized (this) {
-      askForNewTask = (status.countMapTasks() < maxCurrentMapTasks || 
-                       status.countReduceTasks() < maxCurrentReduceTasks) &&
-                      acceptNewTasks; 
+      askForNewTask = 
+        ((status.countOccupiedMapSlots() < maxMapSlots || 
+          status.countOccupiedReduceSlots() < maxReduceSlots) && 
+         acceptNewTasks); 
       localMinSpaceStart = minSpaceStart;
     }
     if (askForNewTask) {
@@ -1571,12 +1573,12 @@ public class TaskTracker
     private final int maxSlots;
     private List<TaskInProgress> tasksToLaunch;
 
-    public TaskLauncher(int numSlots) {
+    public TaskLauncher(TaskType taskType, int numSlots) {
       this.maxSlots = numSlots;
       this.numFreeSlots = new IntWritable(numSlots);
       this.tasksToLaunch = new LinkedList<TaskInProgress>();
       setDaemon(true);
-      setName("TaskLauncher for task");
+      setName("TaskLauncher for " + taskType + " tasks");
     }
 
     public void addToTaskQueue(LaunchTaskAction action) {
@@ -1591,9 +1593,9 @@ public class TaskTracker
       tasksToLaunch.clear();
     }
     
-    public void addFreeSlot() {
+    public void addFreeSlots(int numSlots) {
       synchronized (numFreeSlots) {
-        numFreeSlots.set(numFreeSlots.get() + 1);
+        numFreeSlots.set(numFreeSlots.get() + numSlots);
         assert (numFreeSlots.get() <= maxSlots);
         LOG.info("addFreeSlot : current free slots : " + numFreeSlots.get());
         numFreeSlots.notifyAll();
@@ -1604,22 +1606,29 @@ public class TaskTracker
       while (!Thread.interrupted()) {
         try {
           TaskInProgress tip;
+          Task task;
           synchronized (tasksToLaunch) {
             while (tasksToLaunch.isEmpty()) {
               tasksToLaunch.wait();
             }
             //get the TIP
             tip = tasksToLaunch.remove(0);
-            LOG.info("Trying to launch : " + tip.getTask().getTaskID());
+            task = tip.getTask();
+            LOG.info("Trying to launch : " + tip.getTask().getTaskID() + 
+                     " which needs " + task.getNumSlotsRequired() + " slots");
           }
-          //wait for a slot to run
+          //wait for free slots to run
           synchronized (numFreeSlots) {
-            while (numFreeSlots.get() == 0) {
+            while (numFreeSlots.get() < task.getNumSlotsRequired()) {
+              LOG.info("TaskLauncher : Waiting for " + task.getNumSlotsRequired() + 
+                       " to launch " + task.getTaskID() + ", currently we have " + 
+                       numFreeSlots.get() + " free slots");
               numFreeSlots.wait();
             }
             LOG.info("In TaskLauncher, current free slots : " + numFreeSlots.get()+
-                " and trying to launch "+tip.getTask().getTaskID());
-            numFreeSlots.set(numFreeSlots.get() - 1);
+                     " and trying to launch "+tip.getTask().getTaskID() + 
+                     " which needs " + task.getNumSlotsRequired() + " slots");
+            numFreeSlots.set(numFreeSlots.get() - task.getNumSlotsRequired());
             assert (numFreeSlots.get() >= 0);
           }
           synchronized (tip) {
@@ -1628,7 +1637,7 @@ public class TaskTracker
                 tip.getRunState() != TaskStatus.State.FAILED_UNCLEAN &&
                 tip.getRunState() != TaskStatus.State.KILLED_UNCLEAN) {
               //got killed externally while still in the launcher queue
-              addFreeSlot();
+              addFreeSlots(task.getNumSlotsRequired());
               continue;
             }
             tip.slotTaken = true;
@@ -1795,6 +1804,7 @@ public class TaskTracker
       localJobConf = null;
       taskStatus = TaskStatus.createTaskStatus(task.isMapTask(), task.getTaskID(), 
                                                0.0f, 
+                                               task.getNumSlotsRequired(),
                                                task.getState(),
                                                diagnosticInfo.toString(), 
                                                "initializing",  
@@ -2358,7 +2368,7 @@ public class TaskTracker
     private synchronized void releaseSlot() {
       if (slotTaken) {
         if (launcher != null) {
-          launcher.addFreeSlot();
+          launcher.addFreeSlots(task.getNumSlotsRequired());
         }
         slotTaken = false;
       }
@@ -2989,11 +2999,11 @@ public class TaskTracker
   }
 
   int getMaxCurrentMapTasks() {
-    return maxCurrentMapTasks;
+    return maxMapSlots;
   }
   
   int getMaxCurrentReduceTasks() {
-    return maxCurrentReduceTasks;
+    return maxReduceSlots;
   }
 
   /**
@@ -3057,7 +3067,7 @@ public class TaskTracker
             JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT);
     totalMemoryAllottedForTasks =
-        maxCurrentMapTasks * mapSlotMemorySizeOnTT + maxCurrentReduceTasks
+        maxMapSlots * mapSlotMemorySizeOnTT + maxReduceSlots
             * reduceSlotSizeMemoryOnTT;
     if (totalMemoryAllottedForTasks < 0) {
       totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
