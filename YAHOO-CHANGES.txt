@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+39. MAPREDUCE-814. Provide a way to configure completed job history files to be on HDFS.
+
+38. MAPREDUCE-838 Fixes a problem in the way commit of task outputs happens. The bug was that even if commit failed, the task would be declared as successful. Contributed by Amareshwari Sriramadasu.
+
 37. MAPREDUCE-809 Fix job-summary logs to correctly record final status of FAILED and KILLED jobs. http://issues.apache.org/jira/secure/attachment/12414726/MAPREDUCE-809_0_20090728_yhadoop20.patch
 
 36. MAPREDUCE-740 Log a job-summary at the end of a job, while allowing it to be configured to use a custom appender if desired. http://issues.apache.org/jira/secure/attachment/12413941/MAPREDUCE-740_2_20090717_yhadoop20.patch
