@@ -183,6 +183,8 @@ public class JobInProgress {
   private boolean hasSpeculativeReduces;
   private long inputLength = 0;
   private String user;
+  private String historyFile = "";
+  private boolean historyFileCopied;
   
   // Per-job counters
   public static enum Counter { 
@@ -977,6 +979,22 @@ public class JobInProgress {
     }
   }
 
+  String getHistoryFile() {
+    return historyFile;
+  }
+
+  synchronized void setHistoryFile(String file) {
+    this.historyFile = file;
+  }
+
+  boolean isHistoryFileCopied() {
+    return historyFileCopied;
+  }
+
+  synchronized void setHistoryFileCopied() {
+    this.historyFileCopied = true;
+  }
+  
   /**
    * Returns the job-level counters.
    * 
@@ -2315,11 +2333,13 @@ public class JobInProgress {
   private synchronized void terminateJob(int jobTerminationState) {
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
+      this.finishTime = System.currentTimeMillis();
+      this.status.setMapProgress(1.0f);
+      this.status.setReduceProgress(1.0f);
+      this.status.setCleanupProgress(1.0f);
+      
       if (jobTerminationState == JobStatus.FAILED) {
-        this.status = new JobStatus(status.getJobID(),
-                                    1.0f, 1.0f, 1.0f, JobStatus.FAILED,
-                                    status.getJobPriority());
-        this.finishTime = System.currentTimeMillis();
+        this.status.setRunState(JobStatus.FAILED);
 
         // Log the job summary
         JobSummary.logJobSummary(this, jobtracker.getClusterStatus(false));
@@ -2329,10 +2349,7 @@ public class JobInProgress {
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks);
       } else {
-        this.status = new JobStatus(status.getJobID(),
-                                    1.0f, 1.0f, 1.0f, JobStatus.KILLED,
-                                    status.getJobPriority());
-        this.finishTime = System.currentTimeMillis();
+        this.status.setRunState(JobStatus.KILLED);
 
         // Log the job summary
         JobSummary.logJobSummary(this, jobtracker.getClusterStatus(false));
