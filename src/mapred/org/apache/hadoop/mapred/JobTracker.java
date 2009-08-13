@@ -509,15 +509,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             }
           }
           synchronized (userToJobsMap) {
-            for (Map.Entry<String, ArrayList<JobInProgress>> entry : 
-                userToJobsMap.entrySet()) {
-              String user = entry.getKey();
+            Iterator<Map.Entry<String, ArrayList<JobInProgress>>> 
+                userToJobsMapIt = userToJobsMap.entrySet().iterator();
+            while (userToJobsMapIt.hasNext()) {
+              Map.Entry<String, ArrayList<JobInProgress>> entry = 
+                userToJobsMapIt.next();
               ArrayList<JobInProgress> userJobs = entry.getValue();
               Iterator<JobInProgress> it = userJobs.iterator();
               while (it.hasNext() && 
                   userJobs.size() > MAX_COMPLETE_USER_JOBS_IN_MEMORY) {
                 JobInProgress jobUser = it.next();
                 if (retiredJobs.contains(jobUser)) {
+                  LOG.info("Removing from userToJobsMap: " + 
+                      jobUser.getJobID());
                   it.remove();
                 } else if (minConditionToRetire(jobUser, now)) {
                   LOG.info("User limit exceeded. Marking job: " + 
@@ -527,7 +531,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                 }
               }
               if (userJobs.isEmpty()) {
-                userToJobsMap.remove(user);
+                userToJobsMapIt.remove();
               }
             }
           }
