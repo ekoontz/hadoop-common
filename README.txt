@@ -1,31 +1,37 @@
-For the latest information about Hadoop, please visit our website at:
+Thank you for downloading the Yahoo! Distribution of Hadoop.
 
-   http://hadoop.apache.org/core/
+The Yahoo! Distribution of Hadoop is tested and deployed on 
+Yahoo!’s clusters, which are the largest Hadoop clusters 
+in the world. The Yahoo! Distribution of Hadoop is a 
+source distribution that is based entirely on code found 
+in the Apache Hadoop project. Please read the two documents 
+below before you begin.
 
-and our wiki, at:
+YAHOO-CHANGES.txt lists the additional patches that have
+been applied in this source distribution beyond those patches
+already committed to the Apache Subversion repository.
 
-   http://wiki.apache.org/hadoop/
+YAHOO-BUILDME.txt provides instructions onhow to perform
+a complete build of this source distribution.
 
-This distribution includes cryptographic software.  The country in 
-which you currently reside may have restrictions on the import, 
-possession, use, and/or re-export to another country, of 
-encryption software.  BEFORE using any encryption software, please 
-check your country's laws, regulations and policies concerning the
-import, possession, or use, and re-export of encryption software, to 
-see if this is permitted.  See <http://www.wassenaar.org/> for more
-information.
+APACHE-README.txt contains the original README information
+as supplied in the Apache release of Hadoop 
 
-The U.S. Government Department of Commerce, Bureau of Industry and
-Security (BIS), has classified this software as Export Commodity 
-Control Number (ECCN) 5D002.C.1, which includes information security
-software using or performing cryptographic functions with asymmetric
-algorithms.  The form and manner of this Apache Software Foundation
-distribution makes it eligible for export under the License Exception
-ENC Technology Software Unrestricted (TSU) exception (see the BIS 
-Export Administration Regulations, Section 740.13) for both object 
-code and source code.
+PLEASE NOTE: 
+ 
+ * Yahoo! does not offer any support for the 
+   Yahoo! Distribution of Hadoop.
+ 
+ * This distribution includes cryptographic software that 
+   is subject to U.S. export control laws and applicable 
+   export and import laws of other countries. BEFORE using 
+   any software made available from this site, it is your 
+   responsibility to understand and comply with these laws. 
+   This software is being exported in accordance with the 
+   Export Administration Regulations. As of June 2009, you 
+   are prohibited from exporting and re-exporting this 
+   software to Cuba, Iran, North Korea, Sudan, Syria and 
+   any other countries specified by regulatory update to 
+   the U.S. export control laws and regulations. Diversion 
+   contrary to U.S. law is prohibited.  
 
-The following provides more details on the included cryptographic
-software:
-  Hadoop Core uses the SSL libraries from the Jetty project written 
-by mortbay.org.
