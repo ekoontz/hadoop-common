@@ -4,56 +4,127 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-39. MAPREDUCE-814. Provide a way to configure completed job history files to be on HDFS.
+yahoo-hadoop-0.20.0.2949784002:
 
-38. MAPREDUCE-838 Fixes a problem in the way commit of task outputs happens. The bug was that even if commit failed, the task would be declared as successful. Contributed by Amareshwari Sriramadasu.
+40. MAPREDUCE-817. Add a cache for retired jobs with minimal job
+    info and provide a way to access history file url
 
-37. MAPREDUCE-809 Fix job-summary logs to correctly record final status of FAILED and KILLED jobs. http://issues.apache.org/jira/secure/attachment/12414726/MAPREDUCE-809_0_20090728_yhadoop20.patch
+39. MAPREDUCE-814. Provide a way to configure completed job history
+    files to be on HDFS.
 
-36. MAPREDUCE-740 Log a job-summary at the end of a job, while allowing it to be configured to use a custom appender if desired. http://issues.apache.org/jira/secure/attachment/12413941/MAPREDUCE-740_2_20090717_yhadoop20.patch
+38. MAPREDUCE-838 Fixes a problem in the way commit of task outputs
+    happens. The bug was that even if commit failed, the task would be
+    declared as successful. Contributed by Amareshwari Sriramadasu.
 
-35. MAPREDUCE-771 Fixes a bug which delays normal jobs in favor of high-ram jobs.  http://issues.apache.org/jira/secure/attachment/12413990/MAPREDUCE-771-20.patch
+yahoo-hadoop-0.20.0.2902658004:
 
-34. HADOOP-5420 Support setsid based kill in LinuxTaskController. http://issues.apache.org/jira/secure/attachment/12414735/5420-ydist.patch.txt
+37. MAPREDUCE-809 Fix job-summary logs to correctly record final status of 
+    FAILED and KILLED jobs.  
+    http://issues.apache.org/jira/secure/attachment/12414726/MAPREDUCE-809_0_20090728_yhadoop20.patch 
 
-33. MAPREDUCE-733 Fixes a bug that when a task tracker is killed , it throws exception. Instead it should catch it and process it and allow the rest of the flow to go through  http://issues.apache.org/jira/secure/attachment/12413015/MAPREDUCE-733-ydist.patch
+36. MAPREDUCE-740 Log a job-summary at the end of a job, while
+    allowing it to be configured to use a custom appender if desired.
+    http://issues.apache.org/jira/secure/attachment/12413941/MAPREDUCE-740_2_20090717_yhadoop20.patch
 
-32. MAPREDUCE-734 Fixes a bug which prevented hi ram jobs from being removed from the scheduler queue.  http://issues.apache.org/jira/secure/attachment/12413035/MAPREDUCE-734-20.patch
+35. MAPREDUCE-771 Fixes a bug which delays normal jobs in favor of
+    high-ram jobs.
+    http://issues.apache.org/jira/secure/attachment/12413990/MAPREDUCE-771-20.patch
 
-31. MAPREDUCE-693  Fixes a bug that when a job is submitted and the JT is restarted (before job files have been written) and the job is killed after recovery, the conf files fail to be moved to the "done" subdirectory. http://issues.apache.org/jira/secure/attachment/12412823/MAPREDUCE-693-v1.2-branch-0.20.patch
+34. HADOOP-5420 Support setsid based kill in LinuxTaskController.
+    http://issues.apache.org/jira/secure/attachment/12414735/5420-ydist.patch.txt
 
-30. MAPREDUCE-722 Fixes a bug where more slots are getting reserved for HiRAM job tasks than required.  http://issues.apache.org/jira/secure/attachment/12412744/MAPREDUCE-722.1.txt
+33. MAPREDUCE-733 Fixes a bug that when a task tracker is killed ,
+    it throws exception. Instead it should catch it and process it and
+    allow the rest of the flow to go through
+    http://issues.apache.org/jira/secure/attachment/12413015/MAPREDUCE-733-ydist.patch
 
-29. MAPREDUCE-683 TestJobTrackerRestart failed because of stale filemanager cache (which was created once per jvm). This patch makes sure that the filemanager is inited upon every JobHistory.init() and hence upon every restart. Note that this wont happen in production as upon a restart the new jobtracker will start in a new jvm and hence a new cache will be created.  http://issues.apache.org/jira/secure/attachment/12412743/MAPREDUCE-683-v1.2.1-branch-0.20.patch
+32. MAPREDUCE-734 Fixes a bug which prevented hi ram jobs from being
+    removed from the scheduler queue.
+    http://issues.apache.org/jira/secure/attachment/12413035/MAPREDUCE-734-20.patch
 
-28. MAPREDUCE-709 Fixes a bug where node health check script does not display the correct message on timeout.  http://issues.apache.org/jira/secure/attachment/12412711/mapred-709-ydist.patch
+31. MAPREDUCE-693  Fixes a bug that when a job is submitted and the
+    JT is restarted (before job files have been written) and the job
+    is killed after recovery, the conf files fail to be moved to the
+    "done" subdirectory.
+    http://issues.apache.org/jira/secure/attachment/12412823/MAPREDUCE-693-v1.2-branch-0.20.patch
 
-27. MAPREDUCE-708 Fixes a bug where node health check script does not refresh the "reason for blacklisting".  http://issues.apache.org/jira/secure/attachment/12412706/MAPREDUCE-708-ydist.patch
+30. MAPREDUCE-722 Fixes a bug where more slots are getting reserved
+    for HiRAM job tasks than required.
+    http://issues.apache.org/jira/secure/attachment/12412744/MAPREDUCE-722.1.txt
 
-26. MAPREDUCE-522 Rewrote TestQueueCapacities to make it simpler and avoid timeout errors.  http://issues.apache.org/jira/secure/attachment/12412472/mapred-522-ydist.patch
+29. MAPREDUCE-683 TestJobTrackerRestart failed because of stale
+    filemanager cache (which was created once per jvm). This patch makes
+    sure that the filemanager is inited upon every JobHistory.init()
+    and hence upon every restart. Note that this wont happen in production
+    as upon a restart the new jobtracker will start in a new jvm and
+    hence a new cache will be created.
+    http://issues.apache.org/jira/secure/attachment/12412743/MAPREDUCE-683-v1.2.1-branch-0.20.patch
 
-25. MAPREDUCE-532 Provided ability in the capacity scheduler to limit the number of slots that can be concurrently used per queue at any given time.  http://issues.apache.org/jira/secure/attachment/12412592/MAPREDUCE-532-20.patch
+28. MAPREDUCE-709 Fixes a bug where node health check script does
+    not display the correct message on timeout.
+    http://issues.apache.org/jira/secure/attachment/12412711/mapred-709-ydist.patch
 
-24. MAPREDUCE-211 Provides ability to run a health check script on the tasktracker nodes and blacklist nodes if they are unhealthy. Contributed by Sreekanth Ramakrishnan. http://issues.apache.org/jira/secure/attachment/12412161/mapred-211-internal.patch
+27. MAPREDUCE-708 Fixes a bug where node health check script does
+    not refresh the "reason for blacklisting".
+    http://issues.apache.org/jira/secure/attachment/12412706/MAPREDUCE-708-ydist.patch
 
-23. MAPREDUCE-516 Remove .orig file included by mistake. http://issues.apache.org/jira/secure/attachment/12412108/HADOOP-5964_2_20090629_yhadoop.patch
+26. MAPREDUCE-522 Rewrote TestQueueCapacities to make it simpler
+    and avoid timeout errors.
+    http://issues.apache.org/jira/secure/attachment/12412472/mapred-522-ydist.patch
 
-22. MAPREDUCE-416 Moves the history file to a "done" folder whenever a job completes. http://issues.apache.org/jira/secure/attachment/12411938/MAPREDUCE-416-v1.6-branch-0.20.patch
+25. MAPREDUCE-532 Provided ability in the capacity scheduler to
+    limit the number of slots that can be concurrently used per queue
+    at any given time.
+    http://issues.apache.org/jira/secure/attachment/12412592/MAPREDUCE-532-20.patch
 
-21. HADOOP-5980 Previously, task spawned off by LinuxTaskController didn't get LD_LIBRARY_PATH in their environment. The tasks will now get same LD_LIBRARY_PATH value as when spawned off by DefaultTaskController.  http://issues.apache.org/jira/secure/attachment/12410825/hadoop-5980-v20.patch
+24. MAPREDUCE-211 Provides ability to run a health check script on
+    the tasktracker nodes and blacklist nodes if they are unhealthy.
+    Contributed by Sreekanth Ramakrishnan.
+    http://issues.apache.org/jira/secure/attachment/12412161/mapred-211-internal.patch
 
-20. HADOOP-5981 This issue completes the feature mentioned in HADOOP-2838. HADOOP-2838 provided a way to set env variables in child process. This issue provides a way to inherit tt's env variables and append or reset it. So now 
-X=$X:y will inherit X (if there) and append y to it. http://issues.apache.org/jira/secure/attachment/12410454/hadoop5981-branch-20-example.patch
+23. MAPREDUCE-516 Remove .orig file included by mistake.
+    http://issues.apache.org/jira/secure/attachment/12412108/HADOOP-5964_2_20090629_yhadoop.patch
 
-19. HADOOP-5419  This issue is to provide an improvement on the existing M/R framework to let users know which queues they have access to, and for what operations. One use case for this would that currently there is no easy way to know if the user has access to submit jobs to a queue, until it fails with an access control exception. http://issues.apache.org/jira/secure/attachment/12410824/hadoop-5419-v20.2.patch
+22. MAPREDUCE-416 Moves the history file to a "done" folder whenever
+    a job completes.
+    http://issues.apache.org/jira/secure/attachment/12411938/MAPREDUCE-416-v1.6-branch-0.20.patch
 
-18. HADOOP-5420 Support setsid based kill in LinuxTaskController. http://issues.apache.org/jira/secure/attachment/12414735/5420-ydist.patch.txt
+21. HADOOP-5980 Previously, task spawned off by LinuxTaskController
+    didn't get LD_LIBRARY_PATH in their environment. The tasks will now
+    get same LD_LIBRARY_PATH value as when spawned off by
+    DefaultTaskController.
+    http://issues.apache.org/jira/secure/attachment/12410825/hadoop-5980-v20.patch
 
-17. HADOOP-5643 Added the functionality to refresh jobtrackers node list via command line (bin/hadoop mradmin -refreshNodes). The command should be run as the jobtracker owner (jobtracker process owner) or from a super group (mapred.permissions.supergroup). http://issues.apache.org/jira/secure/attachment/12410619/Fixed%2B5643-0.20-final
+20. HADOOP-5981 This issue completes the feature mentioned in
+    HADOOP-2838. HADOOP-2838 provided a way to set env variables in
+    child process. This issue provides a way to inherit tt's env variables
+    and append or reset it. So now X=$X:y will inherit X (if there) and
+    append y to it.
+    http://issues.apache.org/jira/secure/attachment/12410454/hadoop5981-branch-20-example.patch
+
+19. HADOOP-5419  This issue is to provide an improvement on the
+    existing M/R framework to let users know which queues they have
+    access to, and for what operations. One use case for this would
+    that currently there is no easy way to know if the user has access
+    to submit jobs to a queue, until it fails with an access control
+    exception.
+    http://issues.apache.org/jira/secure/attachment/12410824/hadoop-5419-v20.2.patch
+
+18. HADOOP-5420 Support setsid based kill in LinuxTaskController.
+    http://issues.apache.org/jira/secure/attachment/12414735/5420-ydist.patch.txt
+
+17. HADOOP-5643 Added the functionality to refresh jobtrackers node
+    list via command line (bin/hadoop mradmin -refreshNodes). The command
+    should be run as the jobtracker owner (jobtracker process owner)
+    or from a super group (mapred.permissions.supergroup).
+    http://issues.apache.org/jira/secure/attachment/12410619/Fixed%2B5643-0.20-final
 
 
-16. HADOOP-2838 Now the users can set environment variables using mapred.child.env. They can do the following X=Y : set X to Y X=$X:Y : Append Y to X (which should be taken from the tasktracker)  http://issues.apache.org/jira/secure/attachment/12409895/HADOOP-2838-v2.2-branch-20-example.patch
-
+16. HADOOP-2838 Now the users can set environment variables using
+    mapred.child.env. They can do the following X=Y : set X to Y X=$X:Y
+    : Append Y to X (which should be taken from the tasktracker)
+    http://issues.apache.org/jira/secure/attachment/12409895/HADOOP-2838-v2.2-branch-20-example.patch
+    
 15. HADOOP-5818. Revert the renaming from FSNamesystem.checkSuperuserPrivilege
     to checkAccess by HADOOP-5643.  (Amar Kamat via szetszwo)
     https://issues.apache.org/jira/secure/attachment/12409835/5818for0.20.patch
