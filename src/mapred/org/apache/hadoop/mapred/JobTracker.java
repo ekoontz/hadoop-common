@@ -72,6 +72,7 @@ import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -1099,11 +1100,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           hasUpdates = true;
           LOG.info("Calling init from RM for job " + jip.getJobID().toString());
           try {
-            jip.initTasks();
+            initJob(jip);
           } catch (Throwable t) {
             LOG.error("Job initialization failed : \n" 
                       + StringUtils.stringifyException(t));
-            jip.fail(); // fail the job
+            failJob(jip);
             throw new IOException(t);
           }
         }
@@ -3545,8 +3546,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return;
     }
         
-    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     checkAccess(job, QueueManager.QueueOperation.ADMINISTER_JOBS);
+    killJob(job);
+  }
+  
+  private synchronized void killJob(JobInProgress job) {
+    LOG.info("Killing job " + job.getJobID());
+    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
     job.kill();
     
     // Inform the listeners if the job is killed
@@ -3565,6 +3571,64 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
+  public void initJob(JobInProgress job) {
+    if (null == job) {
+      LOG.info("Init on null job is not valid");
+      return;
+    }
+	        
+    try {
+      JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+      LOG.info("Initializing " + job.getJobID());
+      job.initTasks();
+      // Inform the listeners if the job state has changed
+      // Note : that the job will be in PREP state.
+      JobStatus newStatus = (JobStatus)job.getStatus().clone();
+      if (prevStatus.getRunState() != newStatus.getRunState()) {
+        JobStatusChangeEvent event = 
+          new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+              newStatus);
+        synchronized (JobTracker.this) {
+          updateJobInProgressListeners(event);
+        }
+      }
+    } catch (KillInterruptedException kie) {
+      //   If job was killed during initialization, job state will be KILLED
+      LOG.error("Job initialization interrupted:\n" +
+          StringUtils.stringifyException(kie));
+      killJob(job);
+    } catch (Throwable t) {
+      // If the job initialization is failed, job state will be FAILED
+      LOG.error("Job initialization failed:\n" +
+          StringUtils.stringifyException(t));
+      failJob(job);
+    }
+	 }
+
+  /**
+   * Fail a job and inform the listeners. Other components in the framework 
+   * should use this to fail a job.
+   */
+  public synchronized void failJob(JobInProgress job) {
+    if (null == job) {
+      LOG.info("Fail on null job is not valid");
+      return;
+    }
+         
+    JobStatus prevStatus = (JobStatus)job.getStatus().clone();
+    LOG.info("Failing job " + job.getJobID());
+    job.fail();
+     
+    // Inform the listeners if the job state has changed
+    JobStatus newStatus = (JobStatus)job.getStatus().clone();
+    if (prevStatus.getRunState() != newStatus.getRunState()) {
+      JobStatusChangeEvent event = 
+        new JobStatusChangeEvent(job, EventType.RUN_STATE_CHANGED, prevStatus, 
+            newStatus);
+      updateJobInProgressListeners(event);
+    }
+  }
+  
   /**
    * Set the priority of a job
    * @param jobid id of the job
@@ -4229,14 +4293,39 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         JobConf.normalizeMemoryConfigValue(conf.getLong(
             JobTracker.MAPRED_CLUSTER_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
-    limitMaxMemForMapTasks =
-        JobConf.normalizeMemoryConfigValue(conf.getLong(
+
+    if (conf.get(JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY) != null) {
+      LOG.warn(
+        JobConf.deprecatedString(
+          JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY)+
+          " instead use "+JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY+
+          " and " + JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY
+      );
+
+      limitMaxMemForMapTasks = limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
+            JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY,
+            JobConf.DISABLED_MEMORY_LIMIT));
+      if (limitMaxMemForMapTasks != JobConf.DISABLED_MEMORY_LIMIT &&
+        limitMaxMemForMapTasks >= 0) {
+        limitMaxMemForMapTasks = limitMaxMemForReduceTasks =
+          limitMaxMemForMapTasks /
+            (1024 * 1024); //Converting old values in bytes to MB
+      }
+    } else {
+      limitMaxMemForMapTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAX_MAP_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
-    limitMaxMemForReduceTasks =
-        JobConf.normalizeMemoryConfigValue(conf.getLong(
+      limitMaxMemForReduceTasks =
+        JobConf.normalizeMemoryConfigValue(
+          conf.getLong(
             JobTracker.MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY,
             JobConf.DISABLED_MEMORY_LIMIT));
+    }
+
     LOG.info(new StringBuilder().append("Scheduler configured with ").append(
         "(memSizeForMapSlotOnJT, memSizeForReduceSlotOnJT,").append(
         " limitMaxMemForMapTasks, limitMaxMemForReduceTasks) (").append(

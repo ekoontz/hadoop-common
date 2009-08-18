@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +49,7 @@ public class TestCapacityScheduler extends TestCase {
       LogFactory.getLog(org.apache.hadoop.mapred.TestCapacityScheduler.class);
 
   private static int jobCounter;
-  
+
   /**
    * Test class that removes the asynchronous nature of job initialization.
    * 
@@ -100,8 +101,9 @@ public class TestCapacityScheduler extends TestCase {
     
     public ControlledInitializationPoller(JobQueuesManager mgr,
                                           CapacitySchedulerConf rmConf,
-                                          Set<String> queues) {
-      super(mgr, rmConf, queues);
+                                          Set<String> queues,
+                                          TaskTrackerManager ttm) {
+      super(mgr, rmConf, queues, ttm);
     }
     
     @Override
@@ -478,6 +480,27 @@ public class TestCapacityScheduler extends TestCase {
       job.kill();
     }
 
+    @Override
+    public synchronized void failJob(JobInProgress job) {
+      finalizeJob(job, JobStatus.FAILED);
+      job.fail();
+    }
+    
+    public void initJob(JobInProgress jip) {
+      try {
+        JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
+        jip.initTasks();
+        JobStatus newStatus = (JobStatus)jip.getStatus().clone();
+        JobStatusChangeEvent event = new JobStatusChangeEvent(jip, 
+            EventType.RUN_STATE_CHANGED, oldStatus, newStatus);
+        for (JobInProgressListener listener : listeners) {
+          listener.jobUpdated(event);
+        }
+      } catch (Exception ioe) {
+        failJob(jip);
+      }
+    }
+    
     public void removeJob(JobID jobid) {
       jobs.remove(jobid);
     }
@@ -724,7 +747,7 @@ public class TestCapacityScheduler extends TestCase {
     controlledInitializationPoller = new ControlledInitializationPoller(
         scheduler.jobQueuesManager,
         resConf,
-        resConf.getQueues());
+        resConf.getQueues(), taskTrackerManager);
     scheduler.setInitializationPoller(controlledInitializationPoller);
     scheduler.setConf(conf);
     //by default disable speculative execution.
@@ -752,7 +775,7 @@ public class TestCapacityScheduler extends TestCase {
   private FakeJobInProgress submitJobAndInit(int state, JobConf jobConf)
       throws IOException {
     FakeJobInProgress j = submitJob(state, jobConf);
-    scheduler.jobQueuesManager.jobUpdated(initTasksAndReportEvent(j));
+    taskTrackerManager.initJob(j);
     return j;
   }
 
@@ -772,19 +795,8 @@ public class TestCapacityScheduler extends TestCase {
                                              String queue, String user) 
   throws IOException {
     FakeJobInProgress j = submitJob(state, maps, reduces, queue, user);
-    scheduler.jobQueuesManager.jobUpdated(initTasksAndReportEvent(j));
+    taskTrackerManager.initJob(j);
     return j;
-  }
-  
-  // Note that there is no concept of setup tasks here. So init itself should 
-  // report the job-status change
-  private JobStatusChangeEvent initTasksAndReportEvent(FakeJobInProgress jip) 
-  throws IOException {
-    JobStatus oldStatus = (JobStatus)jip.getStatus().clone();
-    jip.initTasks();
-    JobStatus newStatus = (JobStatus)jip.getStatus().clone();
-    return new JobStatusChangeEvent(jip, EventType.RUN_STATE_CHANGED, 
-                                    oldStatus, newStatus);
   }
   
   // test job run-state change
@@ -813,16 +825,10 @@ public class TestCapacityScheduler extends TestCase {
     // first (may be because of the setup tasks).
     
     // init the lower ranked job first
-    JobChangeEvent event = initTasksAndReportEvent(fjob2);
-    
-    // inform the scheduler
-    scheduler.jobQueuesManager.jobUpdated(event);
+    taskTrackerManager.initJob(fjob2);
     
     // init the higher ordered job later
-    event = initTasksAndReportEvent(fjob1);
-    
-    // inform the scheduler
-    scheduler.jobQueuesManager.jobUpdated(event);
+    taskTrackerManager.initJob(fjob1);
     
     // check if the jobs are missing from the waiting queue
     // The jobs are not removed from waiting queue until they are scheduled 
@@ -2987,5 +2993,23 @@ public class TestCapacityScheduler extends TestCase {
           + " instead of " + expectedQ, expectedQ.equals(observedOrder[i]));
       i++;
     }
+  }
+
+  public void testDeprecatedMemoryValues() throws IOException {
+    // 2 map and 1 reduce slots
+    taskTrackerManager.addQueues(new String[] { "default" });
+    ArrayList<FakeQueueInfo> queues = new ArrayList<FakeQueueInfo>();
+    queues.add(new FakeQueueInfo("default", 100.0f, true, 25));  
+    resConf.setFakeQueues(queues);
+    JobConf conf = (JobConf)(scheduler.getConf());
+    conf.set(
+      JobConf.UPPER_LIMIT_ON_TASK_VMEM_PROPERTY, String.valueOf(
+        1024 * 1024 * 3));
+    scheduler.setTaskTrackerManager(taskTrackerManager);
+    scheduler.setResourceManagerConf(resConf);    
+    scheduler.start();
+
+    assertEquals(scheduler.getLimitMaxMemForMapSlot(),3);
+    assertEquals(scheduler.getLimitMaxMemForReduceSlot(),3);
   }
 }

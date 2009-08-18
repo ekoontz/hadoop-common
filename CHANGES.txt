@@ -193,6 +193,23 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-383. Fix a bug in Pipes combiner due to bytes count not 
     getting reset after the spill. (Christian Kunz via sharad)
 
+    MAPREDUCE-40. Keep memory management backwards compatible for job 
+    configuration parameters and limits. (Rahul Kumar Singh via yhemanth)
+
+    MAPREDUCE-796. Fixes a ClassCastException in an exception log in
+    MultiThreadedMapRunner. (Amar Kamat via ddas)
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe.  (Suresh Srinivas via szetszwo)
+
+    MAPREDUCE-838. Fixes a problem in the way commit of task outputs
+    happens. The bug was that even if commit failed, the task would
+    be declared as successful. (Amareshwari Sriramadasu via ddas)
+
+    MAPREDUCE-805. Fixes some deadlocks in the JobTracker due to the fact
+    the JobTracker lock hierarchy wasn't maintained in some JobInProgress
+    method calls. (Amar Kamat via ddas)
+ 
 Release 0.20.0 - 2009-04-15
 
   INCOMPATIBLE CHANGES
