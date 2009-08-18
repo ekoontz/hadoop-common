@@ -44,7 +44,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
@@ -59,7 +58,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 abstract public class Task implements Writable, Configurable {
   private static final Log LOG =
-    LogFactory.getLog("org.apache.hadoop.mapred.TaskRunner");
+    LogFactory.getLog(Task.class);
 
   // Counters used by Task subclasses
   protected static enum Counter { 
@@ -142,7 +141,6 @@ abstract public class Task implements Writable, Configurable {
   protected org.apache.hadoop.mapreduce.OutputCommitter committer;
   protected String username;
   protected final Counters.Counter spilledRecordsCounter;
-  private String pidFile = "";
   private int numSlotsRequired;
 
   ////////////////////////////////////////////
@@ -186,12 +184,7 @@ abstract public class Task implements Writable, Configurable {
   }
 
   Counters getCounters() { return counters; }
-  public void setPidFile(String pidFile) { 
-    this.pidFile = pidFile; 
-  }
-  public String getPidFile() { 
-    return pidFile; 
-  }
+
   
   /**
    * Get the job name for this task.
@@ -332,7 +325,6 @@ abstract public class Task implements Writable, Configurable {
     Text.writeString(out, username);
     out.writeBoolean(writeSkipRecs);
     out.writeBoolean(taskCleanup);  
-    Text.writeString(out, pidFile);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -354,7 +346,6 @@ abstract public class Task implements Writable, Configurable {
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
-    pidFile = Text.readString(in);
   }
 
   @Override
