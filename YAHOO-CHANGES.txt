@@ -4,6 +4,24 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+yahoo-hadoop-0.20.0-2957040000
+
+45. MAPREDUCE:478 Allow map and reduce jvm parameters, environment 
+    variables and ulimit to be set separately.
+
+44. MAPREDUCE:682 Removes reservations on tasktrackers which are blacklisted. 
+    Contributed by Sreekanth Ramakrishnan.
+
+43. HADOOP:5420 Support killing of process groups in LinuxTaskController 
+    binary
+
+42. HADOOP-5488 Removes the pidfile management for the Task JVM from the 
+    framework and instead passes the PID back and forth between the 
+    TaskTracker and the Task processes. Contributed by Ravi Gummadi.
+
+41. MAPREDUCE:467 Provide ability to collect statistics about total tasks and 
+    succeeded tasks in different time windows.
+
 yahoo-hadoop-0.20.0.2949784002:
 
 40. MAPREDUCE-817. Add a cache for retired jobs with minimal job
