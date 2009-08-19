@@ -68,7 +68,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public static final int MAX_BLOCK_ACQUIRE_FAILURES = 3;
   private static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   public final ClientProtocol namenode;
-  final private ClientProtocol rpcNamenode;
+  private final ClientProtocol rpcNamenode;
   final UnixUserGroupInformation ugi;
   volatile boolean clientRunning = true;
   Random r = new Random();
@@ -142,18 +142,39 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         ClientDatanodeProtocol.versionID, addr, conf);
   }
         
-  /** 
-   * Create a new DFSClient connected to the default namenode.
+  /**
+   * Same as this(NameNode.getAddress(conf), conf);
+   * @see #DFSClient(InetSocketAddress, Configuration)
    */
   public DFSClient(Configuration conf) throws IOException {
-    this(NameNode.getAddress(conf), conf, null);
+    this(NameNode.getAddress(conf), conf);
   }
 
-  /** 
-   * Create a new DFSClient connected to the given namenode server.
+  /**
+   * Same as this(nameNodeAddr, conf, null);
+   * @see #DFSClient(InetSocketAddress, Configuration, org.apache.hadoop.fs.FileSystem.Statistics)
+   */
+  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf
+      ) throws IOException {
+    this(nameNodeAddr, conf, null);
+  }
+
+  /**
+   * Same as this(nameNodeAddr, null, conf, stats);
+   * @see #DFSClient(InetSocketAddress, ClientProtocol, Configuration, org.apache.hadoop.fs.FileSystem.Statistics) 
    */
   public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf,
                    FileSystem.Statistics stats)
+    throws IOException {
+    this(nameNodeAddr, null, conf, stats);
+  }
+
+  /** 
+   * Create a new DFSClient connected to the given nameNodeAddr or rpcNamenode.
+   * Exactly one of nameNodeAddr or rpcNamenode must be null.
+   */
+  DFSClient(InetSocketAddress nameNodeAddr, ClientProtocol rpcNamenode,
+      Configuration conf, FileSystem.Statistics stats)
     throws IOException {
     this.conf = conf;
     this.stats = stats;
@@ -174,9 +195,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       throw (IOException)(new IOException().initCause(e));
     }
 
-    this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
-    this.namenode = createNamenode(rpcNamenode);
-
     String taskId = conf.get("mapred.task.id");
     if (taskId != null) {
       this.clientName = "DFSClient_" + taskId; 
@@ -185,11 +203,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
     defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
-  }
 
-  public DFSClient(InetSocketAddress nameNodeAddr, 
-                   Configuration conf) throws IOException {
-    this(nameNodeAddr, conf, null);
+    if (nameNodeAddr != null && rpcNamenode == null) {
+      this.rpcNamenode = createRPCNamenode(nameNodeAddr, conf, ugi);
+      this.namenode = createNamenode(this.rpcNamenode);
+    } else if (nameNodeAddr == null && rpcNamenode != null) {
+      //This case is used for testing.
+      this.namenode = this.rpcNamenode = rpcNamenode;
+    } else {
+      throw new IllegalArgumentException(
+          "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
+          + "nameNodeAddr=" + nameNodeAddr + ", rpcNamenode=" + rpcNamenode);
+    }
   }
 
   private void checkOpen() throws IOException {
@@ -2870,7 +2895,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   
     private LocatedBlock locateFollowingBlock(long start
                                               ) throws IOException {     
-      int retries = 5;
+      int retries = conf.getInt("dfs.client.block.write.locateFollowingBlock.retries", 5);
       long sleeptime = 400;
       while (true) {
         long localstart = System.currentTimeMillis();
@@ -2887,25 +2912,30 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               throw ue; // no need to retry these exceptions
             }
             
-            if (--retries == 0 && 
-                !NotReplicatedYetException.class.getName().
+            if (NotReplicatedYetException.class.getName().
                 equals(e.getClassName())) {
-              throw e;
+
+                if (retries == 0) { 
+                  throw e;
+                } else {
+                  --retries;
+                  LOG.info(StringUtils.stringifyException(e));
+                  if (System.currentTimeMillis() - localstart > 5000) {
+                    LOG.info("Waiting for replication for "
+                        + (System.currentTimeMillis() - localstart) / 1000
+                        + " seconds");
+                  }
+                  try {
+                    LOG.warn("NotReplicatedYetException sleeping " + src
+                        + " retries left " + retries);
+                    Thread.sleep(sleeptime);
+                    sleeptime *= 2;
+                  } catch (InterruptedException ie) {
+                  }
+                }
             } else {
-              LOG.info(StringUtils.stringifyException(e));
-              if (System.currentTimeMillis() - localstart > 5000) {
-                LOG.info("Waiting for replication for " + 
-                         (System.currentTimeMillis() - localstart)/1000 + 
-                         " seconds");
-              }
-              try {
-                LOG.warn("NotReplicatedYetException sleeping " + src +
-                          " retries left " + retries);
-                Thread.sleep(sleeptime);
-                sleeptime *= 2;
-              } catch (InterruptedException ie) {
-              }
-            }                
+              throw e;
+            }
           }
         }
       } 
