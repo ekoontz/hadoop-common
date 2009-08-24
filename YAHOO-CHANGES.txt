@@ -4,6 +4,11 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+yahoo-hadoop-0.20.0-2957040004
+
+47. MAPREDUCE-834 Correct an issue created by merging this issue with
+    patch attached to external Jira.
+
 yahoo-hadoop-0.20.0-2957040003
 
 47. HADOOP-6184 Provide an API to dump Configuration in a JSON format. 
