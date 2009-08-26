@@ -4,6 +4,12 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+yahoo-hadoop-0.20.0-2957040007
+
+49. MAPREDUCE-430  Added patch supplied by Amar Kamat to allow 
+                   roll forward on branch to includ externally committed
+                   patch.
+
 yahoo-hadoop-0.20.0-2957040006
 
 48. MAPREDUCE-768. Provide an option to dump jobtracker configuration in 

@@ -142,6 +142,8 @@ abstract public class Task implements Writable, Configurable {
   protected String username;
   protected final Counters.Counter spilledRecordsCounter;
   private int numSlotsRequired;
+  private String pidFile = "";
+  protected TaskUmbilicalProtocol umbilical;
 
   ////////////////////////////////////////////
   // Constructors
@@ -229,6 +231,24 @@ abstract public class Task implements Writable, Configurable {
    */
   protected void setWriteSkipRecs(boolean writeSkipRecs) {
     this.writeSkipRecs = writeSkipRecs;
+  }
+
+  /**
+   * Report a fatal error to the parent (task) tracker.
+   */
+  protected void reportFatalError(TaskAttemptID id, Throwable throwable, 
+                                  String logMsg) {
+    LOG.fatal(logMsg);
+    Throwable tCause = throwable.getCause();
+    String cause = tCause == null 
+                   ? StringUtils.stringifyException(throwable)
+                   : StringUtils.stringifyException(tCause);
+    try {
+      umbilical.fatalError(id, cause);
+    } catch (IOException ioe) {
+      LOG.fatal("Failed to contact the tasktracker", ioe);
+      System.exit(-1);
+    }
   }
   
   /**
