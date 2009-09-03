@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 0.20.1 - Unreleased
+Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
 
@@ -128,9 +128,9 @@ Release 0.20.1 - Unreleased
     HADOOP-5882. Fixes a reducer progress update problem for new mapreduce
     api. (Amareshwari Sriramadasu via sharad)
 
-    HADOOP-5746. Fixes a corner case problem in Streaming, where if an exception
-    happens in MROutputThread after the last call to the map/reduce method, the 
-    exception goes undetected. (Amar Kamat via ddas)
+    HADOOP-5746. Fixes a corner case problem in Streaming, where if an 
+    exception happens in MROutputThread after the last call to the map/reduce 
+    method, the exception goes undetected. (Amar Kamat via ddas)
 
     HADOOP-5884. Fixes accounting in capacity scheduler so that high RAM jobs
     take more slots. (Vinod Kumar Vavilapalli via yhemanth)
@@ -142,11 +142,11 @@ Release 0.20.1 - Unreleased
     causing TestQueueCapacities to fail.
     (Sreekanth Ramakrishnan via yhemanth)
 
-    HADOOP-5921. Fixes a problem in the JobTracker where it sometimes never used
-    to come up due to a system file creation on JobTracker's system-dir failing. 
-    This problem would sometimes show up only when the FS for the system-dir 
-    (usually HDFS) is started at nearly the same time as the JobTracker. 
-    (Amar Kamat via ddas)
+    HADOOP-5921. Fixes a problem in the JobTracker where it sometimes never
+    used to come up due to a system file creation on JobTracker's system-dir 
+    failing. This problem would sometimes show up only when the FS for the 
+    system-dir (usually HDFS) is started at nearly the same time as the 
+    JobTracker. (Amar Kamat via ddas)
 
     HADOOP-5920. Fixes a testcase failure for TestJobHistory. 
     (Amar Kamat via ddas)
@@ -202,9 +202,6 @@ Release 0.20.1 - Unreleased
     MAPREDUCE-796. Fixes a ClassCastException in an exception log in
     MultiThreadedMapRunner. (Amar Kamat via ddas)
 
-    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
-    safe.  (Suresh Srinivas via szetszwo)
-
     MAPREDUCE-838. Fixes a problem in the way commit of task outputs
     happens. The bug was that even if commit failed, the task would
     be declared as successful. (Amareshwari Sriramadasu via ddas)
@@ -220,7 +217,7 @@ Release 0.20.1 - Unreleased
 
     MAPREDUCE-832. Reduce number of warning messages printed when 
     deprecated memory variables are used. (Rahul Kumar Singh via yhemanth)
- 
+
     MAPREDUCE-745. Fixes a testcase problem to do with generation of JobTracker
     IDs. (Amar Kamat via ddas)
 
@@ -240,6 +237,24 @@ Release 0.20.1 - Unreleased
 
     MAPREDUCE-430. Fix a bug related to task getting stuck in case of 
     OOM error. (Amar Kamat via ddas)
+
+    HADOOP-6215. fix GenericOptionParser to deal with -D with '=' in the 
+    value. (Amar Kamat via sharad)
+
+    MAPREDUCE-421. Fix Pipes to use returned system exit code.
+    (Christian Kunz via omalley)
+
+    HDFS-525. The SimpleDateFormat object in ListPathsServlet is not thread
+    safe. (Suresh Srinivas and cdouglas)
+
+    MAPREDUCE-911. Fix a bug in TestTaskFail related to speculative 
+    execution. (Amareshwari Sriramadasu via sharad)
+
+    MAPREDUCE-687. Fix an assertion in TestMiniMRMapRedDebugScript.
+    (Amareshwari Sriramadasu via sharad)
+
+    MAPREDUCE-924. Fixes the TestPipes testcase to use Tool.
+    (Amareshwari Sriramadasu via sharad)
 
 Release 0.20.0 - 2009-04-15
 
