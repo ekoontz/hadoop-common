@@ -4,6 +4,12 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+52. HADOOP-5363 Add support for proxying connections to multiple 
+    clusters with different versions to hdfsproxy. Contributed 
+    by Zhiyong Zhang
+
+51. HADOOP-5780. Improve per block message prited by -metaSave 
+    in HDFS. (Raghu Angadi)
 
 yahoo-hadoop-0.20.0-2957040010
  
