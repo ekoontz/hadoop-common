@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+56. HADOOP-5976. Add a new command, classpath, to the hadoop 
+    script. Contributed by Owen O'Malley and Gary Murry
+
 55. HADOOP-5784. Makes the number of heartbeats that should arrive 
     a second at the JobTracker configurable. Contributed by 
     Amareshwari Sriramadasu.
