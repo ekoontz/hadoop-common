@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+54. MAPREDUCE-945. Modifies MRBench and TestMapRed to use 
+    ToolRunner so that options such as queue name can be 
+    passed via command line. Contributed by Sreekanth Ramakrishnan.
+
 yahoo-hadoop-0.20.0-3006291003
 
 53. HADOOP:5420 Correct bug in earlier implementation
