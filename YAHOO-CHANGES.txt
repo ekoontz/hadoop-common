@@ -4,6 +4,12 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+59. MAPREDUCE-1030. Fix capacity-scheduler to assign a map and a reduce task
+    per-heartbeat. Contributed by Rahuk K Singh.
+
+58. MAPREDUCE-1028. Fixed number of slots occupied by cleanup tasks to one
+    irrespective of slot size for the job. Contributed by Ravi Gummadi. 
+
 57. MAPREDUCE-964. Fixed start and finish times of TaskStatus to be
     consistent, thereby fixing inconsistencies in metering tasks.
     Contributed by Sreekanth Ramakrishnan.
