@@ -4,6 +4,12 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+60. MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
+    heartbeat on task-completion for better job-latency. Contributed by
+    Arun C. Murthy
+    Configuration changes:
+      add mapreduce.tasktracker.outofband.heartbeat
+
 59. MAPREDUCE-1030. Fix capacity-scheduler to assign a map and a reduce task
     per-heartbeat. Contributed by Rahuk K Singh.
 
