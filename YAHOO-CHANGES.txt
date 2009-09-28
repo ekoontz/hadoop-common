@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+57. MAPREDUCE-964. Fixed start and finish times of TaskStatus to be
+    consistent, thereby fixing inconsistencies in metering tasks.
+    Contributed by Sreekanth Ramakrishnan.
+
 56. HADOOP-5976. Add a new command, classpath, to the hadoop 
     script. Contributed by Owen O'Malley and Gary Murry
 
