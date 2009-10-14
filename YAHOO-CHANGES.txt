@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+64. HADOOP-5625. Add operation duration to clienttrace. (Lei Xu 
+    via cdouglas)
+
 63. HADOOP-5222. Add offset to datanode clienttrace. (Lei Xu via cdouglas)
 
 62. HADOOP-6218. Adds a feature where TFile can be split by Record
