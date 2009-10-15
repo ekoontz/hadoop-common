@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+69. HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
+    hadoop-config.sh so that it allows setting java command options for
+    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
+
 68. MAPREDUCE-732. Removed spurious log statements in the node
     blacklisting logic. (Sreekanth Ramakrishnan via yhemanth)
 
