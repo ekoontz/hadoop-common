@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+68. MAPREDUCE-732. Removed spurious log statements in the node
+    blacklisting logic. (Sreekanth Ramakrishnan via yhemanth)
+
 67. MAPREDUCE-144. Includes dump of the process tree in task diagnostics when 
     a task is killed due to exceeding memory limits.
     (Vinod Kumar Vavilapalli via yhemanth)
