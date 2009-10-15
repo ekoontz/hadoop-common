@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+65. MAPREDUCE-277. Makes job history counters available on the job history
+    viewers. (Jothi Padmanabhan via ddas)
+
 64. HADOOP-5625. Add operation duration to clienttrace. (Lei Xu 
     via cdouglas)
 
