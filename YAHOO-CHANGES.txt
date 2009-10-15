@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+66. MAPREDUCE-979. Fixed JobConf APIs related to memory parameters to 
+    return values of new configuration variables when deprecated 
+    variables are disabled. (Sreekanth Ramakrishnan via yhemanth)
+
 65. MAPREDUCE-277. Makes job history counters available on the job history
     viewers. (Jothi Padmanabhan via ddas)
 
