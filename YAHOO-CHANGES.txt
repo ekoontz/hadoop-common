@@ -4,6 +4,12 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+71. HDFS-709. Fix TestDFSShell failure due to rename bug introduced by 
+    HDFS-677. (suresh)
+
+70. HDFS-677. Rename failure when both source and destination quota exceeds
+    results in deletion of source. (suresh)
+
 69. HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
     hadoop-config.sh so that it allows setting java command options for
     JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
