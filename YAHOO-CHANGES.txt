@@ -43,6 +43,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3041192001
 
+    MAPREDUCE-1088. Changed permissions on JobHistory files on local disk to
+    0744. Contributed by Arun C. Murthy.
+
     HADOOP-6304. Use java.io.File.set{Readable|Writable|Executable} where
     possible in RawLocalFileSystem. Contributed by Arun C. Murthy.
     
