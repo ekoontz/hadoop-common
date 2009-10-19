@@ -41,6 +41,11 @@ the patches applied from issues referenced in CHANGES.txt.
     it possible to use Configured and Tool to process command line to
     be able to specify a queue). Contributed by Erik Steffl.
 
+yahoo-hadoop-0.20.1-3041192001
+
+    HADOOP-6304. Use java.io.File.set{Readable|Writable|Executable} where
+    possible in RawLocalFileSystem. Contributed by Arun C. Murthy.
+    
 yahoo-hadoop-0.20.1-3041192000
 
     MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
