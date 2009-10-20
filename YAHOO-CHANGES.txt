@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
     
+    HADOOP-6097. Multiple bugs w/ Hadoop archives (mahadev)
+
     HADOOP-6231. Allow caching of filesystem instances to be disabled on a
     per-instance basis (ben slusky via mahadev)
 
