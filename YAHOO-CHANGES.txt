@@ -3,7 +3,10 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
-    
+
+    MAPREDUCE-739. Allow relative paths to be created inside archives. 
+    (mahadev)
+
     HADOOP-6097. Multiple bugs w/ Hadoop archives (mahadev)
 
     HADOOP-6231. Allow caching of filesystem instances to be disabled on a
