@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1062. Fix MRReliabilityTest to work with retired jobs
+    (Contributed by Sreekanth Ramakrishnan)
+
     MAPREDUCE-1090. Modified log statement in TaskMemoryManagerThread to
     include task attempt id. (yhemanth)
 
