@@ -1409,7 +1409,6 @@ public class JobInProgress {
       name = Values.CLEANUP.name();
     } else if (tip.isMapTask()) {
       ++runningMapTasks;
-      metrics.addRunningMaps(jobId, 1);
       name = Values.MAP.name();
       counter = Counter.TOTAL_LAUNCHED_MAPS;
       splits = tip.getSplitNodes();
@@ -1418,7 +1417,6 @@ public class JobInProgress {
       metrics.launchMap(id);
     } else {
       ++runningReduceTasks;
-      metrics.addRunningReduces(jobId, 1);
       name = Values.REDUCE.name();
       counter = Counter.TOTAL_LAUNCHED_REDUCES;
       if (tip.getActiveTasks().size() > 1)
@@ -2310,7 +2308,6 @@ public class JobInProgress {
       jobtracker.markCompletedTaskAttempt(status.getTaskTracker(), taskid);
     } else if (tip.isMapTask()) {
       runningMapTasks -= 1;
-      metrics.decRunningMaps(jobId, 1);
       // check if this was a sepculative task
       if (oldNumAttempts > 1) {
         speculativeMapTasks -= (oldNumAttempts - newNumAttempts);
@@ -2324,7 +2321,6 @@ public class JobInProgress {
       }
     } else {
       runningReduceTasks -= 1;
-      metrics.decRunningReduces(jobId, 1);
       if (oldNumAttempts > 1) {
         speculativeReduceTasks -= (oldNumAttempts - newNumAttempts);
       }
@@ -2586,7 +2582,6 @@ public class JobInProgress {
         launchedSetup = false;
       } else if (tip.isMapTask()) {
         runningMapTasks -= 1;
-        metrics.decRunningMaps(jobId, 1);
         metrics.failedMap(taskid);
         // remove from the running queue and put it in the non-running cache
         // if the tip is not complete i.e if the tip still needs to be run
@@ -2596,7 +2591,6 @@ public class JobInProgress {
         }
       } else {
         runningReduceTasks -= 1;
-        metrics.decRunningReduces(jobId, 1);
         metrics.failedReduce(taskid);
         // remove from the running queue and put in the failed queue if the tip
         // is not complete
