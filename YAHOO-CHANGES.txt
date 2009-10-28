@@ -4,6 +4,11 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-587. Add ability to run HDFS with MR test on non-default queue,
+    also updated junit dependendcy from junit-3.8.1 to junit-4.5 (to make
+    it possible to use Configured and Tool to process command line to
+    be able to specify a queue). Contributed by Erik Steffl.
+
     MAPREDUCE-1158. Fix JT running maps and running reduces metrics.
     (sharad)
 
