@@ -82,11 +82,6 @@ the patches applied from issues referenced in CHANGES.txt.
     HADOOP-6218. Adds a feature where TFile can be split by Record
     Sequence number. Contributed by Hong Tang and Raghu Angadi.
 
-    HDFS-587. Add ability to run HDFS with MR test on non-default queue,
-    also updated junit dependendcy from junit-3.8.1 to junit-4.5 (to make
-    it possible to use Configured and Tool to process command line to
-    be able to specify a queue). Contributed by Erik Steffl.
-
 yahoo-hadoop-0.20.1-3041192001
 
     MAPREDUCE-1088. Changed permissions on JobHistory files on local disk to
