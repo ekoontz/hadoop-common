@@ -1913,7 +1913,9 @@ public class JobInProgress {
                                           final int maxCacheLevel,
                                           final double avgProgress) {
     if (numMapTasks == 0) {
-      LOG.info("No maps to schedule for " + profile.getJobID());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("No maps to schedule for " + profile.getJobID());
+      }
       return -1;
     }
 
@@ -2123,7 +2125,9 @@ public class JobInProgress {
                                              int numUniqueHosts,
                                              double avgProgress) {
     if (numReduceTasks == 0) {
-      LOG.info("No reduces to schedule for " + profile.getJobID());
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("No reduces to schedule for " + profile.getJobID());
+      }
       return -1;
     }
 
