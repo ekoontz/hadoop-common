@@ -4,7 +4,7 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-yahoo-hadoop-0.20.1-3092118003:
+yahoo-hadoop-0.20.1-3092118004:
 
     HADOOP-6344.  rm and rmr immediately delete files rather than sending
     to trash, despite trash being enabled, if a user is over-quota. (jhoman)
