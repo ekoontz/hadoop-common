@@ -6,6 +6,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3092118005:
 
+    HDFS-761. Fix failure to process rename operation from edits log 
+    due to quota verification. (suresh)
+
     HDFS-457. Better handling of volume failure in Data Node storage,
     This fix is a port from hdfs-0.22 to common-0.20 by Boris Shkolnik.
     Contributed by Erik Steffl
