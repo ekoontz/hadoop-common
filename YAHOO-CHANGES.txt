@@ -6,6 +6,10 @@ the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3092118005:
 
+    HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
+    and suggests using -skpTrash, when moving to trash fails.
+    (Boris Shkolnik via suresh)
+
     HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
     (Nicholas), SZE via cdouglas)
 
