@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-758. Changes to report status of decommissioining on the namenode web
+    UI. (jitendra)
+
 yahoo-hadoop-0.20.1-3195383000
     HADOOP-6234. Add new option dfs.umaskmode to set umask in configuration
     to use octal or symbolic instead of decimal. (Jakob Homan via suresh)
