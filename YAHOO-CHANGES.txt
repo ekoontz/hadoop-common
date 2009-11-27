@@ -43,6 +43,10 @@ yahoo-hadoop-0.20.1-3195383000
     MAPREDUCE-1219. Fixed JobTracker to not collect per-job metrics, thus 
     easing load on it. (Amareshwari Sriramadasu via acmurthy)  
 
+    MAPREDUCE-1186. Fixed DistributedCache to do a recursive chmod on just the
+    per-cache directory, not all of mapred.local.dir.
+    (Amareshwari Sriramadasu via acmurthy)
+                           
 yahoo-hadoop-0.20.1-3092118004:
 
     HADOOP-6344.  rm and rmr immediately delete files rather than sending
