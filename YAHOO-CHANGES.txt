@@ -46,6 +46,10 @@ yahoo-hadoop-0.20.1-3195383000
     MAPREDUCE-1186. Fixed DistributedCache to do a recursive chmod on just the
     per-cache directory, not all of mapred.local.dir.
     (Amareshwari Sriramadasu via acmurthy)
+
+    MAPREDUCE-1231. Add an option to distcp to avoid checking checksums
+    with the upgrade option.
+    (Jothi Padmanabhan via yhemanth)
                            
 yahoo-hadoop-0.20.1-3092118004:
 
