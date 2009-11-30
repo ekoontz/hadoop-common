@@ -16,6 +16,10 @@ the patches applied from issues referenced in CHANGES.txt.
     MAPREDUCE-1182. Fix overflow in reduce causing allocations to exceed the
     configured threshold. (cdouglas)
 
+    HADOOP-4933. Fixes a ConcurrentModificationException problem that shows up
+    when the history viewer is accessed concurrently.
+    (Amar Kamat via ddas)
+
 yahoo-hadoop-0.20.1-3195383000
     HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
     and suggests using -skpTrash, when moving to trash fails.
