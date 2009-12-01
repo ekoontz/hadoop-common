@@ -20,6 +20,10 @@ the patches applied from issues referenced in CHANGES.txt.
     when the history viewer is accessed concurrently.
     (Amar Kamat via ddas)
 
+    MAPREDUCE-1140. Fix DistributedCache to not decrement reference counts for 
+    unreferenced files in error conditions.
+    (Amareshwari Sriramadasu via yhemanth)
+
 yahoo-hadoop-0.20.1-3195383000
     HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
     and suggests using -skpTrash, when moving to trash fails.
