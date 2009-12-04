@@ -6,6 +6,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 
 yahoo-hadoop-0.20.1-3195383001
+    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented. (suresh)
+    
     HDFS-758. Changes to report status of decommissioining on the namenode web
     UI. (jitendra)
 
