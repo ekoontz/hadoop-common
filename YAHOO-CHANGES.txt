@@ -28,6 +28,9 @@ yahoo-hadoop-0.20.1-3195383001
     unreferenced files in error conditions.
     (Amareshwari Sriramadasu via yhemanth)
 
+    MAPREDUCE-1185. Redirect running job url to history url if job is already 
+    retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
+
 yahoo-hadoop-0.20.1-3195383000
     HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
     and suggests using -skpTrash, when moving to trash fails.
