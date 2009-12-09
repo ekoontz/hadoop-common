@@ -4,6 +4,13 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+yahoo-hadoop-0.20.1-3195383002
+
+    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
+    IllegalArgumentException is thrown. (cos)
+
+    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented. (suresh)
+ 
     MAPREDUCE-1185. Redirect running job url to history url if job is already 
     retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
 
@@ -17,11 +24,7 @@ the patches applied from issues referenced in CHANGES.txt.
     (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
 
 yahoo-hadoop-0.20.1-3195383001
-    HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
-    IllegalArgumentException is thrown. (cos)
-
-    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented. (suresh)
-    
+       
     HDFS-758. Changes to report status of decommissioining on the namenode web
     UI. (jitendra)
 
