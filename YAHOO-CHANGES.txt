@@ -37,6 +37,9 @@ yahoo-hadoop-0.20.1-3195383001
     MAPREDUCE-754. Fix NPE in expiry thread when a TT is lost. (Amar Kamat 
     via sharad)
 
+    MAPREDUCE-896. Modify permissions for local files on tasktracker before
+    deletion so they can be deleted cleanly. (Ravi Gummadi via yhemanth)
+ 
 yahoo-hadoop-0.20.1-3195383000
     HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
     and suggests using -skpTrash, when moving to trash fails.
