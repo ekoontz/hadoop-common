@@ -6,6 +6,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3195383002
 
+    MAPREDUCE-1068. Added a verbose error message when user specifies an
+    incorrect -file parameter. (Amareshwari Sriramadasu via acmurthy)  
+
     MAPREDUCE-1171. Allow the read-error notification in shuffle to be
     configurable. (Amareshwari Sriramadasu via acmurthy) 
 
