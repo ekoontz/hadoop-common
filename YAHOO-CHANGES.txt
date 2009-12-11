@@ -5,6 +5,10 @@ to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3195383002
+
+    MAPREDUCE-353. Allow shuffle read and connection timeouts to be
+    configurable. (Amareshwari Sriramadasu via acmurthy) 
+
     HADOOP-6428. HttpServer sleeps with negative values (cos)
 
     HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
