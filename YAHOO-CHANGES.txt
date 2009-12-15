@@ -5,6 +5,8 @@ to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3195383002
+    HDFS-595.  umask settings in configuration may now use octal or 
+    symbolic instead of decimal.  Update HDFS tests as such.  (jghoman)
 
     MAPREDUCE-1068. Added a verbose error message when user specifies an
     incorrect -file parameter. (Amareshwari Sriramadasu via acmurthy)  
