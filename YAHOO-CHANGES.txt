@@ -5,6 +5,10 @@ to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3195383002
+
+    HADOOP-5582. Fix Hadoop Vaidya to use new Counters in
+    org.apache.hadoop.mapreduce package. (Suhas Gogate via acmurthy) 
+
     HDFS-595.  umask settings in configuration may now use octal or 
     symbolic instead of decimal.  Update HDFS tests as such.  (jghoman)
 
