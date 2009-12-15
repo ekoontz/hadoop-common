@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1143. Fix running task counters to be updated correctly
+    when speculative attempts are running for a TIP.
+    (Rahul Kumar Singh via yhemanth)
+
 yahoo-hadoop-0.20.1-3195383002
 
     MAPREDUCE-676. Fix Hadoop Vaidya to ensure it works for map-only jobs. 
