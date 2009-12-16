@@ -47,6 +47,8 @@ yahoo-hadoop-0.20.1-3195383002
     HADOOP-5771. Implements unit tests for LinuxTaskController.
     (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
 
+    MAPREDUCE-1124. Import Gridmix3 and Rumen. (cdouglas)
+
 yahoo-hadoop-0.20.1-3195383001
        
     HDFS-758. Changes to report status of decommissioining on the namenode web
