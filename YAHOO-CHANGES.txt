@@ -52,6 +52,8 @@ yahoo-hadoop-0.20.1-3195383002
 
     MAPREDUCE-1124. Import Gridmix3 and Rumen. (cdouglas)
 
+    MAPREDUCE-1063. Document gridmix benchmark. (cdouglas)
+
 yahoo-hadoop-0.20.1-3195383001
        
     HDFS-758. Changes to report status of decommissioining on the namenode web
