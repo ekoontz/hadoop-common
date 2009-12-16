@@ -14,6 +14,10 @@ the patches applied from issues referenced in CHANGES.txt.
     HADOOP-6151, 6281, 6285,  6441. Add HTML quoting of the parameters to all
     of the servlets to prevent XSS attacks. (omalley)
 
+    MAPREDUCE-896. Fix bug in earlier implementation to prevent
+    spurious logging in tasktracker logs for absent file paths.
+    (Ravi Gummadi via yhemanth)
+
 yahoo-hadoop-0.20.1-3195383002
 
     MAPREDUCE-676. Fix Hadoop Vaidya to ensure it works for map-only jobs. 
