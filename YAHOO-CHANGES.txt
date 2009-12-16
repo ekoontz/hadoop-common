@@ -87,9 +87,6 @@ yahoo-hadoop-0.20.1-3195383000
     HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
     (Nicholas), SZE via cdouglas)
 
-    HDFS-761. Fix failure to process rename operation from edits log 
-    due to quota verification. (suresh)
-
     HDFS-457. Better handling of volume failure in Data Node storage,
     This fix is a port from hdfs-0.22 to common-0.20 by Boris Shkolnik.
     Contributed by Erik Steffl
@@ -100,20 +97,29 @@ yahoo-hadoop-0.20.1-3195383000
     HADOOP-6343. Log unexpected throwable object caught in RPC.  
     Contributed by Jitendra Nath Pandey
 
-    MAPREDUCE-1196. Fix FileOutputCommitter to use the deprecated cleanupJob
-    api correctly. (acmurthy)  
-
-    MAPREDUCE-1219. Fixed JobTracker to not collect per-job metrics, thus 
-    easing load on it. (Amareshwari Sriramadasu via acmurthy)  
+yahoo-hadoop-0.20.1-3092118007:
 
     MAPREDUCE-1186. Fixed DistributedCache to do a recursive chmod on just the
     per-cache directory, not all of mapred.local.dir.
     (Amareshwari Sriramadasu via acmurthy)
 
-    MAPREDUCE-1231. Add an option to distcp to avoid checking checksums
-    with the upgrade option.
+    MAPREDUCE-1231. Add an option to distcp to ignore checksums when used with
+    the upgrade option.
     (Jothi Padmanabhan via yhemanth)
-                           
+
+yahoo-hadoop-0.20.1-3092118006:
+
+    MAPREDUCE-1219. Fixed JobTracker to not collect per-job metrics, thus
+    easing load on it. (Amareshwari Sriramadasu via acmurthy)
+
+    HDFS-761. Fix failure to process rename operation from edits log due to
+    quota verification. (suresh)
+
+yahoo-hadoop-0.20.1-3092118005:
+
+    MAPREDUCE-1196. Fix FileOutputCommitter to use the deprecated cleanupJob
+    api correctly. (acmurthy)
+
 yahoo-hadoop-0.20.1-3092118004:
 
     HADOOP-6344.  rm and rmr immediately delete files rather than sending
