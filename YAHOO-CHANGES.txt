@@ -8,6 +8,9 @@ the patches applied from issues referenced in CHANGES.txt.
     when speculative attempts are running for a TIP.
     (Rahul Kumar Singh via yhemanth)
 
+    HADOOP-6151, 6281, 6285,  6441. Add HTML quoting of the parameters to all
+    of the servlets to prevent XSS attacks. (omalley)
+
 yahoo-hadoop-0.20.1-3195383002
 
     MAPREDUCE-676. Fix Hadoop Vaidya to ensure it works for map-only jobs. 
