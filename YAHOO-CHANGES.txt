@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-5824. remove OP_READ_METADATA functionality from Datanode.
+    (Jitendra Nath Pandey)
+
     HADOOP-4359. Access Token: Support for data access authorization 
     checking on DataNodes. (Jitendra Nath Pandey)
 
