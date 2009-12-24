@@ -5,6 +5,8 @@ to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3195383003
+    HADOOP-6460. Reinitializes buffers used for serializing responses in ipc
+    server on exceeding maximum response size to free up Java heap. (suresh)
 
     MAPREDUCE-1100. Truncate user logs to prevent TaskTrackers' disks from
     filling up. (Vinod Kumar Vavilapalli via acmurthy) 
