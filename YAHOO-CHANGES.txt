@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-445. pread() fails when cached block locations are no longer valid.
+    (Jitendra Nath Pandey)
+
     HDFS-195. Need to handle access token expiration when re-establishing the 
     pipeline for dfs write. (Jitendra Nath Pandey)
 
