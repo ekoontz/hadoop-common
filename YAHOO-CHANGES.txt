@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6132. RPC client opens an extra connection for VersionedProtocol.
+    (Jitendra Nath Pandey)
+
     HDFS-445. pread() fails when cached block locations are no longer valid.
     (Jitendra Nath Pandey)
 
