@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6367, HDFS-764. Moving Access Token implementation from Common to 
+    HDFS. These two jiras must be committed together otherwise build will
+    fail. (Jitendra Nath Pandey)
+
     HDFS-409. Add more access token tests
     (Jitendra Nath Pandey)
 
