@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1026. Shuffle should be secure. (Jitendra Nath Pandey)
+
     HADOOP-4268. Permission checking in fsck. (Jitendra Nath Pandey)
 
     HADOOP-6415. Adding a common token interface for both job token and 
