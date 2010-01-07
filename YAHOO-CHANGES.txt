@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1250. Refactor job token to use a common token interface.
+    (Jitendra Nath Pandey)
+
     MAPREDUCE-1026. Shuffle should be secure. (Jitendra Nath Pandey)
 
     HADOOP-4268. Permission checking in fsck. (Jitendra Nath Pandey)
