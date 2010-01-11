@@ -69,8 +69,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
 import org.apache.hadoop.mapred.TaskLog.LogName;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
-import org.apache.hadoop.mapred.TaskController.TaskControllerPathDeletionContext;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapred.pipes.Submitter;
@@ -231,8 +229,6 @@ public class TaskTracker
   private int maxReduceSlots;
   private int failures;
   
-  private FileSystem localFs;
-  
   // Performance-related config knob to send an out-of-band heartbeat
   // on task completion
   static final String TT_OUTOFBAND_HEARBEAT =
@@ -244,7 +240,7 @@ public class TaskTracker
   
   private MapEventsFetcherThread mapEventsFetcher;
   int workerThreads;
-  CleanupQueue directoryCleanupThread;
+  private CleanupQueue directoryCleanupThread;
   volatile JvmManager jvmManager;
   
   private TaskMemoryManagerThread taskMemoryManager;
@@ -392,7 +388,7 @@ public class TaskTracker
   TaskController getTaskController() {
     return taskController;
   }
-
+  
   private RunningJob addTaskToJob(JobID jobId, 
                                   TaskInProgress tip) {
     synchronized (runningJobs) {
@@ -505,7 +501,6 @@ public class TaskTracker
   synchronized void initialize() throws IOException {
     // use configured nameserver & interface to get local hostname
     this.fConf = new JobConf(originalConf);
-    localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");
     }
@@ -1489,32 +1484,6 @@ public class TaskTracker
     }
   }
 
-  private static PathDeletionContext[] buildPathDeletionContexts(FileSystem fs,
-      Path[] paths) {
-    int i = 0;
-    PathDeletionContext[] contexts = new PathDeletionContext[paths.length];
-
-    for (Path p : paths) {
-      contexts[i++] = new PathDeletionContext(fs, p.toUri().getPath());
-    }
-    return contexts;
-  }
-
-  static PathDeletionContext[] buildTaskControllerPathDeletionContexts(
-      FileSystem fs, Path[] paths, Task task, boolean isWorkDir,
-      TaskController taskController)
-      throws IOException {
-    int i = 0;
-    PathDeletionContext[] contexts =
-                          new TaskControllerPathDeletionContext[paths.length];
-
-    for (Path p : paths) {
-      contexts[i++] = new TaskControllerPathDeletionContext(fs, p, task,
-                          isWorkDir, taskController);
-    }
-    return contexts;
-  }
-
   /**
    * The task tracker is done with this job, so we need to clean up.
    * @param action The action with the job
@@ -1543,9 +1512,8 @@ public class TaskTracker
         // Delete the job directory for this  
         // task if the job is done/failed
         if (!rjob.keepJobFiles){
-          PathDeletionContext[] contexts = buildPathDeletionContexts(localFs,
-              getLocalFiles(fConf, getLocalJobDir(rjob.getJobID().toString())));
-          directoryCleanupThread.addToQueue(contexts);
+          directoryCleanupThread.addToQueue(fConf, getLocalFiles(fConf, 
+            getLocalJobDir(rjob.getJobID().toString())));
         }
         // Remove this job 
         rjob.tasks.clear();
@@ -2651,7 +2619,6 @@ public class TaskTracker
           }
           String taskDir = getLocalTaskDir(task.getJobID().toString(),
                              taskId.toString(), task.isTaskCleanupTask());
-
           if (needCleanup) {
             if (runner != null) {
               //cleans up the output directory of the task (where map outputs 
@@ -2663,23 +2630,21 @@ public class TaskTracker
             //might be using the dir. The JVM running the tasks would clean
             //the workdir per a task in the task process itself.
             if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              PathDeletionContext[] contexts =
-                buildTaskControllerPathDeletionContexts(localFs, getLocalDirs(),
-                  task, false/* not workDir */, taskController);
-              directoryCleanupThread.addToQueue(contexts);
-            }
+              directoryCleanupThread.addToQueue(defaultJobConf,
+                  getLocalFiles(defaultJobConf,
+                  taskDir));
+            }  
+            
             else {
-              PathDeletionContext[] contexts = buildPathDeletionContexts(
-                  localFs, getLocalFiles(defaultJobConf, taskDir+"/job.xml"));
-              directoryCleanupThread.addToQueue(contexts);
+              directoryCleanupThread.addToQueue(defaultJobConf,
+                  getLocalFiles(defaultJobConf,
+                taskDir+"/job.xml"));
             }
           } else {
             if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              PathDeletionContext[] contexts =
-                buildTaskControllerPathDeletionContexts(localFs, getLocalDirs(),
-                  task, true /* workDir */,
-                  taskController);
-              directoryCleanupThread.addToQueue(contexts);
+              directoryCleanupThread.addToQueue(defaultJobConf,
+                  getLocalFiles(defaultJobConf,
+                  taskDir+"/work"));
             }  
           }
         } catch (Throwable ie) {
@@ -3266,7 +3231,7 @@ public class TaskTracker
   
 
   // get the full paths of the directory in all the local disks.
-  Path[] getLocalFiles(JobConf conf, String subdir) throws IOException{
+  private Path[] getLocalFiles(JobConf conf, String subdir) throws IOException{
     String[] localDirs = conf.getLocalDirs();
     Path[] paths = new Path[localDirs.length];
     FileSystem localFs = FileSystem.getLocal(conf);
@@ -3275,22 +3240,6 @@ public class TaskTracker
       paths[i] = paths[i].makeQualified(localFs);
     }
     return paths;
-  }
-
-  // get the paths in all the local disks.
-  Path[] getLocalDirs() throws IOException{
-    String[] localDirs = fConf.getLocalDirs();
-    Path[] paths = new Path[localDirs.length];
-    FileSystem localFs = FileSystem.getLocal(fConf);
-    for (int i = 0; i < localDirs.length; i++) {
-      paths[i] = new Path(localDirs[i]);
-      paths[i] = paths[i].makeQualified(localFs);
-    }
-    return paths;
-  }
-
-  FileSystem getLocalFileSystem(){
-    return localFs;
   }
 
   int getMaxCurrentMapTasks() {
