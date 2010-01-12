@@ -4,6 +4,11 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-5737. Fixes a problem in the way the JobTracker used to talk to 
+    other daemons like the NameNode to get the job's files. Also adds APIs 
+    in the JobTracker to get the FileSystem objects as per the JobTracker's 
+    configuration. (Amar Kamat via ddas)
+ 
     HADOOP-5771. Implements unit tests for LinuxTaskController.
     (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
 
