@@ -178,7 +178,7 @@ public class MiniMRCluster {
       conf.set("mapred.local.dir", localPath.toString());
       LOG.info("mapred.local.dir is " +  localPath);
       try {
-        tt = new TaskTracker(conf);
+        tt = createTaskTracker(conf);
         isInitialized = true;
       } catch (Throwable e) {
         isDead = true;
@@ -186,7 +186,14 @@ public class MiniMRCluster {
         LOG.error("task tracker " + trackerId + " crashed", e);
       }
     }
-        
+     
+    /**
+     * Creates a default {@link TaskTracker} using the conf passed. 
+     */
+    TaskTracker createTaskTracker(JobConf conf) throws IOException {
+      return new TaskTracker(conf);
+    }
+    
     /**
      * Create and run the task tracker.
      */
@@ -657,6 +664,13 @@ public class MiniMRCluster {
     TaskTrackerRunner taskTracker;
     taskTracker = new TaskTrackerRunner(idx, numDir, host, conf);
     
+    addTaskTracker(taskTracker);
+  }
+  
+  /**
+   * Add a tasktracker to the Mini-MR cluster.
+   */
+  void addTaskTracker(TaskTrackerRunner taskTracker) throws IOException {
     Thread taskTrackerThread = new Thread(taskTracker);
     taskTrackerList.add(taskTracker);
     taskTrackerThreadList.add(taskTrackerThread);

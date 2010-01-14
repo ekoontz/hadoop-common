@@ -35,6 +35,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -192,7 +193,8 @@ public class TestChildTaskDirs extends ClusterWithLinuxTaskController {
     JobInProgress jip = 
       mrCluster.getJobTrackerRunner().getJobTracker().getJob(id);
     String attemptId = 
-      jip.getMapTasks()[0].getTaskStatuses()[0].getTaskID().toString();
+      jip.getTasks(TaskType.MAP)[0].getTaskStatuses()[0].getTaskID()
+         .toString();
     
     String taskTrackerLocalDir = 
       mrCluster.getTaskTrackerRunner(0).getLocalDir();

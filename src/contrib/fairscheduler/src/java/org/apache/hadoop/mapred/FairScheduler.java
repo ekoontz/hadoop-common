@@ -414,7 +414,8 @@ public class FairScheduler extends TaskScheduler {
       int totalMaps = job.numMapTasks;
       int finishedMaps = 0;
       int runningMaps = 0;
-      for (TaskInProgress tip: job.getMapTasks()) {
+      for (TaskInProgress tip : 
+           job.getTasks(org.apache.hadoop.mapreduce.TaskType.MAP)) {
         if (tip.isComplete()) {
           finishedMaps += 1;
         } else if (tip.isRunning()) {
@@ -428,7 +429,8 @@ public class FairScheduler extends TaskScheduler {
       int totalReduces = job.numReduceTasks;
       int finishedReduces = 0;
       int runningReduces = 0;
-      for (TaskInProgress tip: job.getReduceTasks()) {
+      for (TaskInProgress tip : 
+           job.getTasks(org.apache.hadoop.mapreduce.TaskType.REDUCE)) {
         if (tip.isComplete()) {
           finishedReduces += 1;
         } else if (tip.isRunning()) {
