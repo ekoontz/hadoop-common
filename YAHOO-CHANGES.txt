@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-711. Removed Distributed Cache from Common, to move it under 
+    Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
+
     MAPREDUCE-478. Allow map and reduce jvm parameters, environment 
     variables and ulimit to be set separately. (acmurthy)
  
