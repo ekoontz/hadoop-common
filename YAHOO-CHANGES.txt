@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-856. Setup secure permissions for distributed cache files.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
     MAPREDUCE-871. Fix ownership of Job/Task local files to have correct 
     group ownership according to the egid of the tasktracker.
     (Vinod Kumar Vavilapalli via yhemanth)
