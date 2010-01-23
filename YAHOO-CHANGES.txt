@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1338. Introduces the notion of token cache using which 
+    tokens and secrets can be sent by the Job client to the JobTracker.
+    (Boris Shkolnik)
+
     HADOOP-6495. Identifier should be serialized after the password is created
     In Token constructor. (Jitendra Nath Pandey)
 
