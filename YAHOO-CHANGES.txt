@@ -110,6 +110,9 @@ yahoo-hadoop-0.20.1-3195383006
     HADOOP-6343. Log unexpected throwable object caught in RPC.  
     Contributed by Jitendra Nath Pandey
 
+    MAPREDUCE-1376. Add support for submitting jobs as configured users,
+    pluggable mapping of trace users to target users in Gridmix. (cdouglas)
+
 yahoo-hadoop-0.20.1-3092118007:
 
     MAPREDUCE-1186. Fixed DistributedCache to do a recursive chmod on just the
