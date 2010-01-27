@@ -38,9 +38,6 @@ the patches applied from issues referenced in CHANGES.txt.
     HADOOP-6495. Identifier should be serialized after the password is created
     In Token constructor. (Jitendra Nath Pandey)
 
-    HADOOP-6506. Failing tests prevent the rest of test targets from
-    execution. (cos)
-
     HADOOP-5457. Fix to continue to run builds even if contrib test fails.
     (gkesavan)
 
