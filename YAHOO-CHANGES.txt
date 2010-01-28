@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-919. Create test to validate the BlocksVerified metric (Gary Murry
+    via cos)
+
     MAPREDUCE-1186. Modified code in distributed cache to set 
     permissions only on required set of localized paths.
     (Amareshwari Sriramadasu via yhemanth)
