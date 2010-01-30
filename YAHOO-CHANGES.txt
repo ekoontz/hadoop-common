@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6524. Contrib tests are failing Clover'ed build. (cos)
+
     MAPREDUCE-842. Fixing a bug in the earlier version of the patch
     related to improper localization of the job token file.
     (Ravi Gummadi via yhemanth)
