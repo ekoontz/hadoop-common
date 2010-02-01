@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6517, HADOOP-6518. Ability to add/get tokens from 
+    UserGroupInformation & Kerberos login in UGI should honor KRB5CCNAME
+    (jitendra)
+
     HADOOP-6299. Reimplement the UserGroupInformation to use the OS
     specific and Kerberos JAAS login. (jhoman, ddas, oom)
     
