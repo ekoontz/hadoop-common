@@ -87,9 +87,8 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.authorize.ConfiguredPolicy;
+import java.security.PrivilegedExceptionAction;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.DiskChecker;
@@ -451,7 +450,7 @@ public class TaskTracker
   }
 
   public static String getUserDir(String user) {
-    return TaskTracker.SUBDIR + Path.SEPARATOR + user;
+    return TaskTracker.SUBDIR + Path.SEPARATOR + getShortUserName(user);
   } 
 
   Localizer getLocalizer() {
@@ -462,6 +461,17 @@ public class TaskTracker
     localizer = l;
   }
 
+  /**
+   * This method must be called in all places where the short user name is
+   * desired (e.g. TaskTracker.getUserDir and in the LinuxTaskController).
+   * The short name is required in the path creation
+   * (like TaskTracker.getUserDir) and while launching task processes as the
+   * user.
+   */
+  static String getShortUserName(String name) {
+    return UserGroupInformation.createRemoteUser(name).getShortUserName();
+  }
+  
   public static String getPrivateDistributedCacheDir(String user) {
     return getUserDir(user) + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
   }
@@ -534,11 +544,14 @@ public class TaskTracker
     return getLocalJobDir(user, jobid) + Path.SEPARATOR + TaskTracker.JOB_TOKEN_FILE;
   }
 
-  private void setUgi(String user, Configuration conf) {
-    //The dummy-group used here will not be required once we have UGI
-    //object creation with just the user name.
-    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        user+","+UnixUserGroupInformation.DEFAULT_GROUP);
+  private FileSystem getFS(final Path filePath, String user,
+      final Configuration conf) throws IOException, InterruptedException {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+    FileSystem userFs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        public FileSystem run() throws IOException {
+          return filePath.getFileSystem(conf);
+      }});
+    return userFs;
   }
   
   String getPid(TaskAttemptID tid) {
@@ -558,15 +571,29 @@ public class TaskTracker
                             protocol);
     }
   }
-    
+  public static final String TT_USER_NAME = "mapreduce.tasktracker.user.name";
+  public static final String TT_KEYTAB_FILE =
+    "mapreduce.tasktracker.keytab.file";  
   /**
    * Do the real constructor work here.  It's in a separate method
    * so we can call it again and "recycle" the object after calling
    * close().
    */
-  synchronized void initialize() throws IOException {
-    // use configured nameserver & interface to get local hostname
+  synchronized void initialize() throws IOException, InterruptedException {
     this.fConf = new JobConf(originalConf);
+    String keytabFilename = fConf.get(TT_KEYTAB_FILE);
+    UserGroupInformation ttUgi;
+    UserGroupInformation.setConfiguration(fConf);
+    if (keytabFilename != null) {
+      String desiredUser = fConf.get(TT_USER_NAME,
+                                    System.getProperty("user.name"));
+      UserGroupInformation.loginUserFromKeytab(desiredUser,
+                                               keytabFilename);
+      ttUgi = UserGroupInformation.getLoginUser();
+
+    } else {
+      ttUgi = UserGroupInformation.getCurrentUser();
+    }
     localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");
@@ -628,7 +655,7 @@ public class TaskTracker
             this.fConf.getClass(PolicyProvider.POLICY_PROVIDER_CONFIG, 
                 MapReducePolicyProvider.class, PolicyProvider.class), 
             this.fConf));
-      SecurityUtil.setPolicy(new ConfiguredPolicy(this.fConf, policyProvider));
+      ServiceAuthorizationManager.refresh(fConf, policyProvider);
     }
     
     // RPC initialization
@@ -662,9 +689,13 @@ public class TaskTracker
         this.fConf, taskController);
 
     this.jobClient = (InterTrackerProtocol) 
-      RPC.waitForProxy(InterTrackerProtocol.class,
-                       InterTrackerProtocol.versionID, 
-                       jobTrackAddr, this.fConf);
+    ttUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        return RPC.waitForProxy(InterTrackerProtocol.class,
+            InterTrackerProtocol.versionID,
+            jobTrackAddr, fConf);
+      }
+    });
     this.justInited = true;
     this.running = true;    
     // start the thread that will fetch map task completion events
@@ -897,7 +928,8 @@ public class TaskTracker
                               new LocalDirAllocator("mapred.local.dir");
 
   // intialize the job directory
-  private void localizeJob(TaskInProgress tip) throws IOException {
+  private void localizeJob(TaskInProgress tip) 
+  throws IOException, InterruptedException {
     Path localJarFile = null;
     Task t = tip.getTask();
     JobID jobId = t.getJobID();
@@ -916,7 +948,7 @@ public class TaskTracker
         // directly under the job directory is created.
         JobInitializationContext context = new JobInitializationContext();
         context.jobid = jobId;
-        context.user = localJobConf.getUser();
+        context.user = t.getUser();
         context.workDir = new File(localJobConf.get(JOB_LOCAL_DIR));
         taskController.initializeJob(context);
         
@@ -951,14 +983,13 @@ public class TaskTracker
    * @throws IOException
    */
   JobConf localizeJobFiles(Task t)
-      throws IOException {
+      throws IOException, InterruptedException {
     JobID jobId = t.getJobID();
 
     Path jobFile = new Path(t.getJobFile());
     String userName = t.getUser();
     JobConf userConf = new JobConf(getJobConf());
-    setUgi(userName, userConf);
-    FileSystem userFs = jobFile.getFileSystem(userConf);
+    FileSystem userFs = getFS(jobFile, userName, userConf);
 
     // Initialize the job directories first
     FileSystem localFs = FileSystem.getLocal(fConf);
@@ -969,7 +1000,9 @@ public class TaskTracker
         localizeJobConfFile(new Path(t.getJobFile()), userName, userFs, jobId);
 
     JobConf localJobConf = new JobConf(localJobFile);
-
+    //WE WILL TRUST THE USERNAME THAT WE GOT FROM THE JOBTRACKER
+    //AS PART OF THE TASK OBJECT
+    localJobConf.setUser(userName);
     // create the 'job-work' directory: job-specific shared directory for use as
     // scratch space by all tasks of the same job running on this TaskTracker.
     Path workDir =
@@ -1155,7 +1188,7 @@ public class TaskTracker
   /**
    * Start with the local machine name, and the default JobTracker
    */
-  public TaskTracker(JobConf conf) throws IOException {
+  public TaskTracker(JobConf conf) throws IOException, InterruptedException {
     originalConf = conf;
     maxMapSlots = conf.getInt(
                   "mapred.tasktracker.map.tasks.maximum", 2);
@@ -2117,6 +2150,11 @@ public class TaskTracker
     } catch (IOException iex) {
       LOG.error("Got fatal exception while reinitializing TaskTracker: " +
                 StringUtils.stringifyException(iex));
+      return;
+    }
+    catch (InterruptedException i) {
+      LOG.error("Got interrupted while reinitializing TaskTracker: " +
+          i.getMessage());
       return;
     }
   }

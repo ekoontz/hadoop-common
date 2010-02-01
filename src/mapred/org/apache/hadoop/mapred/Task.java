@@ -363,6 +363,10 @@ abstract public class Task implements Writable, Configurable {
   boolean isMapOrReduce() {
     return !jobSetup && !jobCleanup && !taskCleanup;
   }
+  
+  void setUser(String user) {
+    this.user = user;
+  }
 
   /**
    * Get the name of the user running the job/task. TaskTracker needs task's
@@ -947,7 +951,6 @@ abstract public class Task implements Writable, Configurable {
         NetUtils.addStaticResolution(name, resolvedName);
       }
     }
-    this.user = this.conf.getUser();
   }
 
   public Configuration getConf() {
