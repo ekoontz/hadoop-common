@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6520. UGI should load tokens from the environment. (jitendra)
+
     HADOOP-6517, HADOOP-6518. Ability to add/get tokens from 
     UserGroupInformation & Kerberos login in UGI should honor KRB5CCNAME
     (jitendra)
