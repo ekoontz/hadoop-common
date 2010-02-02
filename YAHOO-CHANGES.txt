@@ -4,6 +4,11 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1383. Automates fetching of delegation tokens in File*Formats
+    Distributed Cache and Distcp. Also, provides a config mapreduce.job.hdfs-servers
+    that the jobs can populate with a comma separated list of namenodes. 
+    The job client automatically fetches delegation tokens from those namenodes.
+
     HADOOP-6337. Update FilterInitializer class to be more visible
     and take a conf for further development. (jhoman)
 
