@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6204. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
     MAPREDUCE-1432. Adds hooks in the jobtracker and tasktracker
     for loading the tokens in the user's ugi. This is required for
     the copying of files from the hdfs. (Devaraj Das vi boryas)
