@@ -3,6 +3,9 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
+
+    HADOOP-6544. fix ivy settings to include JSON jackson.codehause.org
+     libs for .20 (boryas)
      
     HDFS-907. Add tests for getBlockLocations and totalLoad metrics. (rphulari)
 
