@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6419. Adds SASL based authentication to RPC. Also includes the 
+    MAPREDUCE-1335 and HDFS-933 patches. Contributed by Kan Zhang. 
+    (ddas)
+ 
     HADOOP-6538. Sets hadoop.security.authentication to simple by default.
     (ddas)
 
