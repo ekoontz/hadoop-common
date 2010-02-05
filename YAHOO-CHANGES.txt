@@ -5,6 +5,9 @@ to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
 yahoo-hadoop-0.20.1-3195383006
+    HADOOP-6521. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
 
     MAPREDUCE-1372. Fixed a ConcurrentModificationException in jobtracker.
     (Arun C Murthy via yhemanth)
