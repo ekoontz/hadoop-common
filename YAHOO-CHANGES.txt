@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6538. Sets hadoop.security.authentication to simple by default.
+    (ddas)
+
     HDFS-938.  Replace calls to UGI.getUserName() with 
     UGI.getShortUserName()(boryas)
 
