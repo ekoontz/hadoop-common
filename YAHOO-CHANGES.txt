@@ -62,6 +62,10 @@ the patches applied from issues referenced in CHANGES.txt.
     been created by user tasks with non-writable permissions. 
     (Ravi Gummadi via yhemanth)
 
+    HADOOP-6521. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
+
     MAPREDUCE-433. Use more reliable counters in TestReduceFetch.
     (Christopher Douglas via ddas)
 
