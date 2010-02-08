@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-6419. Fixes a bug in the backported patch. (ddas)
+
     MAPREDUCE-1457. Fixes JobTracker to get the FileSystem object within getStagingAreaDir
     within a privileged block. Fixes Child.java to use the appropriate UGIs while getting
     the TaskUmbilicalProtocol proxy and while executing the task. 
