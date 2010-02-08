@@ -75,6 +75,10 @@ the patches applied from issues referenced in CHANGES.txt.
     been created by user tasks with non-writable permissions. 
     (Ravi Gummadi via yhemanth)
 
+    HDFS-737. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
     HADOOP-6521. Fix backward compatiblity issue with umask when applications 
     use deprecated param dfs.umask in configuration or use 
     FsPermission.setUMask(). (suresh)
