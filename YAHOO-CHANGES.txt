@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6547, HDFS-949, MAPREDUCE-1470. Move Delegation token into Common so that we 
+    can use it for MapReduce also. It is a combined patch for common, hdfs and mr.
+    (jitendra)
+
     HADOOP-6510,HDFS-935,MAPREDUCE-1464. Support for doAs to allow authenticated 
     superuser to impersonate proxy users. It is a combined patch with compatible
     fixes in HDFS and MR. (jitendra)
