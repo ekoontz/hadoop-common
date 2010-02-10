@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab kerberos
+    options. (ddas)
+
     MAPREDUCE-1433. Adds delegation token for MapReduce (ddas)
 
     HADOOP-4359. Fixes a bug in the earlier backport. (ddas)
