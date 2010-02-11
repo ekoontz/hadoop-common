@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1425. archive throws OutOfMemoryError (mahadev) 
+
     MAPREDUCE-1399. The archive command shows a null error message. (nicholas)
 
     HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab kerberos
