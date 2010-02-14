@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-2141. Backport changes made in the original JIRA to aid
+    fast unit tests in Map/Reduce. (Amar Kamat via yhemanth)
+
     HADOOP-6382.  Import the mavenizable pom file structure and adjust
     the build targets and bin scripts. (gkesvan via ltucker)
 
