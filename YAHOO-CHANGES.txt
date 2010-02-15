@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6559. Makes the RPC client automatically re-login when the SASL connection
+    setup fails. This is applicable to only keytab based logins. (ddas)
+
     HADOOP-2141. Backport changes made in the original JIRA to aid
     fast unit tests in Map/Reduce. (Amar Kamat via yhemanth)
 
