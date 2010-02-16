@@ -221,7 +221,13 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Yahoo Hadoop 0.20.100.0 - Unreleased
 
-yahoo-hadoop-0.20.1-3195383003
+yahoo-hadoop-0.20.1-3195383006
+
+    MAPREDUCE-1342. Fixed deadlock in global blacklisting of tasktrackers. 
+    (Amareshwari Sriramadasu via acmurthy)  
+
+    HADOOP-6460. Reinitializes buffers used for serializing responses in ipc
+    server on exceeding maximum response size to free up Java heap. (suresh)
 
     MAPREDUCE-1100. Truncate user logs to prevent TaskTrackers' disks from
     filling up. (Vinod Kumar Vavilapalli via acmurthy) 
@@ -236,8 +242,6 @@ yahoo-hadoop-0.20.1-3195383003
     MAPREDUCE-896. Fix bug in earlier implementation to prevent
     spurious logging in tasktracker logs for absent file paths.
     (Ravi Gummadi via yhemanth)
-
-yahoo-hadoop-0.20.1-3195383002
 
     MAPREDUCE-676. Fix Hadoop Vaidya to ensure it works for map-only jobs. 
     (Suhas Gogate via acmurthy) 
@@ -280,8 +284,6 @@ yahoo-hadoop-0.20.1-3195383002
 
     MAPREDUCE-1063. Document gridmix benchmark. (cdouglas)
 
-yahoo-hadoop-0.20.1-3195383001
-       
     HDFS-758. Changes to report status of decommissioining on the namenode web
     UI. (jitendra)
 
@@ -302,7 +304,6 @@ yahoo-hadoop-0.20.1-3195383001
     unreferenced files in error conditions.
     (Amareshwari Sriramadasu via yhemanth)
 
-yahoo-hadoop-0.20.1-3195383000
     HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
     and suggests using -skpTrash, when moving to trash fails.
     (Boris Shkolnik via suresh)
