@@ -4,7 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-    HADOOP-1026. Fixes a bug in the backport. (ddas)
+    MAPREDUCE-181. Fixes an issue in the use of the right config. (ddas)
+
+    MAPREDUCE-1026. Fixes a bug in the backport. (ddas)
 
     HADOOP-6559. Makes the RPC client automatically re-login when the SASL connection
     setup fails. This is applicable to only keytab based logins. (ddas)
