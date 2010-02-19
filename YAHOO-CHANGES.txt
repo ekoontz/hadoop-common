@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-965. Split the HDFS TestDelegationToken into two tests, of which
+    one proxy users and the other normal users. (jitendra via omalley)
+
     HADOOP-6560. HarFileSystem throws NPE for har://hdfs-/foo (nicholas via
     mahadev)
 
