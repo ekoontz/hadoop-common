@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6545. Changes the Key for the FileSystem to be UGI. (ddas)
+
     HADOOP-6572. Makes sure that SASL encryption and push to responder queue for the 
     RPC response happens atomically. (Kan Zhang via ddas)
 
