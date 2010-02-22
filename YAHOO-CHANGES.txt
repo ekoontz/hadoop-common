@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1430. JobTracker should be able to renew delegation tokens 
+    for the jobs(boryas)
+
     HADOOP-6551, HDFS-986, MAPREDUCE-1503. Change API for tokens to throw
     exceptions instead of returning booleans. (omalley)
 
