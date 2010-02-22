@@ -136,6 +136,21 @@ the patches applied from issues referenced in CHANGES.txt.
     (Ravi Gummadi via yhemanth)
 
 yahoo-hadoop-0.20.1-3195383006
+
+    HADOOP-5879. Read compression level and strategy from Configuration for
+    gzip compression. (He Yongqiang via cdouglas)
+
+    HADOOP-6161. Add get/setEnum methods to Configuration. (cdouglas)
+
+    HADOOP-6382 Mavenize the build.xml targets and update the bin scripts
+    in preparation for publishing POM files (giri kesavan via ltucker)
+
+    HDFS-737. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
+yahoo-hadoop-0.20.1-3195383008
+
     HADOOP-6521. Fix backward compatiblity issue with umask when applications 
     use deprecated param dfs.umask in configuration or use 
     FsPermission.setUMask(). (suresh)
