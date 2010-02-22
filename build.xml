@@ -1448,7 +1448,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-sign " description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
