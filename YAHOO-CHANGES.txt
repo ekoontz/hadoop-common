@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-670. Creates ant target for 10 mins patch test build.
+    (Jothi Padmanabhan via gkesavan)
+
     MAPREDUCE-1430. JobTracker should be able to renew delegation tokens 
     for the jobs(boryas)
 
