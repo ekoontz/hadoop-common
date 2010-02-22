@@ -252,6 +252,11 @@ the patches applied from issues referenced in CHANGES.txt.
 Yahoo Hadoop 0.20.100.0 - Unreleased
 
 yahoo-hadoop-0.20.1-3195383006
+    MAPREDUCE-1372. Fixed a ConcurrentModificationException in jobtracker.
+    (Arun C Murthy via yhemanth)
+
+    MAPREDUCE-1316. Fix jobs' retirement from the JobTracker to prevent memory
+    leaks via stale references. (Amar Kamat via acmurthy)  
 
     MAPREDUCE-1342. Fixed deadlock in global blacklisting of tasktrackers. 
     (Amareshwari Sriramadasu via acmurthy)  
