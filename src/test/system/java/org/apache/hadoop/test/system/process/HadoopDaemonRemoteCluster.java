@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -195,8 +196,10 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
       reader = new BufferedReader(new FileReader(slavesFile));
       String slaveHost = null;
       while ((slaveHost = reader.readLine()) != null) {
-        RemoteProcess slave = new ScriptDaemon(slaveCommand, slaveHost);
-        slaves.put(slaveHost, slave);
+        InetAddress addr = InetAddress.getByName(slaveHost);
+        RemoteProcess slave = new ScriptDaemon(slaveCommand, 
+            addr.getCanonicalHostName());
+        slaves.put(addr.getCanonicalHostName(), slave);
       }
     } finally {
       try {
