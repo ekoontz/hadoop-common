@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1476. Fix the M/R framework to not call commit for special 
+    tasks like job setup/cleanup and task cleanup.
+    (Amareshwari Sriramadasu via yhemanth)
+
     HADOOP-6467.  Performance improvement for liststatus on directories in
     hadoop archives. (mahadev)
 
