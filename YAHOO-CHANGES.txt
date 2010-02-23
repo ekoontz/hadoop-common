@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-464. Fix memory leaks in libhdfs. (Christian Kunz via suresh)
+
     HDFS-946. NameNode should not return full path name when lisitng a
     diretory or getting the status of a file. (hairong)
 
