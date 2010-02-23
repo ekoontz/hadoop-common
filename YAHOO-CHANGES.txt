@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-946. NameNode should not return full path name when lisitng a
+    diretory or getting the status of a file. (hairong)
+
     MAPREDUCE-1398. Fix TaskLauncher to stop waiting for slots on a TIP 
     that is killed / failed. (Amareshwari Sriramadasu via yhemanth)
 
