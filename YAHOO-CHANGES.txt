@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
+    (Kan Zhang via ddas)
+
     MAPREDUCE-1505. Delays construction of the job client until it is really
     required. (Arun C Murthy via ddas)
 
