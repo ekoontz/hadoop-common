@@ -22,11 +22,11 @@ import java.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
@@ -49,9 +49,10 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 43: Adding Delegation Token related APIs
+   * 44: getFileInfo returns HDFSFileStatus;
+   *     getListing returns HDFSFileStatus[].
    */
-  public static final long versionID = 43L;
+  public static final long versionID = 44L;
   
   ///////////////////////////////////////
   // File contents
@@ -266,7 +267,7 @@ public interface ClientProtocol extends VersionedProtocol {
   /**
    * Get a listing of the indicated directory
    */
-  public FileStatus[] getListing(String src) throws IOException;
+  public HdfsFileStatus[] getListing(String src) throws IOException;
 
   ///////////////////////////////////////
   // System issues and management
@@ -434,7 +435,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  public FileStatus getFileInfo(String src) throws IOException;
+  public HdfsFileStatus getFileInfo(String src) throws IOException;
 
   /**
    * Get {@link ContentSummary} rooted at the specified directory.
@@ -497,19 +498,18 @@ public interface ClientProtocol extends VersionedProtocol {
    * Renew an existing delegation token.
    *
    * @param token delegation token obtained earlier
-   * @return True if renewed successfully else false
+   * @return the new expiration time
    * @throws IOException
    */
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
 
   /**
    * Cancel an existing delegation token.
    *
    * @param token delegation token
-   * @return True if canceled successfully else false
    * @throws IOException
    */
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
 }

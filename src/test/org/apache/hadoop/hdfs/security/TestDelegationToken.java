@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -46,10 +47,6 @@ import org.mortbay.log.Log;
 public class TestDelegationToken {
   private MiniDFSCluster cluster;
   Configuration config;
-  final private static String GROUP1_NAME = "group1";
-  final private static String GROUP2_NAME = "group2";
-  final private static String[] GROUP_NAMES = new String[] { GROUP1_NAME,
-      GROUP2_NAME };
   
   @Before
   public void setUp() throws Exception {
@@ -84,8 +81,13 @@ public class TestDelegationToken {
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     // Fake renewer should not be able to renew
-	  Assert.assertFalse(dtSecretManager.renewToken(token, "FakeRenewer"));
-	  Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
+    try {
+  	  dtSecretManager.renewToken(token, "FakeRenewer");
+  	  Assert.fail("should have failed");
+    } catch (AccessControlException ace) {
+      // PASS
+    }
+	  dtSecretManager.renewToken(token, "JobTracker");
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
     byte[] tokenId = token.getIdentifier();
     identifier.readFields(new DataInputStream(
@@ -101,10 +103,15 @@ public class TestDelegationToken {
 	  } catch (InvalidToken e) {
 	    //Success
 	  }
-	  Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
+	  dtSecretManager.renewToken(token, "JobTracker");
 	  Log.info("Sleep beyond the max lifetime");
 	  Thread.sleep(5000);
-	  Assert.assertFalse(dtSecretManager.renewToken(token, "JobTracker"));
+	  try {
+  	  dtSecretManager.renewToken(token, "JobTracker");
+  	  Assert.fail("should have been expired");
+	  } catch (InvalidToken it) {
+	    // PASS
+	  }
   }
   
   @Test 
@@ -114,9 +121,19 @@ public class TestDelegationToken {
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     //Fake renewer should not be able to renew
-    Assert.assertFalse(dtSecretManager.cancelToken(token, "FakeCanceller"));
-    Assert.assertTrue(dtSecretManager.cancelToken(token, "JobTracker"));
-    Assert.assertFalse(dtSecretManager.renewToken(token, "JobTracker"));
+    try {
+      dtSecretManager.cancelToken(token, "FakeCanceller");
+      Assert.fail("should have failed");
+    } catch (AccessControlException ace) {
+      // PASS
+    }
+    dtSecretManager.cancelToken(token, "JobTracker");
+    try {
+      dtSecretManager.renewToken(token, "JobTracker");
+      Assert.fail("should have failed");
+    } catch (InvalidToken it) {
+      // PASS
+    }
   }
   
   @Test
@@ -131,34 +148,7 @@ public class TestDelegationToken {
              new ByteArrayInputStream(tokenId)));
     Log.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
-    Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
+    dtSecretManager.renewToken(token, "JobTracker");
   }
  
-  @Test
-  public void testDelegationTokenWithRealUser() throws IOException {
-    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
-        "RealUser", GROUP_NAMES);
-    final UserGroupInformation proxyUgi = UserGroupInformation.createProxyUser(
-        "proxyUser", ugi);
-    try {
-      Token<DelegationTokenIdentifier> token = proxyUgi
-          .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-            public Token<DelegationTokenIdentifier> run() throws IOException {
-              DistributedFileSystem dfs = (DistributedFileSystem) cluster
-                  .getFileSystem();
-              return dfs.getDelegationToken(new Text("RenewerUser"));
-            }
-          });
-      DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
-      byte[] tokenId = token.getIdentifier();
-      identifier.readFields(new DataInputStream(new ByteArrayInputStream(
-          tokenId)));
-      Assert.assertEquals(identifier.getUser().getUserName(), "proxyUser");
-      Assert.assertEquals(identifier.getUser().getRealUser().getUserName(),
-          "RealUser");
-    } catch (InterruptedException e) {
-      //Do Nothing
-    }
-  }
-  
 }

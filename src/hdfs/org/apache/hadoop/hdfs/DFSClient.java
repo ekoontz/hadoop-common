@@ -186,9 +186,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
-    this.maxBlockAcquireFailures = 
-                          conf.getInt("dfs.client.max.block.acquire.failures",
-                                      MAX_BLOCK_ACQUIRE_FAILURES);
+    this.maxBlockAcquireFailures = getMaxBlockAcquireFailures(conf);
     
     ugi = UserGroupInformation.getCurrentUser();
 
@@ -212,6 +210,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
           + "nameNodeAddr=" + nameNodeAddr + ", rpcNamenode=" + rpcNamenode);
     }
+  }
+
+  static int getMaxBlockAcquireFailures(Configuration conf) {
+    return conf.getInt("dfs.client.max.block.acquire.failures",
+                       MAX_BLOCK_ACQUIRE_FAILURES);
   }
 
   private void checkOpen() throws IOException {
@@ -262,18 +265,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return namenode.getDelegationToken(renewer);
   }
 
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     try {
       return namenode.renewDelegationToken(token);
     } catch (RemoteException re) {
-      throw re.unwrapRemoteException(InvalidToken.class);
+      throw re.unwrapRemoteException(InvalidToken.class,
+                                     AccessControlException.class);
     }
   }
 
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws IOException {
-    return namenode.cancelDelegationToken(token);
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws InvalidToken, IOException {
+    try {
+      namenode.cancelDelegationToken(token);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(InvalidToken.class,
+                                     AccessControlException.class);
+    }
   }
   
   /**
@@ -521,7 +530,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   OutputStream append(String src, int buffersize, Progressable progress
       ) throws IOException {
     checkOpen();
-    FileStatus stat = null;
+    HdfsFileStatus stat = null;
     LocatedBlock lastBlock = null;
     try {
       stat = getFileInfo(src);
@@ -604,10 +613,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return getFileInfo(src) != null;
   }
 
-  /** @deprecated Use getFileStatus() instead */
+  /** @deprecated Use getHdfsFileStatus() instead */
   @Deprecated
   public boolean isDirectory(String src) throws IOException {
-    FileStatus fs = getFileInfo(src);
+    HdfsFileStatus fs = getFileInfo(src);
     if (fs != null)
       return fs.isDir();
     else
@@ -616,7 +625,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
   /**
    */
-  public FileStatus[] listPaths(String src) throws IOException {
+  public HdfsFileStatus[] listPaths(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getListing(src);
@@ -625,7 +634,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
-  public FileStatus getFileInfo(String src) throws IOException {
+  public HdfsFileStatus getFileInfo(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getFileInfo(src);
@@ -1494,6 +1503,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private Block currentBlock = null;
     private long pos = 0;
     private long blockEnd = -1;
+
+    /**
+     * This variable tracks the number of failures since the start of the
+     * most recent user-facing operation. That is to say, it should be reset
+     * whenever the user makes a call on this stream, and if at any point
+     * during the retry logic, the failure count exceeds a threshold,
+     * the errors will be thrown back to the operation.
+     *
+     * Specifically this counts the number of times the client has gone
+     * back to the namenode to get a new list of block locations, and is
+     * capped at maxBlockAcquireFailures
+     */
     private int failures = 0;
 
     /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
@@ -1825,6 +1846,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (closed) {
         throw new IOException("Stream closed");
       }
+      failures = 0;
+
       if (pos < getFileLength()) {
         int retries = 2;
         while (retries > 0) {
@@ -1980,6 +2003,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (closed) {
         throw new IOException("Stream closed");
       }
+      failures = 0;
       long filelen = getFileLength();
       if ((position < 0) || (position >= filelen)) {
         return -1;
@@ -2794,7 +2818,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
      */
     DFSOutputStream(String src, int buffersize, Progressable progress,
-        LocatedBlock lastBlock, FileStatus stat,
+        LocatedBlock lastBlock, HdfsFileStatus stat,
         int bytesPerChecksum) throws IOException {
       this(src, stat.getBlockSize(), progress, bytesPerChecksum);
       initialFileSize = stat.getLen(); // length of file when opened

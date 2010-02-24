@@ -188,8 +188,8 @@ public class Client {
     private String serverPrincipal;  // server's krb5 principal name
     private ConnectionHeader header;              // connection header
     private final ConnectionId remoteId;                // connection id
-    private final AuthMethod authMethod; // authentication method
-    private final boolean useSasl;
+    private AuthMethod authMethod; // authentication method
+    private boolean useSasl;
     private Token<? extends TokenIdentifier> token;
     private SaslRpcClient saslRpcClient;
     
@@ -343,13 +343,13 @@ public class Client {
       }
     }
     
-    private synchronized void setupSaslConnection(final InputStream in2, 
+    private synchronized boolean setupSaslConnection(final InputStream in2, 
         final OutputStream out2) 
-    throws javax.security.sasl.SaslException,IOException,InterruptedException {
+        throws IOException {
       try {
         saslRpcClient = new SaslRpcClient(authMethod, token,
             serverPrincipal);
-        saslRpcClient.saslConnect(in2, out2);
+        return saslRpcClient.saslConnect(in2, out2);
       } catch (javax.security.sasl.SaslException je) {
         if (authMethod == AuthMethod.KERBEROS && 
             UserGroupInformation.isLoginKeytabBased()) {
@@ -357,9 +357,10 @@ public class Client {
           UserGroupInformation.getCurrentUser().reloginFromKeytab();
           //try setting up the connection again
           try {
+            disposeSasl();
             saslRpcClient = new SaslRpcClient(authMethod, token,
                 serverPrincipal);
-            saslRpcClient.saslConnect(in2, out2);
+            return saslRpcClient.saslConnect(in2, out2);
           } catch (javax.security.sasl.SaslException jee) {
             UserGroupInformation.
             setLastUnsuccessfulAuthenticationAttemptTime
@@ -416,15 +417,22 @@ public class Client {
               ticket = ticket.getRealUser();
             }
           }
-          ticket.doAs(new PrivilegedExceptionAction<Object>() {
+          if (ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
             @Override
-            public Object run() throws IOException, InterruptedException {
-              setupSaslConnection(in2, out2);
-              return null;
+            public Boolean run() throws IOException {
+              return setupSaslConnection(in2, out2);
             }
-          });
-          inStream = saslRpcClient.getInputStream(inStream);
-          outStream = saslRpcClient.getOutputStream(outStream);
+          })) {
+            // Sasl connect is successful. Let's set up Sasl i/o streams.
+            inStream = saslRpcClient.getInputStream(inStream);
+            outStream = saslRpcClient.getOutputStream(outStream);
+          } else {
+            // fall back to simple auth because server told us so.
+            authMethod = AuthMethod.SIMPLE;
+            header = new ConnectionHeader(header.getProtocol(),
+                header.getUgi(), authMethod);
+            useSasl = false;
+          }
         }
         this.in = new DataInputStream(new BufferedInputStream
             (new PingInputStream(inStream)));
@@ -622,13 +630,14 @@ public class Client {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
 
-        Call call = calls.remove(id);
+        Call call = calls.get(id);
 
         int state = in.readInt();     // read call status
         if (state == Status.SUCCESS.state) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setValue(value);
+          calls.remove(id);
         } else if (state == Status.ERROR.state) {
           call.setException(new RemoteException(WritableUtils.readString(in),
                                                 WritableUtils.readString(in)));

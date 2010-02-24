@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -38,32 +36,34 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JobHistory.Values;
-import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
-import org.apache.hadoop.mapreduce.JobSubmissionFiles;
-import org.apache.hadoop.mapreduce.split.*;
-import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 
 /*************************************************************
  * JobInProgress maintains all the info for keeping
@@ -295,6 +295,8 @@ public class JobInProgress {
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
     this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    this.profile = new JobProfile(conf.getUser(), jobid, "", "",
+                                  conf.getJobName(), conf.getQueueName());
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
       (numMapTasks + numReduceTasks + 10);
     try {
@@ -392,6 +394,10 @@ public class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
+    
+    // register job's tokens for renewal
+    DelegationTokenRenewal.registerDelegationTokensForRenewal(
+         jobInfo.getJobID(), ts, this.conf);
   }
 
   /**
@@ -659,6 +665,10 @@ public class JobInProgress {
     tasksInited.set(true);
     JobHistory.JobInfo.logInited(profile.getJobID(), this.launchTime, 
                                  numMapTasks, numReduceTasks);
+    
+   // Log the number of map and reduce tasks
+   LOG.info("Job " + jobId + " initialized successfully with " + numMapTasks
+            + " map tasks and " + numReduceTasks + " reduce tasks.");
   }
   
   TaskSplitMetaInfo[] createSplits(org.apache.hadoop.mapreduce.JobID jobId)
@@ -764,38 +774,45 @@ public class JobInProgress {
     return launchedSetup;
   }
 
-  /**
-   * Get the list of map tasks
-   * @return the raw array of maps for this job
+  /** 
+   * Get all the tasks of the desired type in this job.
+   * @param type {@link TaskType} of the tasks required
+   * @return An array of {@link TaskInProgress} matching the given type. 
+   *         Returns an empty array if no tasks are found for the given type.  
    */
-  TaskInProgress[] getMapTasks() {
-    return maps;
-  }
+  TaskInProgress[] getTasks(TaskType type) {
+    TaskInProgress[] tasks = null;
+    switch (type) {
+      case MAP:
+        {
+          tasks = maps;
+        }
+        break;
+      case REDUCE:
+        {
+          tasks = reduces;
+        }
+        break;
+      case JOB_SETUP: 
+        {
+          tasks = setup;
+        }
+        break;
+      case JOB_CLEANUP:
+        {
+          tasks = cleanup;
+        }
+        break;
+      default:
+        {
+          tasks = new TaskInProgress[0];
+        }
+        break;
+    }
     
-  /**
-   * Get the list of cleanup tasks
-   * @return the array of cleanup tasks for the job
-   */
-  TaskInProgress[] getCleanupTasks() {
-    return cleanup;
+    return tasks;
   }
   
-  /**
-   * Get the list of setup tasks
-   * @return the array of setup tasks for the job
-   */
-  TaskInProgress[] getSetupTasks() {
-    return setup;
-  }
-  
-  /**
-   * Get the list of reduce tasks
-   * @return the raw array of reduce tasks for this job
-   */
-  TaskInProgress[] getReduceTasks() {
-    return reduces;
-  }
-
   /**
    * Return the nonLocalRunningMaps
    * @return
@@ -2879,37 +2896,43 @@ public class JobInProgress {
    * from all tables.  Be sure to remove all of this job's tasks
    * from the various tables.
    */
-  synchronized void garbageCollect() {
-    // Cancel task tracker reservation
-    cancelReservedSlots();
-    
-    // Let the JobTracker know that a job is complete
-    jobtracker.getInstrumentation().decWaitingMaps(getJobID(), pendingMaps());
-    jobtracker.getInstrumentation().decWaitingReduces(getJobID(), pendingReduces());
-    jobtracker.storeCompletedJob(this);
-    jobtracker.finalizeJob(this);
-      
-    try {
-      // Definitely remove the local-disk copy of the job file
-      if (localJobFile != null) {
-        localFs.delete(localJobFile, true);
-        localJobFile = null;
+  void garbageCollect() {
+    synchronized(this) {
+      // Cancel task tracker reservation
+      cancelReservedSlots();
+
+      // Let the JobTracker know that a job is complete
+      jobtracker.getInstrumentation().decWaitingMaps(getJobID(), pendingMaps());
+      jobtracker.getInstrumentation().decWaitingReduces(getJobID(), pendingReduces());
+      jobtracker.storeCompletedJob(this);
+      jobtracker.finalizeJob(this);
+
+      try {
+        // Definitely remove the local-disk copy of the job file
+        if (localJobFile != null) {
+          localFs.delete(localJobFile, true);
+          localJobFile = null;
+        }
+
+        Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
+        new CleanupQueue().addToQueue(new PathDeletionContext(
+            jobtracker.getFileSystem(), tempDir.toUri().getPath())); 
+      } catch (IOException e) {
+        LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
       }
 
-      Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
-      new CleanupQueue().addToQueue(new PathDeletionContext(
-          jobtracker.getFileSystem(), tempDir.toUri().getPath())); 
-    } catch (IOException e) {
-      LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
+      cleanUpMetrics();
+      // free up the memory used by the data structures
+      this.nonRunningMapCache = null;
+      this.runningMapCache = null;
+      this.nonRunningReduces = null;
+      this.runningReduces = null;
     }
     
-    cleanUpMetrics();
-    // free up the memory used by the data structures
-    this.nonRunningMapCache = null;
-    this.runningMapCache = null;
-    this.nonRunningReduces = null;
-    this.runningReduces = null;
-
+    // remove jobs delegation tokens
+    if(conf.getBoolean(JobContext.JOB_CANCEL_DELEGATION_TOKEN, true)) {
+      DelegationTokenRenewal.removeDelegationTokenRenewalForJob(jobId);
+    } // else don't remove it.May be used by spawned tasks
   }
 
   /**
@@ -3097,11 +3120,11 @@ public class JobInProgress {
                "submitTime" + EQUALS + job.getStartTime() + StringUtils.COMMA +
                "launchTime" + EQUALS + job.getLaunchTime() + StringUtils.COMMA +
                "finishTime" + EQUALS + job.getFinishTime() + StringUtils.COMMA +
-               "numMaps" + EQUALS + job.getMapTasks().length + 
+               "numMaps" + EQUALS + job.getTasks(TaskType.MAP).length + 
                            StringUtils.COMMA +
                "numSlotsPerMap" + EQUALS + job.getNumSlotsPerMap() + 
                                   StringUtils.COMMA +
-               "numReduces" + EQUALS + job.getReduceTasks().length + 
+               "numReduces" + EQUALS + job.getTasks(TaskType.REDUCE).length + 
                               StringUtils.COMMA +
                "numSlotsPerReduce" + EQUALS + job.getNumSlotsPerReduce() + 
                                      StringUtils.COMMA +

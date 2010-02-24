@@ -177,7 +177,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private DNSToSwitchMapping dnsToSwitchMapping;
   private NetworkTopology clusterMap = new NetworkTopology();
   private int numTaskCacheLevels; // the max level to which we cache tasks
-  private Set<Node> nodesAtMaxLevel = new HashSet<Node>();
+  /**
+   * {@link #nodesAtMaxLevel} is using the keySet from {@link ConcurrentHashMap}
+   * so that it can be safely written to and iterated on via 2 separate threads.
+   * Note: It can only be iterated from a single thread which is feasible since
+   *       the only iteration is done in {@link JobInProgress} under the 
+   *       {@link JobTracker} lock.
+   */
+  private Set<Node> nodesAtMaxLevel = 
+    Collections.newSetFromMap(new ConcurrentHashMap<Node, Boolean>());
   private final TaskScheduler taskScheduler;
   private final List<JobInProgressListener> jobInProgressListeners =
     new CopyOnWriteArrayList<JobInProgressListener>();
@@ -2446,8 +2454,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // and TaskInProgress
   ///////////////////////////////////////////////////////
   void createTaskEntry(TaskAttemptID taskid, String taskTracker, TaskInProgress tip) {
-    LOG.info("Adding task " + 
-      (tip.isCleanupAttempt(taskid) ? "(cleanup)" : "") + 
+    LOG.info("Adding task (" + tip.getAttemptType(taskid) + ") " + 
       "'"  + taskid + "' to tip " + 
       tip.getTIPId() + ", for tracker '" + taskTracker + "'");
 
@@ -2480,9 +2487,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     // taskid --> TIP
-    taskidToTIPMap.remove(taskid);
-        
-    LOG.debug("Removing task '" + taskid + "'");
+    if (taskidToTIPMap.remove(taskid) != null) {   
+      LOG.info("Removing task '" + taskid + "'");
+    }
   }
     
   /**
@@ -2511,7 +2518,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @param job the completed job
    */
   void markCompletedJob(JobInProgress job) {
-    for (TaskInProgress tip : job.getSetupTasks()) {
+    for (TaskInProgress tip : job.getTasks(TaskType.JOB_SETUP)) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
@@ -2521,7 +2528,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
     }
-    for (TaskInProgress tip : job.getMapTasks()) {
+    for (TaskInProgress tip : job.getTasks(TaskType.MAP)) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING && 
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
@@ -2533,7 +2540,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
     }
-    for (TaskInProgress tip : job.getReduceTasks()) {
+    for (TaskInProgress tip : job.getTasks(TaskType.REDUCE)) {
       for (TaskStatus taskStatus : tip.getTaskStatuses()) {
         if (taskStatus.getRunState() != TaskStatus.State.RUNNING &&
             taskStatus.getRunState() != TaskStatus.State.COMMIT_PENDING &&
@@ -2561,8 +2568,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     if (markedTaskSet != null) {
       for (TaskAttemptID taskid : markedTaskSet) {
         removeTaskEntry(taskid);
-        LOG.info("Removed completed task '" + taskid + "' from '" + 
-                 taskTracker + "'");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Removed marked completed task '" + taskid + "' from '" + 
+                    taskTracker + "'");
+        }
       }
       // Clear
       trackerToMarkedTasksMap.remove(taskTracker);
@@ -2580,15 +2589,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * 
    * @param job the job about to be 'retired'
    */
-  synchronized private void removeJobTasks(JobInProgress job) { 
-    for (TaskInProgress tip : job.getMapTasks()) {
-      for (TaskStatus taskStatus : tip.getTaskStatuses()) {
-        removeTaskEntry(taskStatus.getTaskID());
-      }
-    }
-    for (TaskInProgress tip : job.getReduceTasks()) {
-      for (TaskStatus taskStatus : tip.getTaskStatuses()) {
-        removeTaskEntry(taskStatus.getTaskID());
+  synchronized void removeJobTasks(JobInProgress job) { 
+    // iterate over all the task types
+    for (TaskType type : TaskType.values()) {
+      // iterate over all the tips of the type under consideration
+      for (TaskInProgress tip : job.getTasks(type)) {
+        // iterate over all the task-ids in the tip under consideration
+        for (TaskAttemptID id : tip.getAllTaskAttemptIDs()) {
+          // remove the task-id entry from the jobtracker
+          removeTaskEntry(id);
+        }
       }
     }
   }
@@ -2907,25 +2917,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   private Node addHostToNodeMapping(String host, String networkLoc) {
-    Node node;
-    if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
-      node = new NodeBase(host, networkLoc);
-      clusterMap.add(node);
-      if (node.getLevel() < getNumTaskCacheLevels()) {
-        LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
-                  + " Should get at least a level of value: " 
-                  + getNumTaskCacheLevels());
-        try {
-          stopTracker();
-        } catch (IOException ie) {
-          LOG.warn("Exception encountered during shutdown: " 
-                   + StringUtils.stringifyException(ie));
-          System.exit(-1);
+    Node node = null;
+    synchronized (nodesAtMaxLevel) {
+      if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
+        node = new NodeBase(host, networkLoc);
+        clusterMap.add(node);
+        if (node.getLevel() < getNumTaskCacheLevels()) {
+          LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
+              + " Should get at least a level of value: " 
+              + getNumTaskCacheLevels());
+          try {
+            stopTracker();
+          } catch (IOException ie) {
+            LOG.warn("Exception encountered during shutdown: " 
+                + StringUtils.stringifyException(ie));
+            System.exit(-1);
+          }
         }
+        hostnameToNodeMap.put(host, node);
+        // Make an entry for the node at the max level in the cache
+        nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
       }
-      hostnameToNodeMap.put(host, node);
-      // Make an entry for the node at the max level in the cache
-      nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
     }
     return node;
   }
@@ -3697,6 +3709,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }
     }
     myInstrumentation.submitJob(job.getJobConf(), jobId);
+    LOG.info("Job " + jobId + " added successfully for user '" 
+             + job.getJobConf().getUser() + "' to queue '" 
+             + job.getJobConf().getQueueName() + "'");
     return job.getStatus();
   }
 
@@ -3810,11 +3825,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Discard a current delegation token.
    */ 
   @Override
-  public boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
                                        ) throws IOException,
                                                 InterruptedException {
     String user = UserGroupInformation.getCurrentUser().getUserName();
-    return secretManager.cancelToken(token, user);
+    secretManager.cancelToken(token, user);
   }  
   /**
    * Get a new delegation token.
@@ -3837,7 +3852,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Renew a delegation token to extend its lifetime.
    */ 
   @Override
-  public boolean renewDelegationToken(Token<DelegationTokenIdentifier> token
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                       ) throws IOException,
                                                InterruptedException {
     String user = UserGroupInformation.getCurrentUser().getUserName();

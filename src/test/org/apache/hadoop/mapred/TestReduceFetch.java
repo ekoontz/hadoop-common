@@ -106,7 +106,7 @@ public class TestReduceFetch extends TestCase {
     job.set("mapred.job.reduce.input.buffer.percent", "0.0");
     job.setNumMapTasks(MAP_TASKS);
     job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
-    job.set("mapred.job.shuffle.input.buffer.percent", "0.14");
+    job.set("mapred.job.shuffle.input.buffer.percent", "0.05");
     job.setInt("io.sort.factor", 2);
     job.setInt("mapred.inmem.merge.threshold", 4);
     Counters c = runJob(job);
@@ -119,7 +119,7 @@ public class TestReduceFetch extends TestCase {
   }
 
   public void testReduceFromPartialMem() throws Exception {
-    final int MAP_TASKS = 5;
+    final int MAP_TASKS = 7;
     JobConf job = mrCluster.createJobConf();
     job.setNumMapTasks(MAP_TASKS);
     job.setInt("mapred.inmem.merge.threshold", 0);

@@ -4,6 +4,58 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1520. Moves a call to setWorkingDirectory in Child to within
+    a doAs block. (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
+    (Kan Zhang via ddas)
+
+    MAPREDUCE-1505. Delays construction of the job client until it is really
+    required. (Arun C Murthy via ddas)
+
+    HADOOP-6549. TestDoAsEffectiveUser should use ip address of the host
+    for superuser ip check. (jitendra)
+
+    HDFS-464. Fix memory leaks in libhdfs. (Christian Kunz via suresh)
+
+    HDFS-946. NameNode should not return full path name when lisitng a
+    diretory or getting the status of a file. (hairong)
+
+    MAPREDUCE-1398. Fix TaskLauncher to stop waiting for slots on a TIP 
+    that is killed / failed. (Amareshwari Sriramadasu via yhemanth)
+
+    MAPREDUCE-1476. Fix the M/R framework to not call commit for special 
+    tasks like job setup/cleanup and task cleanup.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HADOOP-6467.  Performance improvement for liststatus on directories in
+    hadoop archives. (mahadev)
+
+    HADOOP-6558. archive does not work with distcp -update. (nicholas via
+    mahadev)
+
+    HADOOP-6583. Captures authentication and authorization metrics. (ddas)
+
+    MAPREDUCE-1316. Fixes a memory leak of TaskInProgress instances in
+    the jobtracker. (Amar Kamat via yhemanth)
+
+    MAPREDUCE-670. Creates ant target for 10 mins patch test build.
+    (Jothi Padmanabhan via gkesavan)
+
+    MAPREDUCE-1430. JobTracker should be able to renew delegation tokens 
+    for the jobs(boryas)
+
+    HADOOP-6551, HDFS-986, MAPREDUCE-1503. Change API for tokens to throw
+    exceptions instead of returning booleans. (omalley)
+
+    HADOOP-6545. Changes the Key for the FileSystem to be UGI. (ddas)
+
+    HADOOP-6572. Makes sure that SASL encryption and push to responder queue 
+    for the RPC response happens atomically. (Kan Zhang via ddas)
+
+    HDFS-965. Split the HDFS TestDelegationToken into two tests, of which
+    one proxy users and the other normal users. (jitendra via omalley)
+
     HADOOP-6560. HarFileSystem throws NPE for har://hdfs-/foo (nicholas via
     mahadev)
 
@@ -14,8 +66,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
     MAPREDUCE-1026. Fixes a bug in the backport. (ddas)
 
-    HADOOP-6559. Makes the RPC client automatically re-login when the SASL connection
-    setup fails. This is applicable to only keytab based logins. (ddas)
+    HADOOP-6559. Makes the RPC client automatically re-login when the SASL 
+    connection setup fails. This is applicable to only keytab based logins. 
+    (ddas)
 
     HADOOP-2141. Backport changes made in the original JIRA to aid
     fast unit tests in Map/Reduce. (Amar Kamat via yhemanth)
@@ -27,30 +80,30 @@ the patches applied from issues referenced in CHANGES.txt.
 
     MAPREDUCE-1399. The archive command shows a null error message. (nicholas)
 
-    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab kerberos
-    options. (ddas)
+    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab 
+    kerberos options. (ddas)
 
     MAPREDUCE-1433. Adds delegation token for MapReduce (ddas)
 
     HADOOP-4359. Fixes a bug in the earlier backport. (ddas)
 
-    HADOOP-6547, HDFS-949, MAPREDUCE-1470. Move Delegation token into Common so that we 
-    can use it for MapReduce also. It is a combined patch for common, hdfs and mr.
-    (jitendra)
+    HADOOP-6547, HDFS-949, MAPREDUCE-1470. Move Delegation token into Common 
+    so that we can use it for MapReduce also. It is a combined patch for 
+    common, hdfs and mr. (jitendra)
 
-    HADOOP-6510,HDFS-935,MAPREDUCE-1464. Support for doAs to allow authenticated 
-    superuser to impersonate proxy users. It is a combined patch with compatible
-    fixes in HDFS and MR. (jitendra)
+    HADOOP-6510,HDFS-935,MAPREDUCE-1464. Support for doAs to allow 
+    authenticated superuser to impersonate proxy users. It is a combined 
+    patch with compatible fixes in HDFS and MR. (jitendra)
 
     MAPREDUCE-1435. Fixes the way symlinks are handled when cleaning up
     work directory files. (Ravi Gummadi via yhemanth)
 
     MAPREDUCE-6419. Fixes a bug in the backported patch. (ddas)
 
-    MAPREDUCE-1457. Fixes JobTracker to get the FileSystem object within getStagingAreaDir
-    within a privileged block. Fixes Child.java to use the appropriate UGIs while getting
-    the TaskUmbilicalProtocol proxy and while executing the task. 
-    Contributed by Jakob Homan. (ddas)
+    MAPREDUCE-1457. Fixes JobTracker to get the FileSystem object within 
+    getStagingAreaDir within a privileged block. Fixes Child.java to use the
+    appropriate UGIs while getting the TaskUmbilicalProtocol proxy and while
+    executing the task. Contributed by Jakob Homan. (ddas)
 
     MAPREDUCE-1440. Replace the long user name in MapReduce with the local
     name. (ddas) 
@@ -78,9 +131,10 @@ the patches applied from issues referenced in CHANGES.txt.
     the copying of files from the hdfs. (Devaraj Das vi boryas)
 
     MAPREDUCE-1383. Automates fetching of delegation tokens in File*Formats
-    Distributed Cache and Distcp. Also, provides a config mapreduce.job.hdfs-servers
-    that the jobs can populate with a comma separated list of namenodes. 
-    The job client automatically fetches delegation tokens from those namenodes.
+    Distributed Cache and Distcp. Also, provides a config 
+    mapreduce.job.hdfs-servers that the jobs can populate with a comma 
+    separated list of namenodes. The job client automatically fetches 
+    delegation tokens from those namenodes.
 
     HADOOP-6337. Update FilterInitializer class to be more visible
     and take a conf for further development. (jhoman)
@@ -112,6 +166,30 @@ the patches applied from issues referenced in CHANGES.txt.
     MAPREDUCE-896. Enhance tasktracker to cleanup files that might have 
     been created by user tasks with non-writable permissions. 
     (Ravi Gummadi via yhemanth)
+
+yahoo-hadoop-0.20.1-3195383006
+
+    HADOOP-5879. Read compression level and strategy from Configuration for
+    gzip compression. (He Yongqiang via cdouglas)
+
+    HADOOP-6161. Add get/setEnum methods to Configuration. (cdouglas)
+
+    HADOOP-6382 Mavenize the build.xml targets and update the bin scripts
+    in preparation for publishing POM files (giri kesavan via ltucker)
+
+    HDFS-737. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
+    HADOOP-6577. Add hidden configuration option "ipc.server.max.response.size"
+    to change the default 1 MB, the maximum size when large IPC handler 
+    response buffer is reset. (suresh)
+
+yahoo-hadoop-0.20.1-3195383008
+
+    HADOOP-6521. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
 
     HDFS-737. Add full path name of the file to the block information and 
     summary of total number of files, blocks, live and deadnodes to 
@@ -188,9 +266,9 @@ the patches applied from issues referenced in CHANGES.txt.
     HADOOP-5771. Implements unit tests for LinuxTaskController.
     (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
 
-    HADOOP-4656, HDFS-685, MAPREDUCE-1083. Use the user-to-groups mapping service
-    in the NameNode and JobTracker. Combined patch for these 3 jiras otherwise 
-    tests fail. (Jitendra Nath Pandey)
+    HADOOP-4656, HDFS-685, MAPREDUCE-1083. Use the user-to-groups mapping 
+    service in the NameNode and JobTracker. Combined patch for these 3 jiras 
+    otherwise tests fail. (Jitendra Nath Pandey)
 
     MAPREDUCE-1250. Refactor job token to use a common token interface.
     (Jitendra Nath Pandey)
@@ -230,6 +308,11 @@ the patches applied from issues referenced in CHANGES.txt.
 Yahoo Hadoop 0.20.100.0 - Unreleased
 
 yahoo-hadoop-0.20.1-3195383006
+    MAPREDUCE-1372. Fixed a ConcurrentModificationException in jobtracker.
+    (Arun C Murthy via yhemanth)
+
+    MAPREDUCE-1316. Fix jobs' retirement from the JobTracker to prevent memory
+    leaks via stale references. (Amar Kamat via acmurthy)  
 
     MAPREDUCE-1342. Fixed deadlock in global blacklisting of tasktrackers. 
     (Amareshwari Sriramadasu via acmurthy)  
@@ -274,7 +357,8 @@ yahoo-hadoop-0.20.1-3195383006
     HADOOP-6386. NameNode's HttpServer can't instantiate InetSocketAddress:
     IllegalArgumentException is thrown. (cos)
 
-    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented. (suresh)
+    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented. 
+    (suresh)
  
     MAPREDUCE-1185. Redirect running job url to history url if job is already 
     retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
