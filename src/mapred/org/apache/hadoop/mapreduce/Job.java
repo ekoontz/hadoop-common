@@ -47,7 +47,6 @@ public class Job extends JobContext {
 
   public Job(Configuration conf) throws IOException {
     super(conf, null);
-    jobClient = new JobClient((JobConf) getConfiguration());
   }
 
   public Job(Configuration conf, String jobName) throws IOException {
@@ -55,10 +54,19 @@ public class Job extends JobContext {
     setJobName(jobName);
   }
 
+  JobClient getJobClient() {
+    return jobClient;
+  }
+  
   private void ensureState(JobState state) throws IllegalStateException {
     if (state != this.state) {
       throw new IllegalStateException("Job in state "+ this.state + 
                                       " instead of " + state);
+    }
+
+    if (state == JobState.RUNNING && jobClient == null) {
+      throw new IllegalStateException("Job in state " + JobState.RUNNING + 
+                                      " however jobClient is not initialized!");
     }
   }
 
@@ -387,6 +395,15 @@ public class Job extends JobContext {
       throw new IOException(attr + " is incompatible with " + msg + " mode.");
     }    
   }
+  
+  /**
+   * Sets the flag that will allow the JobTracker to cancel the HDFS delegation
+   * tokens upon job completion. Defaults to true.
+   */
+  public void setCancelDelegationTokenUponJobCompletion(boolean value) {
+    ensureState(JobState.DEFINE);
+    conf.setBoolean(JOB_CANCEL_DELEGATION_TOKEN, value);
+  }
 
   /**
    * Default to the new APIs unless they are explicitly set or the old mapper or
@@ -441,9 +458,20 @@ public class Job extends JobContext {
                               ClassNotFoundException {
     ensureState(JobState.DEFINE);
     setUseNewAPI();
+    
+    // Connect to the JobTracker and submit the job
+    connect();
     info = jobClient.submitJobInternal(conf);
     state = JobState.RUNNING;
    }
+  
+  /**
+   * Open a connection to the JobTracker
+   * @throws IOException
+   */
+  private void connect() throws IOException {
+    jobClient = new JobClient((JobConf) getConfiguration());
+  }
   
   /**
    * Submit the job to the cluster and wait for it to finish.

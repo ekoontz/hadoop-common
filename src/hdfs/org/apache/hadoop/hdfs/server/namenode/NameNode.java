@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.FileSystem;
@@ -251,6 +250,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     this.httpServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
     this.httpServer.addInternalServlet("checksum", "/fileChecksum/*",
         FileChecksumServlets.RedirectServlet.class);
+    this.httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
+        ContentSummaryServlet.class);
     this.httpServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info
@@ -360,14 +361,16 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.getDelegationToken(renewer);
   }
 
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  @Override
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     return namesystem.renewDelegationToken(token);
   }
 
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+  @Override
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    return namesystem.cancelDelegationToken(token);
+    namesystem.cancelDelegationToken(token);
   }
   
   /** {@inheritDoc} */
@@ -582,8 +585,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   /**
    */
-  public FileStatus[] getListing(String src) throws IOException {
-    FileStatus[] files = namesystem.getListing(src);
+  public HdfsFileStatus[] getListing(String src) throws IOException {
+    HdfsFileStatus[] files = namesystem.getListing(src);
     if (files != null) {
       myMetrics.numGetListingOps.inc();
     }
@@ -597,7 +600,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @return object containing information regarding the file
    *         or null if file not found
    */
-  public FileStatus getFileInfo(String src)  throws IOException {
+  public HdfsFileStatus getFileInfo(String src)  throws IOException {
     myMetrics.numFileInfoOps.inc();
     return namesystem.getFileInfo(src);
   }
