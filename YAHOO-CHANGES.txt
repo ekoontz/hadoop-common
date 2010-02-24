@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1466. Added a private configuration variable 
+    mapreduce.input.num.files, to store number of input files 
+    being processed by M/R job. (Arun Murthy via yhemanth)
+
     MAPREDUCE-1403. Save file-sizes of each of the artifacts in 
     DistributedCache in the JobConf (Arun Murthy via yhemanth)
 
