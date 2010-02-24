@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1403. Save file-sizes of each of the artifacts in 
+    DistributedCache in the JobConf (Arun Murthy via yhemanth)
+
     HADOOP-6543. Fixes a compilation problem in the original commit. (ddas)
 
     MAPREDUCE-1520. Moves a call to setWorkingDirectory in Child to within
