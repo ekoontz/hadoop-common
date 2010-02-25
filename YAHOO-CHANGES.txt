@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1354. Make incremental changes in jobtracker for
+    improving scalability (acmurthy)
+
     HDFS-999.Secondary namenode should login using kerberos if security
     is configured(boryas)
 
