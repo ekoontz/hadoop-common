@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6579. Add a mechanism for encoding and decoding Tokens in to
+    url-safe strings. (omalley)
+
     MAPREDUCE-1354. Make incremental changes in jobtracker for
     improving scalability (acmurthy)
 
