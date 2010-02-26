@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-991. Allow use of delegation tokens to authenticate to the 
+    HDFS servlets. (omalley)
+
     HADOOP-1849. Add undocumented configuration parameter for per handler 
     call queue size in IPC Server. (shv)
     
