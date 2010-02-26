@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-985. HDFS should issue multiple RPCs for listing a large directory.
+    (hairong)
+
     HDFS-1000. Updates libhdfs to use the new UGI. (ddas)
 
     MAPREDUCE-1532. Ensures all filesystem operations at the client is done
