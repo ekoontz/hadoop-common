@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6569. FsShell#cat should avoid calling unnecessary getFileStatus
+    before opening a file to read. (hairong)
+
     HDFS-985. HDFS should issue multiple RPCs for listing a large directory.
     (hairong)
 
