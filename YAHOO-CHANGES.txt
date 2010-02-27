@@ -3,6 +3,10 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
+
+    HADOOP-1849. Add undocumented configuration parameter for per handler 
+    call queue size in IPC Server. (shv)
+    
     HADOOP-6599. Split existing RpcMetrics with summary in RpcMetrics and
     details information in RpcDetailedMetrics. (suresh)
 
