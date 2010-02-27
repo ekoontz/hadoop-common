@@ -60,7 +60,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -132,7 +132,7 @@ public class JobInProgress {
   JobPriority priority = JobPriority.NORMAL;
   final JobTracker jobtracker;
   
-  protected TokenStorage tokenStorage;
+  protected Credentials tokenStorage;
 
   // NetworkTopology Node to the set of TIPs
   Map<Node, List<TaskInProgress>> nonRunningMapCache;
@@ -333,7 +333,7 @@ public class JobInProgress {
   }
 
   JobInProgress(JobTracker jobtracker, final JobConf default_conf, 
-      JobInfo jobInfo, int rCount, TokenStorage ts) 
+      JobInfo jobInfo, int rCount, Credentials ts) 
   throws IOException, InterruptedException {
     this.restartCount = rCount;
     this.jobId = JobID.downgrade(jobInfo.getJobID());
@@ -3216,7 +3216,7 @@ public class JobInProgress {
     
     // add this token to the tokenStorage
     if(tokenStorage == null)
-      tokenStorage = new TokenStorage();
+      tokenStorage = new Credentials();
 
     TokenCache.setJobToken(token, tokenStorage);
         
