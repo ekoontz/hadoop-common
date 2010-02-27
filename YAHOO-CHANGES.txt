@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-992. Refactors block access token implementation to conform to the 
+    generic Token interface. (Kan Zhang via ddas)
+
     HADOOP-6584. Adds KrbSSL connector for jetty. (Jakob Homan via ddas)
 
     HADOOP-6589. Add a framework for better error messages when rpc connections
