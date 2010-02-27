@@ -4,6 +4,7 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6586. Log authentication and authorization failures and successes(boryas)
     HDFS-991. Allow use of delegation tokens to authenticate to the 
     HDFS servlets. (omalley)
 
