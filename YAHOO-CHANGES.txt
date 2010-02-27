@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6600,HDFS-1003,MAPREDUCE-1539. mechanism for authorization check for 
+    inter-server protocols(boryas)
+
     HADOOP-6580,HDFS-993,MAPREDUCE-1516. UGI should contain authentication method.
     Namenode and JT should issue a delegation token only for kerberos authenticated 
     clients. (jitendra)
