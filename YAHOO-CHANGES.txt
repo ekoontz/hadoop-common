@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1455. Fixes a testcase in the earlier patch. 
+    (Ravi Gummadi via ddas)
+
     HDFS-992. Refactors block access token implementation to conform to the 
     generic Token interface. (Kan Zhang via ddas)
 
