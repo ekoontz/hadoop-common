@@ -4,7 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-   
+    MAPREDUCE-1155. Just pulls out the TestStreamingExitStatus part of the
+    patch from jira (that went to 0.22). (ddas)
+ 
     HADOOP-6600. Fix for branch backport only. Comparing of user should use
     equals. (boryas).
 
