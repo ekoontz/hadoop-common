@@ -34,9 +34,11 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.StringUtils;
@@ -67,6 +69,22 @@ public class TestDelegationTokenRenewal {
     System.out.println("filesystem uri = " + FileSystem.getDefaultUri(conf).toString());
   }
   
+  private static class MyDelegationTokenSecretManager extends DelegationTokenSecretManager {
+
+    public MyDelegationTokenSecretManager(long delegationKeyUpdateInterval,
+        long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
+        long delegationTokenRemoverScanInterval, FSNamesystem namesystem) {
+      super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
+          delegationTokenRenewInterval, delegationTokenRemoverScanInterval,
+          namesystem);
+    }
+    
+    @Override //DelegationTokenSecretManager
+    public void logUpdateMasterKey(DelegationKey key) throws IOException {
+      return;
+    }
+  }
+  
   /**
    * add some extra functionality for testing
    * 1. toString();
@@ -77,7 +95,7 @@ public class TestDelegationTokenRenewal {
     public static final String CANCELED = "CANCELED";
 
     public MyToken(DelegationTokenIdentifier dtId1,
-        DelegationTokenSecretManager sm) {
+        MyDelegationTokenSecretManager sm) {
       super(dtId1, sm);
       status = "GOOD";
     }
@@ -165,11 +183,11 @@ public class TestDelegationTokenRenewal {
     throws IOException {
     Text user1= new Text("user1");
     
-    DelegationTokenSecretManager sm = new DelegationTokenSecretManager(
+    MyDelegationTokenSecretManager sm = new MyDelegationTokenSecretManager(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT,
-        3600000);
+        3600000, null);
     sm.startThreads();
     
     DelegationTokenIdentifier dtId1 = 
@@ -220,7 +238,7 @@ public class TestDelegationTokenRenewal {
     String nn2 = DelegationTokenRenewal.SCHEME + "://host2:0";
     String nn3 = DelegationTokenRenewal.SCHEME + "://host3:0";
     
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     
     // register the token for renewal
     ts.addToken(new Text(nn1), token1);
@@ -233,7 +251,7 @@ public class TestDelegationTokenRenewal {
     // first 3 initial renewals + 1 real
     int numberOfExpectedRenewals = 3+1; 
     
-    int attempts = 4;
+    int attempts = 10;
     while(attempts-- > 0) {
       try {
         Thread.sleep(3*1000); // sleep 3 seconds, so it has time to renew
@@ -255,7 +273,7 @@ public class TestDelegationTokenRenewal {
     // add another token ( that expires in 2 secs). Then remove it, before
     // time is up.
     // Wait for 3 secs , and make sure no renews were called
-    ts = new TokenStorage();
+    ts = new Credentials();
     MyToken token4 = dfs.getDelegationToken(new Text("user4"));
     
     //to cause this one to be set for renew in 2 secs
@@ -269,16 +287,10 @@ public class TestDelegationTokenRenewal {
     JobID jid2 = new JobID("job2",1);
     DelegationTokenRenewal.registerDelegationTokensForRenewal(jid2, ts, conf);
     DelegationTokenRenewal.removeDelegationTokenRenewalForJob(jid2);
-    numberOfExpectedRenewals++; // one more initial renewal
-    attempts = 4;
-    while(attempts-- > 0) {
-      try {
-        Thread.sleep(3*1000); // sleep 3 seconds, so it has time to renew
-      } catch (InterruptedException e) {}
-      // since we cannot guarantee timely execution - let's give few chances
-      if(dfs.getCounter()==numberOfExpectedRenewals)
-        break;
-    }
+    numberOfExpectedRenewals = dfs.getCounter(); // number of renewals so far
+    try {
+      Thread.sleep(6*1000); // sleep 6 seconds, so it has time to renew
+    } catch (InterruptedException e) {}
     System.out.println("Counter = " + dfs.getCounter() + ";t="+dfs.getToken());
     
     // counter and the token should stil be the old ones

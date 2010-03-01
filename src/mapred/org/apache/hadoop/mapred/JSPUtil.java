@@ -20,37 +20,130 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.jsp.JspWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.mapred.JobHistory.JobInfo;
+import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobTracker.RetireJobInfo;
+import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
 
 class JSPUtil {
-  private static final String PRIVATE_ACTIONS_KEY = "webinterface.private.actions";
-  
-  public static final Configuration conf = new Configuration();
+  static final String PRIVATE_ACTIONS_KEY = "webinterface.private.actions";
 
   //LRU based cache
   private static final Map<String, JobInfo> jobHistoryCache = 
     new LinkedHashMap<String, JobInfo>(); 
 
-  private static final int CACHE_SIZE = 
-    conf.getInt("mapred.job.tracker.jobhistory.lru.cache.size", 5);
-
   private static final Log LOG = LogFactory.getLog(JSPUtil.class);
+
+  /**
+   * Wraps the {@link JobInProgress} object and contains boolean for
+   * 'job view access' allowed or not.
+   * This class is only for usage by JSPs and Servlets.
+   */
+  static class JobWithViewAccessCheck {
+    private JobInProgress job = null;
+    
+    // true if user is authorized to view this job
+    private boolean isViewAllowed = true;
+
+    JobWithViewAccessCheck(JobInProgress job) {
+      this.job = job;
+    }
+
+    JobInProgress getJob() {
+      return job;
+    }
+
+    boolean isViewJobAllowed() {
+      return isViewAllowed;
+    }
+
+    void setViewAccess(boolean isViewAllowed) {
+      this.isViewAllowed = isViewAllowed;
+    }
+  }
+
+  /**
+   * Validates if current user can view the job.
+   * If user is not authorized to view the job, this method will modify the
+   * response and forwards to an error page and returns Job with
+   * viewJobAccess flag set to false.
+   * @return JobWithViewAccessCheck object(contains JobInProgress object and
+   *         viewJobAccess flag). Callers of this method will check the flag
+   *         and decide if view should be allowed or not. Job will be null if
+   *         the job with given jobid doesnot exist at the JobTracker.
+   */
+  public static JobWithViewAccessCheck checkAccessAndGetJob(JobTracker jt,
+      JobID jobid, HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
+    final JobInProgress job = jt.getJob(jobid);
+    JobWithViewAccessCheck myJob = new JobWithViewAccessCheck(job);
+
+    String user = request.getRemoteUser();
+    if (user != null && job != null && jt.isJobLevelAuthorizationEnabled()) {
+      final UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser(user);
+      try {
+        ugi.doAs(new PrivilegedExceptionAction<Void>() {
+          public Void run() throws IOException, ServletException {
+
+            // checks job view permission
+            job.checkAccess(ugi, JobACL.VIEW_JOB);
+            return null;
+          }
+        });
+      } catch (AccessControlException e) {
+        String errMsg = "User " + ugi.getShortUserName() +
+            " failed to view " + jobid + "!<br><br>" + e.getMessage() +
+            "<hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>";
+        JSPUtil.setErrorAndForward(errMsg, request, response);
+        myJob.setViewAccess(false);
+      } catch (InterruptedException e) {
+        String errMsg = " Interrupted while trying to access " + jobid +
+        "<hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>";
+        JSPUtil.setErrorAndForward(errMsg, request, response);
+        myJob.setViewAccess(false);
+      }
+    }
+    return myJob;
+  }
+
+  /**
+   * Sets error code SC_UNAUTHORIZED in response and forwards to
+   * error page which contains error message and a back link.
+   */
+  public static void setErrorAndForward(String errMsg,
+      HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
+    request.setAttribute("error.msg", errMsg);
+    RequestDispatcher dispatcher = request.getRequestDispatcher(
+        "/job_authorization_error.jsp");
+    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    dispatcher.forward(request, response);
+  }
+
   /**
    * Method used to process the request from the job page based on the 
    * request which it has received. For example like changing priority.
@@ -59,33 +152,99 @@ class JSPUtil {
    * @param response HTTP response object.
    * @param tracker {@link JobTracker} instance
    * @throws IOException
+   * @throws InterruptedException 
+   * @throws ServletException 
    */
   public static void processButtons(HttpServletRequest request,
-      HttpServletResponse response, JobTracker tracker) throws IOException {
+      HttpServletResponse response, final JobTracker tracker)
+      throws IOException, InterruptedException, ServletException {
 
-    if (conf.getBoolean(PRIVATE_ACTIONS_KEY, false)
+	String user = request.getRemoteUser();
+    if (privateActionsAllowed(tracker.conf)
         && request.getParameter("killJobs") != null) {
-      String[] jobs = request.getParameterValues("jobCheckBox");
-      if (jobs != null) {
-        for (String job : jobs) {
-          tracker.killJob(JobID.forName(job));
+        String[] jobs = request.getParameterValues("jobCheckBox");
+        if (jobs != null) {
+          boolean notAuthorized = false;
+          String errMsg = "User " + user
+              + " failed to kill the following job(s)!<br><br>";
+          for (String job : jobs) {
+            final JobID jobId = JobID.forName(job);
+            if (user != null) {
+              UserGroupInformation ugi =
+                UserGroupInformation.createRemoteUser(user);
+              try {
+                ugi.doAs(new PrivilegedExceptionAction<Void>() {
+                  public Void run() throws IOException{
+
+                    tracker.killJob(jobId);// checks job modify permission
+                    return null;
+                  }
+                });
+              } catch(AccessControlException e) {
+                errMsg = errMsg.concat("<br>" + e.getMessage());
+                notAuthorized = true;
+                // We don't return right away so that we can try killing other
+                // jobs that are requested to be killed.
+                continue;
+              }
+            }
+            else {// no authorization needed
+              tracker.killJob(jobId);
+            }
+          }
+          if (notAuthorized) {// user is not authorized to kill some/all of jobs
+            errMsg = errMsg.concat(
+              "<br><hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>");
+            setErrorAndForward(errMsg, request, response);
+            return;
+          }
         }
       }
-    }
 
-    if (conf.getBoolean(PRIVATE_ACTIONS_KEY, false) && 
+    if (privateActionsAllowed(tracker.conf) && 
           request.getParameter("changeJobPriority") != null) {
-      String[] jobs = request.getParameterValues("jobCheckBox");
+        String[] jobs = request.getParameterValues("jobCheckBox");
+        if (jobs != null) {
+          final JobPriority jobPri = JobPriority.valueOf(request
+              .getParameter("setJobPriority"));
+          boolean notAuthorized = false;
+          String errMsg = "User " + user
+              + " failed to set priority for the following job(s)!<br><br>";
 
-      if (jobs != null) {
-        JobPriority jobPri = JobPriority.valueOf(request
-            .getParameter("setJobPriority"));
+          for (String job : jobs) {
+            final JobID jobId = JobID.forName(job);
+            if (user != null) {
+              UserGroupInformation ugi = UserGroupInformation.
+                  createRemoteUser(user);
+              try {
+                ugi.doAs(new PrivilegedExceptionAction<Void>() {
+                  public Void run() throws IOException{
 
-        for (String job : jobs) {
-          tracker.setJobPriority(JobID.forName(job), jobPri);
+                    // checks job modify permission
+                    tracker.setJobPriority(jobId, jobPri);
+                    return null;
+                  }
+                });
+              } catch(AccessControlException e) {
+                errMsg = errMsg.concat("<br>" + e.getMessage());
+                notAuthorized = true;
+                // We don't return right away so that we can try operating on
+                // other jobs.
+                continue;
+              }
+            }
+            else {// no authorization needed
+              tracker.setJobPriority(jobId, jobPri);
+            }
+          }
+          if (notAuthorized) {// user is not authorized to kill some/all of jobs
+            errMsg = errMsg.concat(
+              "<br><hr><a href=\"jobtracker.jsp\">Go back to JobTracker</a><br>");
+            setErrorAndForward(errMsg, request, response);
+            return;
+          }
         }
       }
-    }
   }
 
   /**
@@ -99,11 +258,10 @@ class JSPUtil {
    * @throws IOException
    */
   public static String generateJobTable(String label, Collection<JobInProgress> jobs
-      , int refresh, int rowId) throws IOException {
+      , int refresh, int rowId, JobConf conf) throws IOException {
 
     boolean isModifiable = label.equals("Running") 
-                                && conf.getBoolean(
-                                      PRIVATE_ACTIONS_KEY, false);
+                                && privateActionsAllowed(conf);
     StringBuffer sb = new StringBuffer();
     
     sb.append("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n");
@@ -158,9 +316,10 @@ class JSPUtil {
         int desiredReduces = job.desiredReduces();
         int completedMaps = job.finishedMaps();
         int completedReduces = job.finishedReduces();
-        String name = profile.getJobName();
+        String name = HtmlQuoting.quoteHtmlChars(profile.getJobName());
         String jobpri = job.getPriority().toString();
-        String schedulingInfo = job.getStatus().getSchedulingInfo();
+        String schedulingInfo =
+          HtmlQuoting.quoteHtmlChars(job.getStatus().getSchedulingInfo());
 
         if (isModifiable) {
           sb.append("<tr><td><input TYPE=\"checkbox\" " +
@@ -175,7 +334,8 @@ class JSPUtil {
             + "\"><a href=\"jobdetails.jsp?jobid=" + jobid + "&refresh="
             + refresh + "\">" + jobid + "</a></td>" + "<td id=\"priority_"
             + rowId + "\">" + jobpri + "</td>" + "<td id=\"user_" + rowId
-            + "\">" + profile.getUser() + "</td>" + "<td id=\"name_" + rowId
+            + "\">" + HtmlQuoting.quoteHtmlChars(profile.getUser()) +
+              "</td>" + "<td id=\"name_" + rowId
             + "\">" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + "<td>"
             + StringUtils.formatPercent(status.mapProgress(), 2)
             + ServletUtil.percentageGraph(status.mapProgress() * 100, 80)
@@ -241,17 +401,16 @@ class JSPUtil {
             "<td id=\"job_" + rowId + "\">" + 
             
               (historyFileUrl == null ? "" :
-              "<a href=\"jobdetailshistory.jsp?jobid=" + 
-              info.status.getJobId() + "&logFile=" + historyFileUrl + "\">") + 
+              "<a href=\"jobdetailshistory.jsp?logFile=" + historyFileUrl + "\">") + 
               
               info.status.getJobId() + "</a></td>" +
             
             "<td id=\"priority_" + rowId + "\">" + 
               info.status.getJobPriority().toString() + "</td>" +
-            "<td id=\"user_" + rowId + "\">" + info.profile.getUser() 
-              + "</td>" +
-            "<td id=\"name_" + rowId + "\">" + info.profile.getJobName() 
-              + "</td>" +
+            "<td id=\"user_" + rowId + "\">" +
+              HtmlQuoting.quoteHtmlChars(info.profile.getUser()) + "</td>" +
+            "<td id=\"name_" + rowId + "\">" +
+              HtmlQuoting.quoteHtmlChars(info.profile.getJobName()) + "</td>" +
             "<td>" + JobStatus.getJobRunState(info.status.getRunState()) 
               + "</td>" +
             "<td>" + new Date(info.status.getStartTime()) + "</td>" +
@@ -266,9 +425,9 @@ class JSPUtil {
                info.status.reduceProgress() * 100, 80) + 
               "</td>" +
             
-            "<td>" + info.status.getSchedulingInfo() + "</td>" +
-            
-            "</tr>\n");
+            "<td>" +
+            HtmlQuoting.quoteHtmlChars(info.status.getSchedulingInfo()) +
+            "</td>" + "</tr>\n");
         rowId++;
       }
     }
@@ -276,19 +435,42 @@ class JSPUtil {
     return sb.toString();
   }
 
-  static JobInfo getJobInfo(HttpServletRequest request, FileSystem fs) 
-      throws IOException {
-    String jobid = request.getParameter("jobid");
-    String logFile = request.getParameter("logFile");
+  static Path getJobConfFilePath(Path logFile) {
+    String[] jobDetails = logFile.getName().split("_");
+    String jobId = getJobID(logFile.getName());
+    String jobUniqueString =
+        jobDetails[0] + "_" + jobDetails[1] + "_" + jobId;
+    Path logDir = logFile.getParent();
+    Path jobFilePath = new Path(logDir, jobUniqueString + "_conf.xml");
+    return jobFilePath;
+  }
+
+  /**
+   * Read a job-history log file and construct the corresponding {@link JobInfo}
+   * . Also cache the {@link JobInfo} for quick serving further requests.
+   * 
+   * @param logFile
+   * @param fs
+   * @param jobTracker
+   * @return JobInfo
+   * @throws IOException
+   */
+  static JobInfo getJobInfo(Path logFile, FileSystem fs,
+      JobTracker jobTracker) throws IOException {
+    String jobid = getJobID(logFile.getName());
+    JobInfo jobInfo = null;
     synchronized(jobHistoryCache) {
-      JobInfo jobInfo = jobHistoryCache.remove(jobid);
+      jobInfo = jobHistoryCache.remove(jobid);
       if (jobInfo == null) {
         jobInfo = new JobHistory.JobInfo(jobid);
         LOG.info("Loading Job History file "+jobid + ".   Cache size is " +
             jobHistoryCache.size());
-        DefaultJobHistoryParser.parseJobTasks( logFile, jobInfo, fs) ; 
+        DefaultJobHistoryParser.parseJobTasks(logFile.toUri().getPath(),
+            jobInfo, logFile.getFileSystem(jobTracker.conf));
       }
       jobHistoryCache.put(jobid, jobInfo);
+      int CACHE_SIZE = 
+        jobTracker.conf.getInt("mapred.job.tracker.jobhistory.lru.cache.size", 5);
       if (jobHistoryCache.size() > CACHE_SIZE) {
         Iterator<Map.Entry<String, JobInfo>> it = 
           jobHistoryCache.entrySet().iterator();
@@ -296,7 +478,106 @@ class JSPUtil {
         it.remove();
         LOG.info("Job History file removed form cache "+removeJobId);
       }
-      return jobInfo;
     }
+
+    jobTracker.getJobACLsManager().checkAccess(JobID.forName(jobid),
+        UserGroupInformation.getCurrentUser(), JobACL.VIEW_JOB,
+        jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB));
+    return jobInfo;
+  }
+
+  /**
+   * Check the access for users to view job-history pages.
+   * 
+   * @param request
+   * @param response
+   * @param jobTracker
+   * @param fs
+   * @param logFile
+   * @return the job if authorization is disabled or if the authorization checks
+   *         pass. Otherwise return null.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws ServletException
+   */
+  static JobInfo checkAccessAndGetJobInfo(HttpServletRequest request,
+      HttpServletResponse response, final JobTracker jobTracker,
+      final FileSystem fs, final Path logFile) throws IOException,
+      InterruptedException, ServletException {
+    String jobid = getJobID(logFile.getName());
+    String user = request.getRemoteUser();
+    JobInfo job = null;
+    if (user != null) {
+      try {
+        final UserGroupInformation ugi =
+            UserGroupInformation.createRemoteUser(user);
+        job =
+            ugi.doAs(new PrivilegedExceptionAction<JobHistory.JobInfo>() {
+              public JobInfo run() throws IOException {
+                // checks job view permission
+                JobInfo jobInfo = JSPUtil.getJobInfo(logFile, fs, jobTracker);
+                return jobInfo;
+              }
+            });
+      } catch (AccessControlException e) {
+        String errMsg =
+            String.format(
+                "User %s failed to view %s!<br><br>%s"
+                    + "<hr>"
+                    + "<a href=\"jobhistory.jsp\">Go back to JobHistory</a><br>"
+                    + "<a href=\"jobtracker.jsp\">Go back to JobTracker</a>",
+                user, jobid, e.getMessage());
+        JSPUtil.setErrorAndForward(errMsg, request, response);
+        return null;
+      }
+    } else {
+      // no authorization needed
+      job = JSPUtil.getJobInfo(logFile, fs, jobTracker);
+    }
+    return job;
+  }
+
+  static String getJobID(String historyFileName) {
+    String[] jobDetails = historyFileName.split("_");
+    return jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
+  }
+
+  static String getUserName(String historyFileName) {
+    String[] jobDetails = historyFileName.split("_");
+    return jobDetails[5];
+  }
+
+  static String getJobName(String historyFileName) {
+    String[] jobDetails = historyFileName.split("_");
+    return jobDetails[6];
+  }
+
+  /**
+   * Nicely print the Job-ACLs
+   * @param tracker
+   * @param jobAcls
+   * @param out
+   * @throws IOException
+   */
+  static void printJobACLs(JobTracker tracker,
+      Map<JobACL, AccessControlList> jobAcls, JspWriter out)
+      throws IOException {
+    if (tracker.isJobLevelAuthorizationEnabled()) {
+      // Display job-view-acls and job-modify-acls configured for this job
+      out.print("<b>Job-ACLs:</b><br>");
+      for (JobACL aclName : JobACL.values()) {
+        String aclConfigName = aclName.getAclName();
+        AccessControlList aclConfigured = jobAcls.get(aclName);
+        if (aclConfigured != null) {
+          String aclStr = aclConfigured.toString();
+          out.print("&nbsp;&nbsp;&nbsp;&nbsp;" + aclConfigName + ": "
+              + aclStr + "<br>");
+        }
+      }
+    }
+  }
+
+  static boolean privateActionsAllowed(JobConf conf) {
+    return conf.getBoolean(PRIVATE_ACTIONS_KEY, false);
   }
 }

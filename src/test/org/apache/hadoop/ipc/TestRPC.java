@@ -30,14 +30,19 @@ import java.util.Arrays;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.spi.NullContext;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.security.AccessControlException;
 
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
@@ -246,7 +251,26 @@ public class TestRPC extends TestCase {
 
     stringResult = proxy.echo((String)null);
     assertEquals(stringResult, null);
-
+    
+    // Check rpcMetrics 
+    server.rpcMetrics.doUpdates(new NullContext());
+    
+    // Number 4 includes getProtocolVersion()
+    assertEquals(4, server.rpcMetrics.rpcProcessingTime.getPreviousIntervalNumOps());
+    assertTrue(server.rpcMetrics.sentBytes.getPreviousIntervalValue() > 0);
+    assertTrue(server.rpcMetrics.receivedBytes.getPreviousIntervalValue() > 0);
+    
+    // Number of calls to echo method should be 2
+    server.rpcDetailedMetrics.doUpdates(new NullContext());
+    MetricsTimeVaryingRate metrics = 
+      (MetricsTimeVaryingRate)server.rpcDetailedMetrics.registry.get("echo");
+    assertEquals(2, metrics.getPreviousIntervalNumOps());
+    
+    // Number of calls to ping method should be 1
+    metrics = 
+      (MetricsTimeVaryingRate)server.rpcDetailedMetrics.registry.get("ping");
+    assertEquals(1, metrics.getPreviousIntervalNumOps());
+    
     String[] stringResults = proxy.echo(new String[]{"foo","bar"});
     assertTrue(Arrays.equals(stringResults, new String[]{"foo","bar"}));
 
@@ -365,37 +389,29 @@ public class TestRPC extends TestCase {
         RPC.stopProxy(proxy);
       }
       if (expectFailure) {
-        assertTrue("Expected 1 but got " + 
+        assertEquals("Wrong number of authorizationFailures ", 1,  
             server.getRpcMetrics().authorizationFailures
-            .getCurrentIntervalValue(), 
-            server.getRpcMetrics().authorizationFailures
-            .getCurrentIntervalValue() == 1);
+            .getCurrentIntervalValue());
       } else {
-        assertTrue("Expected 1 but got " + 
+        assertEquals("Wrong number of authorizationSuccesses ", 1, 
             server.getRpcMetrics().authorizationSuccesses
-            .getCurrentIntervalValue(),
-            server.getRpcMetrics().authorizationSuccesses
-            .getCurrentIntervalValue() == 1);
+            .getCurrentIntervalValue());
       }
       //since we don't have authentication turned ON, we should see 
-      // >0 for the authentication successes and 0 for failure
-      assertTrue("Expected 0 but got " + 
+      // 0 for the authentication successes and 0 for failure
+      assertEquals("Wrong number of authenticationFailures ", 0, 
           server.getRpcMetrics().authenticationFailures
-          .getCurrentIntervalValue(),
-          server.getRpcMetrics().authenticationFailures
-          .getCurrentIntervalValue() == 0);
-      assertTrue("Expected greater than 0 but got " + 
+          .getCurrentIntervalValue());
+      assertEquals("Wrong number of authenticationSuccesses ", 0, 
           server.getRpcMetrics().authenticationSuccesses
-          .getCurrentIntervalValue(),
-          server.getRpcMetrics().authenticationSuccesses
-          .getCurrentIntervalValue() > 0);
+          .getCurrentIntervalValue());
     }
   }
   
   public void testAuthorization() throws Exception {
     Configuration conf = new Configuration();
-    conf.setBoolean(
-        ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        true);
     
     // Expect to succeed
     conf.set(ACL_CONFIG, "*");
@@ -404,6 +420,30 @@ public class TestRPC extends TestCase {
     // Reset authorization to expect failure
     conf.set(ACL_CONFIG, "invalid invalid");
     doRPCs(conf, true);
+  }
+  
+  public void testErrorMsgForInsecureClient() throws Exception {
+    final Server server = RPC.getServer(
+        new TestImpl(), ADDRESS, 0, 5, true, conf, null);
+    server.enableSecurity();
+    server.start();
+    boolean succeeded = false;
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    TestProtocol proxy = null;
+    try {
+      proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
+          TestProtocol.versionID, addr, conf);
+    } catch (RemoteException e) {
+      LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
+      assertTrue(e.unwrapRemoteException() instanceof AccessControlException);
+      succeeded = true;
+    } finally {
+      server.stop();
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+    }
+    assertTrue(succeeded);
   }
   
   public static void main(String[] args) throws Exception {

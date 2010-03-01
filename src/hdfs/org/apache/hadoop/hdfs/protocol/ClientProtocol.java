@@ -41,7 +41,8 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
  * as well as open/close file streams, etc.
  *
  **********************************************************************/
-@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @TokenInfo(DelegationTokenSelector.class)
 public interface ClientProtocol extends VersionedProtocol {
 
@@ -49,10 +50,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 44: getFileInfo returns HDFSFileStatus;
-   *     getListing returns HDFSFileStatus[].
+   * 45: Replace full getListing with iterative getListinng
    */
-  public static final long versionID = 44L;
+  public static final long versionID = 45L;
   
   ///////////////////////////////////////
   // File contents
@@ -265,9 +265,14 @@ public interface ClientProtocol extends VersionedProtocol {
   public boolean mkdirs(String src, FsPermission masked) throws IOException;
 
   /**
-   * Get a listing of the indicated directory
+   * Get a partial listing of the indicated directory
+   * 
+   * @param src the directory name
+   * @param startAfter the name of the last entry received by the client
+   * @return a partial listing starting after startAfter 
    */
-  public HdfsFileStatus[] getListing(String src) throws IOException;
+  public DirectoryListing getListing(String src, byte[] startAfter)
+  throws IOException;
 
   ///////////////////////////////////////
   // System issues and management

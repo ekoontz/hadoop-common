@@ -4,24 +4,32 @@
   import="java.io.*"
   import="java.util.*"
   import="org.apache.hadoop.fs.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="java.text.*"
   import="org.apache.hadoop.mapred.JobHistory.*"
+  import="java.security.PrivilegedExceptionAction"
+  import="org.apache.hadoop.security.AccessControlException"
+  import="org.apache.hadoop.mapreduce.JobACL"
+  import="org.apache.hadoop.security.authorize.AccessControlList"
 %>
 
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
-    String jobid = request.getParameter("jobid");
     String logFile = request.getParameter("logFile");
-	String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
-	
-    Path jobFile = new Path(logFile);
-    String[] jobDetails = jobFile.getName().split("_");
-    String jobUniqueString = jobDetails[0] + "_" +jobDetails[1] + "_" + jobid ;
+
+    String jobid = JSPUtil.getJobID(new Path(logFile).getName());
 	
     FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-    JobHistory.JobInfo job = JSPUtil.getJobInfo(request, fs);
+    JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
+    JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
+        response, jobTracker, fs, new Path(logFile));
+    if (job == null) {
+      return;
+    }
+
+  	String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
 %>
 
 <html>
@@ -33,10 +41,14 @@
 
 <h2>Hadoop Job <%=jobid %> on <a href="jobhistory.jsp">History Viewer</a></h2>
 
-<b>User: </b> <%=job.get(Keys.USER) %><br/> 
-<b>JobName: </b> <%=job.get(Keys.JOBNAME) %><br/> 
-<b>JobConf: </b> <a href="jobconf_history.jsp?jobid=<%=jobid%>&jobLogDir=<%=new Path(logFile).getParent().toString()%>&jobUniqueString=<%=jobUniqueString%>"> 
+<b>User: </b> <%=HtmlQuoting.quoteHtmlChars(job.get(Keys.USER)) %><br/> 
+<b>JobName: </b> <%=HtmlQuoting.quoteHtmlChars(job.get(Keys.JOBNAME)) %><br/>  
+<b>JobConf: </b> <a href="jobconf_history.jsp?logFile=<%=encodedLogFileName%>"> 
                  <%=job.get(Keys.JOBCONF) %></a><br/> 
+<%         
+  Map<JobACL, AccessControlList> jobAcls = job.getJobACLs();
+  JSPUtil.printJobACLs(jobTracker, jobAcls, out);
+%> 
 <b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
 <b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>
 <b>Finished At: </b>  <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.FINISH_TIME), job.getLong(Keys.LAUNCH_TIME)) %><br/>
@@ -134,7 +146,7 @@
       }
     }
 %>
-<b><a href="analysejobhistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>">Analyse This Job</a></b> 
+<b><a href="analysejobhistory.jsp?logFile=<%=encodedLogFileName%>">Analyse This Job</a></b> 
 <hr/>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
@@ -143,52 +155,52 @@
 </tr>
 <tr>
 <td>Setup</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=all">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=all">
         <%=totalSetups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.SUCCESS %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.SUCCESS %>">
         <%=numFinishedSetups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.FAILED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.FAILED %>">
         <%=numFailedSetups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.KILLED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.SETUP.name() %>&status=<%=Values.KILLED %>">
         <%=numKilledSetups%></a></td>  
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, setupStarted, 0) %></td>
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, setupFinished, setupStarted) %></td>
 </tr>
 <tr>
 <td>Map</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=all">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=all">
         <%=totalMaps %></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.SUCCESS %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.SUCCESS %>">
         <%=job.getInt(Keys.FINISHED_MAPS) %></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.FAILED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.FAILED %>">
         <%=numFailedMaps %></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.KILLED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.MAP.name() %>&status=<%=Values.KILLED %>">
         <%=numKilledMaps %></a></td>
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, mapStarted, 0) %></td>
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, mapFinished, mapStarted) %></td>
 </tr>
 <tr>
 <td>Reduce</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=all">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=all">
         <%=totalReduces%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.SUCCESS %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.SUCCESS %>">
         <%=job.getInt(Keys.FINISHED_REDUCES)%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.FAILED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.FAILED %>">
         <%=numFailedReduces%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.KILLED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.REDUCE.name() %>&status=<%=Values.KILLED %>">
         <%=numKilledReduces%></a></td>  
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceStarted, 0) %></td>
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, reduceFinished, reduceStarted) %></td>
 </tr>
 <tr>
 <td>Cleanup</td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=all">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=all">
         <%=totalCleanups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.SUCCESS %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.SUCCESS %>">
         <%=numFinishedCleanups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.FAILED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.FAILED %>">
         <%=numFailedCleanups%></a></td>
-    <td><a href="jobtaskshistory.jsp?jobid=<%=jobid %>&logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.KILLED %>">
+    <td><a href="jobtaskshistory.jsp?logFile=<%=encodedLogFileName%>&taskType=<%=Values.CLEANUP.name() %>&status=<%=Values.KILLED %>">
         <%=numKilledCleanups%></a></td>  
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, cleanupStarted, 0) %></td>
     <td><%=StringUtils.getFormattedTimeWithDiff(dateFormat, cleanupFinished, cleanupStarted) %></td>
@@ -240,11 +252,12 @@
        if (isFirst) {
          isFirst = false;
 %>
-         <td rowspan="<%=totalGroup.size()%>"><%=totalGroup.getDisplayName()%></td>
+         <td rowspan="<%=totalGroup.size()%>">
+         <%=HtmlQuoting.quoteHtmlChars(totalGroup.getDisplayName())%></td>
 <%
        }
 %>
-       <td><%=counter.getDisplayName()%></td>
+       <td><%=HtmlQuoting.quoteHtmlChars(counter.getDisplayName())%></td>
        <td align="right"><%=mapValue%></td>
        <td align="right"><%=reduceValue%></td>
        <td align="right"><%=totalValue%></td>
@@ -279,7 +292,7 @@
 <%
         for (String t : failedTasks) {
 %>
-          <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+          <a href="taskdetailshistory.jsp?logFile=<%=encodedLogFileName%>&tipid=<%=t %>"><%=t %></a>,&nbsp;
 <%		  
         }
 %>	
@@ -313,7 +326,7 @@
 <%
         for (String t : killedTasks) {
 %>
-          <a href="taskdetailshistory.jsp?jobid=<%=jobid%>&logFile=<%=encodedLogFileName%>&taskid=<%=t %>"><%=t %></a>,&nbsp;
+          <a href="taskdetailshistory.jsp?logFile=<%=encodedLogFileName%>&tipid=<%=t %>"><%=t %></a>,&nbsp;
 <%		  
         }
 %>	

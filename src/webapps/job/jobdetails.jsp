@@ -6,19 +6,25 @@
   import="java.text.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapred.JSPUtil.JobWithViewAccessCheck"
   import="org.apache.hadoop.mapreduce.TaskType"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.mapreduce.JobACL"
+  import="org.apache.hadoop.security.UserGroupInformation"
+  import="java.security.PrivilegedExceptionAction"
+  import="org.apache.hadoop.security.AccessControlException"
+  import="org.apache.hadoop.security.authorize.AccessControlList"
 %>
 
 <%
-  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+  final JobTracker tracker = (JobTracker) application.getAttribute(
+      "job.tracker");
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
 %>
 <%!
-  private static final String PRIVATE_ACTIONS_KEY 
-		= "webinterface.private.actions";
  
   private void printTaskSummary(JspWriter out,
                                 String jobId,
@@ -156,27 +162,83 @@
         catch (NumberFormatException ignored) {
         }
     }
-    JobID jobIdObj = JobID.forName(jobId);
-    JobInProgress job = (JobInProgress) tracker.getJob(jobIdObj);
-    
+    final JobID jobIdObj = JobID.forName(jobId);
+    JobWithViewAccessCheck myJob = JSPUtil.checkAccessAndGetJob(tracker, jobIdObj,
+                                                     request, response);
+    if (!myJob.isViewJobAllowed()) {
+      return; // user is not authorized to view this job
+    }
+
+    JobInProgress job = myJob.getJob();
+
+    final String newPriority = request.getParameter("prio");
+    String user = request.getRemoteUser();
+    UserGroupInformation ugi = null;
+    if (user != null) {
+      ugi = UserGroupInformation.createRemoteUser(user);
+    }
+
     String action = request.getParameter("action");
-    if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) && 
+    if(JSPUtil.privateActionsAllowed(tracker.conf) && 
         "changeprio".equalsIgnoreCase(action) 
         && request.getMethod().equalsIgnoreCase("POST")) {
-      tracker.setJobPriority(jobIdObj, 
-                             JobPriority.valueOf(request.getParameter("prio")));
+      if (ugi != null) {
+        try {
+          ugi.doAs(new PrivilegedExceptionAction<Void>() {
+            public Void run() throws IOException{
+
+              // checks job modify permission
+              tracker.setJobPriority(jobIdObj, 
+                  JobPriority.valueOf(newPriority));
+              return null;
+            }
+          });
+        } catch(AccessControlException e) {
+          String errMsg = "User " + user + " failed to modify priority of " +
+              jobIdObj + "!<br><br>" + e.getMessage() +
+              "<hr><a href=\"jobdetails.jsp?jobid=" + jobId +
+              "\">Go back to Job</a><br>";
+          JSPUtil.setErrorAndForward(errMsg, request, response);
+          return;
+        }
+      }
+      else {// no authorization needed
+        tracker.setJobPriority(jobIdObj,
+             JobPriority.valueOf(newPriority));;
+      }
     }
     
-    if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) {
-        action = request.getParameter("action");
-	    if(action!=null && action.equalsIgnoreCase("confirm")) {
-  	      printConfirm(out, jobId);
-    	    return;
-	    }
-  	    else if(action != null && action.equalsIgnoreCase("kill") && 
-  	        request.getMethod().equalsIgnoreCase("POST")) {
-	      tracker.killJob(jobIdObj);
-	    }
+    if(JSPUtil.privateActionsAllowed(tracker.conf)) {
+      action = request.getParameter("action");
+      if(action!=null && action.equalsIgnoreCase("confirm")) {
+        printConfirm(out, jobId);
+        return;
+      }
+      else if(action != null && action.equalsIgnoreCase("kill") &&
+          request.getMethod().equalsIgnoreCase("POST")) {
+        if (ugi != null) {
+          try {
+            ugi.doAs(new PrivilegedExceptionAction<Void>() {
+              public Void run() throws IOException{
+
+                // checks job modify permission
+                tracker.killJob(jobIdObj);// checks job modify permission
+                return null;
+              }
+            });
+          } catch(AccessControlException e) {
+            String errMsg = "User " + user + " failed to kill " + jobIdObj +
+                "!<br><br>" + e.getMessage() +
+                "<hr><a href=\"jobdetails.jsp?jobid=" + jobId +
+                "\">Go back to Job</a><br>";
+            JSPUtil.setErrorAndForward(errMsg, request, response);
+            return;
+          }
+        }
+        else {// no authorization needed
+          tracker.killJob(jobIdObj);
+        }
+      }
     }
 %>
 
@@ -203,8 +265,8 @@
         out.println("<h2>Job " + jobId + " not known!</h2>");
         return;
       }
-      String historyUrl = "/jobdetailshistory.jsp?jobid=" + jobId +
-      "&logFile=" + JobHistory.JobInfo.encodeJobHistoryFilePath(historyFile);
+      String historyUrl = "/jobdetailshistory.jsp?logFile=" + 
+          JobHistory.JobInfo.encodeJobHistoryFilePath(historyFile);
       response.sendRedirect(response.encodeRedirectURL(historyUrl));
       return;
     }
@@ -212,10 +274,15 @@
     JobStatus status = job.getStatus();
     int runState = status.getRunState();
     int flakyTaskTrackers = job.getNoOfBlackListedTrackers();
-    out.print("<b>User:</b> " + profile.getUser() + "<br>\n");
-    out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
-    out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" 
-              + profile.getJobFile() + "</a><br>\n");
+    out.print("<b>User:</b> " +
+        HtmlQuoting.quoteHtmlChars(profile.getUser()) + "<br>\n");
+    out.print("<b>Job Name:</b> " +
+        HtmlQuoting.quoteHtmlChars(profile.getJobName()) + "<br>\n");
+    out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" +
+        profile.getJobFile() + "</a><br>\n");
+
+    Map<JobACL, AccessControlList> jobAcls = status.getJobACLs();
+    JSPUtil.printJobACLs(tracker, jobAcls, out);
     out.print("<b>Job Setup:</b>");
     printJobLevelTaskSummary(out, jobId, "setup", 
                              job.getTasks(TaskType.JOB_SETUP));
@@ -309,11 +376,12 @@
           if (isFirst) {
             isFirst = false;
             %>
-            <td rowspan="<%=totalGroup.size()%>"><%=totalGroup.getDisplayName()%></td>
+            <td rowspan="<%=totalGroup.size()%>">
+            <%=HtmlQuoting.quoteHtmlChars(totalGroup.getDisplayName())%></td>
             <%
           }
           %>
-          <td><%=name%></td>
+          <td><%=HtmlQuoting.quoteHtmlChars(name)%></td>
           <td align="right"><%=mapValue%></td>
           <td align="right"><%=reduceValue%></td>
           <td align="right"><%=totalValue%></td>
@@ -361,7 +429,7 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
 <%} }%>
 
 <hr>
-<% if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false)) { %>
+<% if(JSPUtil.privateActionsAllowed(tracker.conf)) { %>
   <table border="0"> <tr> <td>
   Change priority from <%=job.getPriority()%> to:
   <form action="jobdetails.jsp" method="post">
@@ -381,7 +449,7 @@ if("off".equals(session.getAttribute("map.graph"))) { %>
 
 <table border="0"> <tr>
     
-<% if(JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY, false) 
+<% if(JSPUtil.privateActionsAllowed(tracker.conf) 
     	&& runState == JobStatus.RUNNING) { %>
 	<br/><a href="jobdetails.jsp?action=confirm&jobid=<%=jobId%>"> Kill this job </a>
 <% } %>

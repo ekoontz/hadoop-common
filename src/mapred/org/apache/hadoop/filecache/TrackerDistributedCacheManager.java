@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 
@@ -628,26 +629,39 @@ public class TrackerDistributedCacheManager {
   public static void determineTimestamps(Configuration job) throws IOException {
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
+      FileStatus status = DistributedCache.getFileStatus(job, tarchives[0]);
+      StringBuffer archiveFileSizes = 
+        new StringBuffer(String.valueOf(status.getLen()));      
       StringBuffer archiveTimestamps = 
-        new StringBuffer(String.valueOf(
-            DistributedCache.getTimestamp(job, tarchives[0])));
+        new StringBuffer(String.valueOf(status.getModificationTime()));
       for (int i = 1; i < tarchives.length; i++) {
+        status = DistributedCache.getFileStatus(job, tarchives[i]);
+        archiveFileSizes.append(",");
+        archiveFileSizes.append(String.valueOf(status.getLen()));
         archiveTimestamps.append(",");
         archiveTimestamps.append(String.valueOf(
-            DistributedCache.getTimestamp(job, tarchives[i])));
+            status.getModificationTime()));
       }
+      job.set(DistributedCache.CACHE_ARCHIVES_SIZES, 
+          archiveFileSizes.toString());
       DistributedCache.setArchiveTimestamps(job, archiveTimestamps.toString());
     }
   
     URI[] tfiles = DistributedCache.getCacheFiles(job);
     if (tfiles != null) {
+      FileStatus status = DistributedCache.getFileStatus(job, tfiles[0]);
+      StringBuffer fileSizes = 
+        new StringBuffer(String.valueOf(status.getLen()));      
       StringBuffer fileTimestamps = new StringBuffer(String.valueOf(
-          DistributedCache.getTimestamp(job, tfiles[0])));
+          status.getModificationTime()));
       for (int i = 1; i < tfiles.length; i++) {
+        status = DistributedCache.getFileStatus(job, tfiles[i]);
+        fileSizes.append(",");
+        fileSizes.append(String.valueOf(status.getLen()));
         fileTimestamps.append(",");
-        fileTimestamps.append(String.valueOf(
-            DistributedCache.getTimestamp(job, tfiles[i])));
+        fileTimestamps.append(String.valueOf(status.getModificationTime()));
       }
+      job.set(DistributedCache.CACHE_FILES_SIZES, fileSizes.toString());
       DistributedCache.setFileTimestamps(job, fileTimestamps.toString());
     }
   }
@@ -730,9 +744,12 @@ public class TrackerDistributedCacheManager {
   /**
    * For each archive or cache file - get the corresponding delegation token
    * @param job
+   * @param credentials
    * @throws IOException
    */
-  public static void getDelegationTokens(Configuration job) throws IOException {
+  public static void getDelegationTokens(Configuration job, 
+                                         Credentials credentials) 
+  throws IOException {
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     URI[] tfiles = DistributedCache.getCacheFiles(job);
 
@@ -752,6 +769,6 @@ public class TrackerDistributedCacheManager {
       }
     }
 
-    TokenCache.obtainTokensForNamenodes(ps, job);
+    TokenCache.obtainTokensForNamenodes(credentials, ps, job);
   }
 }

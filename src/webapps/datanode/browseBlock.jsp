@@ -8,12 +8,15 @@
   import="org.apache.hadoop.hdfs.*"
   import="org.apache.hadoop.hdfs.server.namenode.*"
   import="org.apache.hadoop.hdfs.server.datanode.*"
+  import="org.apache.hadoop.hdfs.server.common.*"
   import="org.apache.hadoop.hdfs.protocol.*"
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
-  import="org.apache.hadoop.hdfs.security.BlockAccessToken"
-  import="org.apache.hadoop.hdfs.security.AccessTokenHandler"
+  import="org.apache.hadoop.security.token.Token"
+  import="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"
+  import="org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager"
+  import="org.apache.hadoop.security.UserGroupInformation"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
 %>
@@ -21,8 +24,9 @@
 <%!
   static JspHelper jspHelper = new JspHelper();
 
-  public void generateFileDetails(JspWriter out, HttpServletRequest req) 
-    throws IOException {
+  public void generateFileDetails(JspWriter out, HttpServletRequest req,
+                                  Configuration conf
+                                 ) throws IOException, InterruptedException {
 
     int chunkSizeToView = 0;
     long startOffset = 0;
@@ -50,9 +54,12 @@
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
 
     String chunkSizeToViewStr = req.getParameter("chunkSizeToView");
-    if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
-      chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
-    else chunkSizeToView = jspHelper.defaultChunkSizeToView;
+    if (chunkSizeToViewStr != null && 
+        Integer.parseInt(chunkSizeToViewStr) > 0) {
+     chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
+    } else {
+     chunkSizeToView = JspHelper.getDefaultChunkSize(conf);
+    }
 
     String startOffsetStr = req.getParameter("startOffset");
     if (startOffsetStr == null || Long.parseLong(startOffsetStr) < 0)
@@ -73,14 +80,17 @@
     } 
     blockSize = Long.parseLong(blockSizeStr);
 
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    String tokenString = req.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
+    UserGroupInformation ugi = JspHelper.getUGI(req, conf);
+    DFSClient dfs = JspHelper.getDFSClient(ugi, jspHelper.nameNodeAddr, conf);
     List<LocatedBlock> blocks = 
       dfs.namenode.getBlockLocations(filename, 0, Long.MAX_VALUE).getLocatedBlocks();
     //Add the various links for looking at the file contents
     //URL for downloading the full file
     String downloadUrl = "http://" + req.getServerName() + ":" +
-                         + req.getServerPort() + "/streamFile?" + "filename=" +
-                         URLEncoder.encode(filename, "UTF-8");
+                         + req.getServerPort() + "/streamFile?" + "filename="
+                         + URLEncoder.encode(filename, "UTF-8")
+                         + JspHelper.SET_DELEGATION + tokenString;
     out.print("<a name=\"viewOptions\"></a>");
     out.print("<a href=\"" + downloadUrl + "\">Download this file</a><br>");
     
@@ -104,7 +114,8 @@
                  "&chunkSizeToView=" + chunkSizeToView +
                  "&referrer=" + 
           URLEncoder.encode(req.getRequestURL() + "?" + req.getQueryString(),
-                            "UTF-8");
+                            "UTF-8") +
+                 JspHelper.SET_DELEGATION + tokenString;
     out.print("<a href=\"" + tailUrl + "\">Tail this file</a><br>");
 
     out.print("<form action=\"/browseBlock.jsp\" method=GET>");
@@ -166,8 +177,9 @@
     dfs.close();
   }
 
-  public void generateFileChunks(JspWriter out, HttpServletRequest req) 
-    throws IOException {
+  public void generateFileChunks(JspWriter out, HttpServletRequest req,
+                                 Configuration conf
+                                ) throws IOException, InterruptedException {
     long startOffset = 0;
     int datanodePort = 0; 
     int chunkSizeToView = 0;
@@ -192,11 +204,14 @@
     }
     blockId = Long.parseLong(blockIdStr);
 
-    final DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    String tokenString = req.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
+    UserGroupInformation ugi = JspHelper.getUGI(req, conf);
+    final DFSClient dfs = JspHelper.getDFSClient(ugi, jspHelper.nameNodeAddr,
+                                                 conf);
     
-    BlockAccessToken accessToken = BlockAccessToken.DUMMY_TOKEN;
-    if (JspHelper.conf
-        .getBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false)) {
+    Token<BlockTokenIdentifier> accessToken = BlockTokenSecretManager.DUMMY_TOKEN;
+    if (conf
+        .getBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false)) {
       List<LocatedBlock> blks = dfs.namenode.getBlockLocations(filename, 0,
           Long.MAX_VALUE).getLocatedBlocks();
       if (blks == null || blks.size() == 0) {
@@ -206,7 +221,7 @@
       }
       for (int i = 0; i < blks.size(); i++) {
         if (blks.get(i).getBlock().getBlockId() == blockId) {
-          accessToken = blks.get(i).getAccessToken();
+          accessToken = blks.get(i).getBlockToken();
           break;
         }
       }
@@ -233,7 +248,7 @@
     String chunkSizeToViewStr = req.getParameter("chunkSizeToView");
     if (chunkSizeToViewStr != null && Integer.parseInt(chunkSizeToViewStr) > 0)
       chunkSizeToView = Integer.parseInt(chunkSizeToViewStr);
-    else chunkSizeToView = jspHelper.defaultChunkSizeToView;
+    else chunkSizeToView = JspHelper.getDefaultChunkSize(conf);
 
     String startOffsetStr = req.getParameter("startOffset");
     if (startOffsetStr == null || Long.parseLong(startOffsetStr) < 0)
@@ -247,10 +262,11 @@
     }
     datanodePort = Integer.parseInt(datanodePortStr);
     out.print("<h3>File: ");
-    JspHelper.printPathWithLinks(filename, out, namenodeInfoPort);
+    JspHelper.printPathWithLinks(filename, out, namenodeInfoPort,
+                                 tokenString);
     out.print("</h3><hr>");
     String parent = new File(filename).getParent();
-    JspHelper.printGotoForm(out, namenodeInfoPort, parent);
+    JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, parent);
     out.print("<hr>");
     out.print("<a href=\"http://" + req.getServerName() + ":" + 
               req.getServerPort() + 
@@ -312,7 +328,8 @@
                 "&filename=" + URLEncoder.encode(filename, "UTF-8") +
                 "&chunkSizeToView=" + chunkSizeToView + 
                 "&datanodePort=" + nextDatanodePort +
-                "&namenodeInfoPort=" + namenodeInfoPort;
+                "&namenodeInfoPort=" + namenodeInfoPort +
+                JspHelper.SET_DELEGATION + tokenString;
       out.print("<a href=\"" + nextUrl + "\">View Next chunk</a>&nbsp;&nbsp;");        
     }
     //determine data for the prev link
@@ -368,7 +385,8 @@
                 "&chunkSizeToView=" + chunkSizeToView +
                 "&genstamp=" + prevGenStamp +
                 "&datanodePort=" + prevDatanodePort +
-                "&namenodeInfoPort=" + namenodeInfoPort;
+                "&namenodeInfoPort=" + namenodeInfoPort +
+                JspHelper.SET_DELEGATION + tokenString;
       out.print("<a href=\"" + prevUrl + "\">View Prev chunk</a>&nbsp;&nbsp;");
     }
     out.print("<hr>");
@@ -376,7 +394,8 @@
     try {
     jspHelper.streamBlockInAscii(
             new InetSocketAddress(req.getServerName(), datanodePort), blockId, 
-            accessToken, genStamp, blockSize, startOffset, chunkSizeToView, out);
+            accessToken, genStamp, blockSize, startOffset, chunkSizeToView, 
+            out, conf);
     } catch (Exception e){
         out.print(e);
     }
@@ -391,11 +410,13 @@
 </head>
 <body onload="document.goto.dir.focus()">
 <% 
-   generateFileChunks(out,request);
+   Configuration conf = 
+     (Configuration) getServletContext().getAttribute("datanode.conf");
+   generateFileChunks(out, request, conf);
 %>
 <hr>
 <% 
-   generateFileDetails(out,request);
+   generateFileDetails(out, request, conf);
 %>
 
 <h2>Local logs</h2>

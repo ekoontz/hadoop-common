@@ -103,7 +103,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -248,6 +248,10 @@ public class TaskTracker
   private int maxMapSlots;
   private int maxReduceSlots;
   private int failures;
+
+  // MROwner's ugi
+  private UserGroupInformation mrOwner;
+  private String supergroup;
   
   // Performance-related config knob to send an out-of-band heartbeat
   // on task completion
@@ -275,6 +279,9 @@ public class TaskTracker
 
   static final String MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY =
       "mapred.tasktracker.memory_calculator_plugin";
+
+  // Manages job acls of jobs in TaskTracker
+  private TaskTrackerJobACLsManager jobACLsManager;
 
   /**
    * the minimum interval between jobtracker polls
@@ -579,18 +586,22 @@ public class TaskTracker
   synchronized void initialize() throws IOException, InterruptedException {
     this.fConf = new JobConf(originalConf);
     String keytabFilename = fConf.get(TT_KEYTAB_FILE);
-    UserGroupInformation ttUgi;
     UserGroupInformation.setConfiguration(fConf);
     if (keytabFilename != null) {
       String desiredUser = fConf.get(TT_USER_NAME,
                                     System.getProperty("user.name"));
       UserGroupInformation.loginUserFromKeytab(desiredUser,
                                                keytabFilename);
-      ttUgi = UserGroupInformation.getLoginUser();
+      mrOwner = UserGroupInformation.getLoginUser();
 
     } else {
-      ttUgi = UserGroupInformation.getCurrentUser();
+      mrOwner = UserGroupInformation.getCurrentUser();
     }
+    supergroup = fConf.get(JobConf.MR_SUPERGROUP,
+                           "supergroup");
+    LOG.info("Starting tasktracker with owner as " + mrOwner.getShortUserName()
+             + " and supergroup as " + supergroup);
+
     localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");
@@ -686,7 +697,7 @@ public class TaskTracker
         this.fConf, taskController);
 
     this.jobClient = (InterTrackerProtocol) 
-    ttUgi.doAs(new PrivilegedExceptionAction<Object>() {
+    mrOwner.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         return RPC.waitForProxy(InterTrackerProtocol.class,
             InterTrackerProtocol.versionID,
@@ -726,6 +737,22 @@ public class TaskTracker
     
     oobHeartbeatOnTaskCompletion = 
       fConf.getBoolean(TT_OUTOFBAND_HEARBEAT, false);
+  }
+
+  UserGroupInformation getMROwner() {
+    return mrOwner;
+  }
+
+  String getSuperGroup() {
+    return supergroup;
+  }
+  
+  /**
+   * Is job level authorization enabled on the TT ?
+   */
+  boolean isJobLevelAuthorizationEnabled() {
+    return fConf.getBoolean(
+        JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, false);
   }
 
   public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(
@@ -993,7 +1020,7 @@ public class TaskTracker
     rjob.ugi = UserGroupInformation.createRemoteUser(t.getUser());
     
     
-    TokenStorage ts = TokenCache.loadTokens(localJobTokenFile, fConf);
+    Credentials ts = TokenCache.loadTokens(localJobTokenFile, fConf);
     Token<JobTokenIdentifier> jt = TokenCache.getJobToken(ts);
     if (jt != null) { //could be null in the case of some unit tests
       getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
@@ -1230,10 +1257,13 @@ public class TaskTracker
     server.setAttribute("localDirAllocator", localDirAllocator);
     server.setAttribute("shuffleServerMetrics", shuffleServerMetrics);
     server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
-    server.addInternalServlet("taskLog", "/tasklog", TaskLogServlet.class);
+    server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
     server.start();
     this.httpPort = server.getPort();
     checkJettyPort(httpPort);
+    
+    // Initialize the jobACLSManager
+    jobACLsManager = new TaskTrackerJobACLsManager(this);
     initialize();
   }
 
@@ -3794,4 +3824,7 @@ public class TaskTracker
       return localJobTokenFileStr;
     }
 
+    TaskTrackerJobACLsManager getJobACLsManager() {
+      return jobACLsManager;
+    }
 }

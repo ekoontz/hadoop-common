@@ -4,6 +4,80 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1006. Fixes NameNode and SecondaryNameNode to use kerberizedSSL for
+    the http communication. (Jakob Homan via ddas)
+
+    HDFS-1007. Fixes a bug on top of the earlier patch. (ddas)
+
+    HDFS-1005. Fsck security. Makes it workd ofver kerberized SSL(boryas and jhoman)
+    HDFS-1007. Makes HFTP and Distcp use kerberized SSL. (ddas)
+
+    MAPREDUCE-1455. Fixes a testcase in the earlier patch. 
+    (Ravi Gummadi via ddas)
+
+    HDFS-992. Refactors block access token implementation to conform to the 
+    generic Token interface. (Kan Zhang via ddas)
+
+    HADOOP-6584. Adds KrbSSL connector for jetty. (Jakob Homan via ddas)
+
+    HADOOP-6589. Add a framework for better error messages when rpc connections
+    fail to authenticate. (Kan Zhang via omalley)
+
+    HADOOP-6600,HDFS-1003,MAPREDUCE-1539. mechanism for authorization check for 
+    inter-server protocols(boryas)
+
+    HADOOP-6580,HDFS-993,MAPREDUCE-1516. UGI should contain authentication method.
+    Namenode and JT should issue a delegation token only for kerberos authenticated 
+    clients. (jitendra)
+
+    HDFS-984,HADOOP-6573,MAPREDUCE-1537. Delegation Tokens should be persisted in Namenode,
+    and corresponding changes in common and mr. (jitendra)
+
+    HDFS-994. Provide methods for obtaining delegation token from Namenode for 
+    hftp and other uses. Incorporates HADOOP-6594: Update hdfs script to 
+    provide fetchdt tool. (jitendra)
+
+    HADOOP-6586. Log authentication and authorization failures and successes(boryas)
+    HDFS-991. Allow use of delegation tokens to authenticate to the 
+    HDFS servlets. (omalley)
+
+    HADOOP-1849. Add undocumented configuration parameter for per handler 
+    call queue size in IPC Server. (shv)
+    
+    HADOOP-6599. Split existing RpcMetrics with summary in RpcMetrics and
+    details information in RpcDetailedMetrics. (suresh)
+
+    HDFS-985. HDFS should issue multiple RPCs for listing a large directory.
+    (hairong)
+
+    HDFS-1000. Updates libhdfs to use the new UGI. (ddas)
+
+    MAPREDUCE-1532. Ensures all filesystem operations at the client is done
+    as the job submitter. Also, changes the renewal to maintain list of tokens
+    to renew. (ddas)
+
+    HADOOP-6596. Add a version field to the seialization of the 
+    AbstractDelegationTokenIdentifier. (omalley)
+
+    HADOOP-5561. Add javadoc.maxmemory to build.xml to allow larger memory.
+    (jkhoman via omalley)
+
+    HADOOP-6579. Add a mechanism for encoding and decoding Tokens in to
+    url-safe strings. (omalley)
+
+    MAPREDUCE-1354. Make incremental changes in jobtracker for
+    improving scalability (acmurthy)
+
+    HDFS-999.Secondary namenode should login using kerberos if security
+    is configured(boryas)
+
+    MAPREDUCE-1466. Added a private configuration variable 
+    mapreduce.input.num.files, to store number of input files 
+    being processed by M/R job. (Arun Murthy via yhemanth)
+
+    MAPREDUCE-1403. Save file-sizes of each of the artifacts in 
+    DistributedCache in the JobConf (Arun Murthy via yhemanth)
+
     HADOOP-6543. Fixes a compilation problem in the original commit. (ddas)
 
     MAPREDUCE-1520. Moves a call to setWorkingDirectory in Child to within

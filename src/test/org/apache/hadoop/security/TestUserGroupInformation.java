@@ -31,7 +31,9 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import junit.framework.Assert;
 
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
@@ -209,5 +211,79 @@ public class TestUserGroupInformation {
       });
     assertTrue(otherSet.contains(t1));
     assertTrue(otherSet.contains(t2));
+  }
+  
+  @Test
+  public void testTokenIdentifiers() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        "TheDoctor", new String[] { "TheTARDIS" });
+    TokenIdentifier t1 = mock(TokenIdentifier.class);
+    TokenIdentifier t2 = mock(TokenIdentifier.class);
+
+    ugi.addTokenIdentifier(t1);
+    ugi.addTokenIdentifier(t2);
+
+    Collection<TokenIdentifier> z = ugi.getTokenIdentifiers();
+    assertTrue(z.contains(t1));
+    assertTrue(z.contains(t2));
+    assertEquals(2, z.size());
+
+    // ensure that the token identifiers are passed through doAs
+    Collection<TokenIdentifier> otherSet = ugi
+        .doAs(new PrivilegedExceptionAction<Collection<TokenIdentifier>>() {
+          public Collection<TokenIdentifier> run() throws IOException {
+            return UserGroupInformation.getCurrentUser().getTokenIdentifiers();
+          }
+        });
+    assertTrue(otherSet.contains(t1));
+    assertTrue(otherSet.contains(t2));
+    assertEquals(2, otherSet.size());
+  }
+
+  @Test
+  public void testUGIAuthMethod() throws Exception {
+    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
+    ugi.setAuthenticationMethod(am);
+    Assert.assertEquals(am, ugi.getAuthenticationMethod());
+    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
+            .getAuthenticationMethod());
+        return null;
+      }
+    });
+  }
+  
+  @Test
+  public void testUGIAuthMethodInRealUser() throws Exception {
+    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation proxyUgi = UserGroupInformation.createProxyUser(
+        "proxy", ugi);
+    final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
+    ugi.setAuthenticationMethod(am);
+    Assert.assertEquals(am, ugi.getAuthenticationMethod());
+    Assert.assertEquals(null, proxyUgi.getAuthenticationMethod());
+    proxyUgi.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
+            .getCurrentUser().getAuthenticationMethod());
+        Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
+            .getRealUser().getAuthenticationMethod());
+        return null;
+      }
+    });
+    UserGroupInformation proxyUgi2 = UserGroupInformation.createProxyUser(
+        "proxy", ugi);
+    proxyUgi2.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    Assert.assertEquals(proxyUgi, proxyUgi2);
+    // Equality should work if authMethod is null
+    UserGroupInformation realugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation proxyUgi3 = UserGroupInformation.createProxyUser(
+        "proxyAnother", realugi);
+    UserGroupInformation proxyUgi4 = UserGroupInformation.createProxyUser(
+        "proxyAnother", realugi);
+    Assert.assertEquals(proxyUgi3, proxyUgi4);
   }
 }

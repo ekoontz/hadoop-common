@@ -27,11 +27,11 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -44,7 +44,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector.MODE;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -75,6 +80,10 @@ public class HttpServer implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
+
+  // The ServletContext attribute where the daemon Configuration
+  // gets stored.
+  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
 
   protected final Server webServer;
   protected final Connector listener;
@@ -117,12 +126,18 @@ public class HttpServer implements FilterContainer {
     webServer.setHandler(contexts);
 
     webAppContext = new WebAppContext();
+    webAppContext.setDisplayName("WepAppsContext");
     webAppContext.setContextPath("/");
     webAppContext.setWar(appDir + "/" + name);
+    webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webServer.addHandler(webAppContext);
 
-    addDefaultApps(contexts, appDir);
-
+    addDefaultApps(contexts, appDir, conf);
+    
+    defineFilter(webAppContext, "krb5Filter", 
+        Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
+        null, null);
+    
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
@@ -173,19 +188,23 @@ public class HttpServer implements FilterContainer {
    * @throws IOException
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
-      final String appDir) throws IOException {
+      final String appDir, Configuration conf) throws IOException {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
     if (logDir != null) {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
-      logContext.addServlet(DefaultServlet.class, "/");
+      logContext.addServlet(AdminAuthorizedServlet.class, "/");
+      logContext.setDisplayName("logs");
+      logContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
     Context staticContext = new Context(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
+    staticContext.setDisplayName("static");
+    staticContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     defaultContexts.put(staticContext, true);
   }
   
@@ -239,7 +258,7 @@ public class HttpServer implements FilterContainer {
    */
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
-    addInternalServlet(name, pathSpec, clazz);
+    addInternalServlet(name, pathSpec, clazz, false);
     addFilterPathMapping(pathSpec, webAppContext);
   }
 
@@ -253,11 +272,38 @@ public class HttpServer implements FilterContainer {
   @Deprecated
   public void addInternalServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
+    addInternalServlet(name, pathSpec, clazz, false);
+  }
+
+  /**
+   * Add an internal servlet in the server, specifying whether or not to
+   * protect with Kerberos authentication. 
+   * Note: This method is to be used for adding servlets that facilitate
+   * internal communication and not for user facing functionality. For
+   * servlets added using this method, filters (except internal Kerberized
+   * filters) are not enabled. 
+   * 
+   * @param name The name of the servlet (can be passed as null)
+   * @param pathSpec The path spec for the servlet
+   * @param clazz The servlet class
+   */
+  public void addInternalServlet(String name, String pathSpec, 
+      Class<? extends HttpServlet> clazz, boolean requireAuth) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
     }
     webAppContext.addServlet(holder, pathSpec);
+    
+    if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
+       LOG.info("Adding Kerberos filter to " + name);
+       ServletHandler handler = webAppContext.getServletHandler();
+       FilterMapping fmap = new FilterMapping();
+       fmap.setPathSpec(pathSpec);
+       fmap.setFilterName("krb5Filter");
+       fmap.setDispatches(Handler.ALL);
+       handler.addFilterMapping(fmap);
+    }
   }
 
   /** {@inheritDoc} */
@@ -266,6 +312,8 @@ public class HttpServer implements FilterContainer {
 
     final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
     defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+    LOG.info("Added filter " + name + " (class=" + classname
+        + ") to context " + webAppContext.getDisplayName());
     final String[] ALL_URLS = { "/*" };
     for (Map.Entry<Context, Boolean> e : defaultContexts.entrySet()) {
       if (e.getValue()) {
@@ -393,10 +441,22 @@ public class HttpServer implements FilterContainer {
    */
   public void addSslListener(InetSocketAddress addr, Configuration sslConf,
       boolean needClientAuth) throws IOException {
+    addSslListener(addr, sslConf, needClientAuth, false);
+  }
+
+  /**
+   * Configure an ssl listener on the server.
+   * @param addr address to listen on
+   * @param sslConf conf to retrieve ssl options
+   * @param needClientAuth whether client authentication is required
+   * @param needKrbAuth whether to allow kerberos auth
+   */
+  public void addSslListener(InetSocketAddress addr, Configuration sslConf,
+      boolean needCertsAuth, boolean needKrbAuth) throws IOException {
     if (webServer.isStarted()) {
       throw new IOException("Failed to add ssl listener");
     }
-    if (needClientAuth) {
+    if (needCertsAuth) {
       // setting up SSL truststore for authenticating clients
       System.setProperty("javax.net.ssl.trustStore", sslConf.get(
           "ssl.server.truststore.location", ""));
@@ -405,14 +465,22 @@ public class HttpServer implements FilterContainer {
       System.setProperty("javax.net.ssl.trustStoreType", sslConf.get(
           "ssl.server.truststore.type", "jks"));
     }
-    SslSocketConnector sslListener = new SslSocketConnector();
+    Krb5AndCertsSslSocketConnector.MODE mode;
+    if(needCertsAuth && needKrbAuth)
+      mode = MODE.BOTH;
+    else if (!needCertsAuth && needKrbAuth)
+      mode = MODE.KRB;
+    else // Default to certificates
+      mode = MODE.CERTS;
+
+    SslSocketConnector sslListener = new Krb5AndCertsSslSocketConnector(mode);
     sslListener.setHost(addr.getHostName());
     sslListener.setPort(addr.getPort());
     sslListener.setKeystore(sslConf.get("ssl.server.keystore.location"));
     sslListener.setPassword(sslConf.get("ssl.server.keystore.password", ""));
     sslListener.setKeyPassword(sslConf.get("ssl.server.keystore.keypassword", ""));
     sslListener.setKeystoreType(sslConf.get("ssl.server.keystore.type", "jks"));
-    sslListener.setNeedClientAuth(needClientAuth);
+    sslListener.setNeedClientAuth(needCertsAuth);
     webServer.addConnector(sslListener);
   }
 
@@ -530,6 +598,50 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Does the user sending the HttpServletRequest has the administrator ACLs? If
+   * it isn't the case, response will be modified to send an error to the user.
+   * 
+   * @param servletContext
+   * @param request
+   * @param response
+   * @return true if admin-authorized, false otherwise
+   * @throws IOException
+   */
+  public static boolean hasAdministratorAccess(
+      ServletContext servletContext, HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    Configuration conf =
+        (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
+
+    // If there is no authorization, anybody has administrator access.
+    if (!conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      return true;
+    }
+
+    String remoteUser = request.getRemoteUser();
+    if (remoteUser == null) {
+      return true;
+    }
+
+    String adminsAclString =
+        conf.get(
+            CommonConfigurationKeys.HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY,
+            "*");
+    AccessControlList adminsAcl = new AccessControlList(adminsAclString);
+    UserGroupInformation remoteUserUGI =
+        UserGroupInformation.createRemoteUser(remoteUser);
+    if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
+          + remoteUser + " is unauthorized to access this page. "
+          + "Only superusers/supergroup \"" + adminsAclString
+          + "\" can access this page.");
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * A very simple servlet to serve up a text representation of the current
    * stack traces. It both returns the stacks to the caller and logs them.
    * Currently the stack traces are done sequentially rather than exactly the
@@ -541,7 +653,13 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-      
+
+      // Do the authorization
+      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
+          response)) {
+        return;
+      }
+
       PrintWriter out = new PrintWriter
                     (HtmlQuoting.quoteOutputStream(response.getOutputStream()));
       ReflectionUtils.printThreadInfo(out, "");

@@ -1,6 +1,7 @@
-/**
+<%
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file 
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
@@ -15,29 +16,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+%>
+<%@ page
+  contentType="text/html; charset=UTF-8"
+  import="javax.servlet.*"
+  import="javax.servlet.http.*"
+  import="java.io.*"
+  import="java.net.URL"
+  import="org.apache.hadoop.util.*"
+%>
+<%!	private static final long serialVersionUID = 1L;
+%>
 
-package org.apache.hadoop.hdfs.security;
+<html>
+<head>
+<title>Error: User cannot access this Job</title>
+</head>
+<body>
+<h2>Error: User cannot do this operation on this Job</h2><br>
 
-import java.io.IOException;
+<%
+  String errorMsg = (String) request.getAttribute("error.msg");
+%>
 
-/** Utilities for security tests */
-public class SecurityTestUtil {
+<font size="5"> 
+<%
+  out.println(errorMsg);
+%>
+</font>
 
-  /**
-   * check if an access token is expired. return true when token is expired,
-   * false otherwise
-   */
-  public static boolean isAccessTokenExpired(BlockAccessToken token)
-      throws IOException {
-    return AccessTokenHandler.isTokenExpired(token);
-  }
+<hr>
 
-  /**
-   * set access token lifetime.
-   */
-  public static void setAccessTokenLifetime(AccessTokenHandler handler,
-      long tokenLifetime) {
-    handler.setTokenLifetime(tokenLifetime);
-  }
-
-}
+<%
+out.println(ServletUtil.htmlFooter());
+%>
