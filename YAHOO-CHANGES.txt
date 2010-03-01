@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+   
+    HADOOP-6600. Fix for branch backport only. Comparing of user should use
+    equals. (boryas).
+
     HDFS-1006. Fixes NameNode and SecondaryNameNode to use kerberizedSSL for
     the http communication. (Jakob Homan via ddas)
 
