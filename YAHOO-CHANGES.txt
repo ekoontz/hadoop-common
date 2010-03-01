@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1007. Fixes a bug on top of the earlier patch. (ddas)
+
     HDFS-1005. Fsck security. Makes it workd ofver kerberized SSL(boryas and jhoman)
     HDFS-1007. Makes HFTP and Distcp use kerberized SSL. (ddas)
 
