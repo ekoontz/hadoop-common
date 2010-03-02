@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1014. Error in reading delegation tokens from edit logs. (jitendra)
+
     HDFS-458. Add under-10-min tests from 0.22 to 0.20.1xx, only the tests
     that already exist in 0.20.1xx (steffl)
 
