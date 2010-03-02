@@ -19,12 +19,16 @@
 package org.apache.hadoop.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+import static org.junit.Assert.*;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -38,10 +42,12 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -53,6 +59,7 @@ public class TestSaslRPC {
   public static final Log LOG =
     LogFactory.getLog(TestSaslRPC.class);
   
+  static final String ERROR_MESSAGE = "Token is invalid";
   static final String SERVER_PRINCIPAL_KEY = "test.ipc.server.principal";
   private static Configuration conf;
   static {
@@ -127,6 +134,14 @@ public class TestSaslRPC {
       return new TestTokenIdentifier();
     }
   }
+  
+  public static class BadTokenSecretManager extends TestTokenSecretManager {
+
+    public byte[] retrievePassword(TestTokenIdentifier id) 
+        throws InvalidToken {
+      throw new InvalidToken(ERROR_MESSAGE);
+    }
+  }
 
   public static class TestTokenSelector implements
       TokenSelector<TestTokenIdentifier> {
@@ -147,13 +162,18 @@ public class TestSaslRPC {
     }
   }
   
-  @KerberosInfo(SERVER_PRINCIPAL_KEY)
+  @KerberosInfo(
+      serverPrincipal = SERVER_PRINCIPAL_KEY)
   @TokenInfo(TestTokenSelector.class)
   public interface TestSaslProtocol extends TestRPC.TestProtocol {
+    public AuthenticationMethod getAuthMethod() throws IOException;
   }
   
   public static class TestSaslImpl extends TestRPC.TestImpl implements
       TestSaslProtocol {
+    public AuthenticationMethod getAuthMethod() throws IOException {
+      return UserGroupInformation.getCurrentUser().getAuthenticationMethod();
+    }
   }
 
   @Test
@@ -172,6 +192,24 @@ public class TestSaslRPC {
     server.disableSecurity();
     TestTokenSecretManager sm = new TestTokenSecretManager();
     doDigestRpc(server, sm);
+  }
+  
+  @Test
+  public void testErrorMessage() throws Exception {
+    BadTokenSecretManager sm = new BadTokenSecretManager();
+    final Server server = RPC.getServer(
+        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+
+    boolean succeeded = false;
+    try {
+      doDigestRpc(server, sm);
+    } catch (RemoteException e) {
+      LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
+      assertTrue(ERROR_MESSAGE.equals(e.getLocalizedMessage()));
+      assertTrue(e.unwrapRemoteException() instanceof InvalidToken);
+      succeeded = true;
+    }
+    assertTrue(succeeded);
   }
   
   private void doDigestRpc(Server server, TestTokenSecretManager sm)
@@ -227,6 +265,43 @@ public class TestSaslRPC {
         RPC.stopProxy(proxy);
       }
     }
+  }
+  
+  @Test
+  public void testDigestAuthMethod() throws Exception {
+    TestTokenSecretManager sm = new TestTokenSecretManager();
+    Server server = RPC.getServer(
+        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+    server.start();
+
+    final UserGroupInformation current = UserGroupInformation.getCurrentUser();
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
+        .getUserName()));
+    Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
+        sm);
+    Text host = new Text(addr.getAddress().getHostAddress() + ":"
+        + addr.getPort());
+    token.setService(host);
+    LOG.info("Service IP address for token is " + host);
+    current.addToken(token);
+
+    current.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        TestSaslProtocol proxy = null;
+        try {
+          proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+              TestSaslProtocol.versionID, addr, conf);
+          Assert.assertEquals(AuthenticationMethod.TOKEN, proxy.getAuthMethod());
+        } finally {
+          if (proxy != null) {
+            RPC.stopProxy(proxy);
+          }
+        }
+        return null;
+      }
+    });
+    server.stop();
   }
   
   public static void main(String[] args) throws Exception {

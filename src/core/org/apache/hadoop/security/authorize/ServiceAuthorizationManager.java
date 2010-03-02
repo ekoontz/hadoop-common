@@ -20,7 +20,11 @@ package org.apache.hadoop.security.authorize;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -35,10 +39,21 @@ public class ServiceAuthorizationManager {
   
   /**
    * Configuration key for controlling service-level authorization for Hadoop.
+   * 
+   * @deprecated Use
+   *             {@link CommonConfigurationKeys#HADOOP_SECURITY_AUTHORIZATION}
+   *             instead.
    */
+  @Deprecated
   public static final String SERVICE_AUTHORIZATION_CONFIG = 
     "hadoop.security.authorization";
   
+  public static final Log auditLOG =
+    LogFactory.getLog("SecurityLogger."+ServiceAuthorizationManager.class.getName());
+
+  private static final String AUTHZ_SUCCESSFULL_FOR = "Authorization successfull for ";
+  private static final String AUTHZ_FAILED_FOR = "Authorization failed for ";
+
   /**
    * Authorize the user to access the protocol being used.
    * 
@@ -47,18 +62,32 @@ public class ServiceAuthorizationManager {
    * @throws AuthorizationException on authorization failure
    */
   public static void authorize(UserGroupInformation user, 
-                               Class<?> protocol
+                               Class<?> protocol,
+                               Configuration conf
                                ) throws AuthorizationException {
     AccessControlList acl = protocolToAcl.get(protocol);
     if (acl == null) {
       throw new AuthorizationException("Protocol " + protocol + 
                                        " is not known.");
     }
-    if (!acl.isUserAllowed(user)) {
-      throw new AuthorizationException("User " + user.toString() + 
-                                       " is not authorized for protocol " + 
-                                       protocol);
+        
+    // get client principal key to verify (if available)
+    KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+    String clientPrincipal = null; 
+    if (krbInfo != null) {
+      String clientKey = krbInfo.clientPrincipal();
+      if (clientKey != null && !clientKey.equals("")) {
+        clientPrincipal = conf.get(clientKey);
+      }
     }
+    if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
+        !acl.isUserAllowed(user)) {
+      auditLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);
+      throw new AuthorizationException("User " + user + 
+          " is not authorized for protocol " + 
+          protocol);
+    }
+    auditLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
   }
 
   public static synchronized void refresh(Configuration conf,

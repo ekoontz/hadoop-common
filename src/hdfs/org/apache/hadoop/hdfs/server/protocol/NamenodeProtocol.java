@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
@@ -31,7 +31,9 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
  * It's used to get part of the name node state
  *****************************************************************************/
-@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 public interface NamenodeProtocol extends VersionedProtocol {
   /**
    * 3: new method added: getAccessKeys()
@@ -50,12 +52,12 @@ public interface NamenodeProtocol extends VersionedProtocol {
   throws IOException;
 
   /**
-   * Get the current access keys
+   * Get the current block keys
    * 
-   * @return ExportedAccessKeys containing current access keys
+   * @return ExportedBlockKeys containing current block keys
    * @throws IOException 
    */
-  public ExportedAccessKeys getAccessKeys() throws IOException;
+  public ExportedBlockKeys getBlockKeys() throws IOException;
 
   /**
    * Get the size of the current edit log (in bytes).

@@ -48,6 +48,7 @@ import javax.security.auth.spi.LoginModule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -365,7 +366,7 @@ public class UserGroupInformation {
         loginUser = new UserGroupInformation(login.getSubject());
         String tokenFile = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (tokenFile != null && isSecurityEnabled()) {
-          TokenStorage.readTokensAndLoadInUGI(tokenFile, new Configuration(), loginUser);
+          Credentials.readTokensAndLoadInUGI(tokenFile, new Configuration(), loginUser);
         }
       } catch (LoginException le) {
         throw new IOException("failure to login", le);
@@ -464,6 +465,15 @@ public class UserGroupInformation {
     Subject subject = new Subject();
     subject.getPrincipals().add(new User(user));
     return new UserGroupInformation(subject);
+  }
+
+  public static enum AuthenticationMethod {
+    SIMPLE,
+    KERBEROS,
+    TOKEN,
+    CERTIFICATE,
+    KERBEROS_SSL,
+    PROXY;
   }
 
   /* Create a proxy user using username of the effective user and the ugi of the
@@ -589,6 +599,28 @@ public class UserGroupInformation {
   }
 
   /**
+   * Add a TokenIdentifier to this UGI. The TokenIdentifier has typically been
+   * authenticated by the RPC layer as belonging to the user represented by this
+   * UGI.
+   * 
+   * @param tokenId
+   *          tokenIdentifier to be added
+   * @return true on successful add of new tokenIdentifier
+   */
+  public synchronized boolean addTokenIdentifier(TokenIdentifier tokenId) {
+    return subject.getPublicCredentials().add(tokenId);
+  }
+
+  /**
+   * Get the set of TokenIdentifiers belonging to this UGI
+   * 
+   * @return the set of TokenIdentifiers belonging to this UGI
+   */
+  public synchronized Set<TokenIdentifier> getTokenIdentifiers() {
+    return subject.getPublicCredentials(TokenIdentifier.class);
+  }
+  
+  /**
    * Add a token to this UGI
    * 
    * @param token Token to be added
@@ -641,6 +673,30 @@ public class UserGroupInformation {
     } else {
       return getUserName();
     }
+  }
+
+  /**
+   * Sets the authentication method in the subject
+   * 
+   * @param authMethod
+   */
+  public synchronized 
+  void setAuthenticationMethod(AuthenticationMethod authMethod) {
+    for (User p : subject.getPrincipals(User.class)) {
+      p.setAuthenticationMethod(authMethod);
+    }
+  }
+
+  /**
+   * Get the authentication method from the subject
+   * 
+   * @return AuthenticationMethod in the subject, null if not present.
+   */
+  public synchronized AuthenticationMethod getAuthenticationMethod() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getAuthenticationMethod();
+    }
+    return null;
   }
 
   /**

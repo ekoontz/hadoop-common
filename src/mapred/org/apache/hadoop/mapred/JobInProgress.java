@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -59,7 +60,8 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -130,7 +132,7 @@ public class JobInProgress {
   JobPriority priority = JobPriority.NORMAL;
   final JobTracker jobtracker;
   
-  protected TokenStorage tokenStorage;
+  protected Credentials tokenStorage;
 
   // NetworkTopology Node to the set of TIPs
   Map<Node, List<TaskInProgress>> nonRunningMapCache;
@@ -298,6 +300,7 @@ public class JobInProgress {
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
     this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    this.status.setUsername(conf.getUser());
     this.profile = new JobProfile(conf.getUser(), jobid, "", "",
                                   conf.getJobName(), conf.getQueueName());
     this.memoryPerMap = conf.getMemoryForMapTask();
@@ -330,7 +333,7 @@ public class JobInProgress {
   }
 
   JobInProgress(JobTracker jobtracker, final JobConf default_conf, 
-      JobInfo jobInfo, int rCount, TokenStorage ts) 
+      JobInfo jobInfo, int rCount, Credentials ts) 
   throws IOException, InterruptedException {
     this.restartCount = rCount;
     this.jobId = JobID.downgrade(jobInfo.getJobID());
@@ -338,6 +341,7 @@ public class JobInProgress {
         + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobId;
     this.jobtracker = jobtracker;
     this.status = new JobStatus(jobId, 0.0f, 0.0f, JobStatus.PREP);
+    this.status.setUsername(jobInfo.getUser().toString());
     this.jobtracker.getInstrumentation().addPrepJob(conf, jobId);
     this.startTime = jobtracker.getClock().getTime();
     status.setStartTime(startTime);
@@ -385,6 +389,9 @@ public class JobInProgress {
     
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
        (numMapTasks + numReduceTasks + 10);
+
+    // Construct the jobACLs
+    status.setJobACLs(jobtracker.getJobACLsManager().constructJobACLs(conf));
 
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
@@ -707,6 +714,25 @@ public class JobInProgress {
     return allTaskSplitMetaInfo;
   }
 
+  /**
+   * If authorization is enabled on the JobTracker, checks whether the user (in
+   * the callerUGI) is authorized to perform the operation specify by
+   * 'jobOperation' on the job.
+   * <ul>
+   * <li>The owner of the job can do any operation on the job</li>
+   * <li>The superuser/supergroup of the JobTracker is always permitted to do
+   * operations on any job.</li>
+   * <li>For all other users/groups job-acls are checked</li>
+   * </ul>
+   * 
+   * @param callerUGI
+   * @param jobOperation
+   */
+  void checkAccess(UserGroupInformation callerUGI, JobACL jobOperation)
+      throws AccessControlException {
+    jobtracker.getJobACLsManager().checkAccess(status, callerUGI, jobOperation);
+  }
+
   /////////////////////////////////////////////////////
   // Accessors for the JobInProgress
   /////////////////////////////////////////////////////
@@ -988,7 +1014,7 @@ public class JobInProgress {
           host = ttStatus.getHost();
         }
         httpTaskLogLocation = "http://" + host + ":" + ttStatus.getHttpPort(); 
-           //+ "/tasklog?plaintext=true&taskid=" + status.getTaskID();
+           //+ "/tasklog?plaintext=true&attemptid=" + status.getTaskID();
       }
 
       TaskCompletionEvent taskEvent = null;
@@ -3190,7 +3216,7 @@ public class JobInProgress {
     
     // add this token to the tokenStorage
     if(tokenStorage == null)
-      tokenStorage = new TokenStorage();
+      tokenStorage = new Credentials();
 
     TokenCache.setJobToken(token, tokenStorage);
         

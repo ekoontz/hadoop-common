@@ -20,13 +20,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
@@ -35,7 +34,8 @@ import org.apache.hadoop.security.token.TokenInfo;
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
-@KerberosInfo(JobContext.JOB_JOBTRACKER_ID)
+@KerberosInfo(
+    serverPrincipal = JobTracker.JT_USER_NAME)
 @TokenInfo(DelegationTokenSelector.class)
 interface JobSubmissionProtocol extends VersionedProtocol {
   /* 
@@ -75,8 +75,9 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             staging area using user credentials passed via the rpc. 
    * Version 23: Provide TokenStorage object while submitting a job
    * Version 24: Added delegation tokens (add, renew, cancel)
+   * Version 25: Added JobACLs to JobStatus as part of MAPREDUCE-1307
    */
-  public static final long versionID = 24L;
+  public static final long versionID = 25L;
 
   /**
    * Allocate a name for the job.
@@ -90,7 +91,7 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * that job.
    * The job files should be submitted in <b>jobSubmitDir</b>.
    */
-  public JobStatus submitJob(JobID jobName, String jobSubmitDir, TokenStorage ts) 
+  public JobStatus submitJob(JobID jobName, String jobSubmitDir, Credentials ts) 
   throws IOException;
 
   /**
