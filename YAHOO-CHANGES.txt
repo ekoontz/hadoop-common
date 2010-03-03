@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-204. Revive number of files listed metrics. (hairong)
+
     HADOOP-6569. FsShell#cat should avoid calling uneccessary getFileStatus
     before opening a file to read. (hairong)
 
