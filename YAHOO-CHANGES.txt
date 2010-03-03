@@ -3,6 +3,9 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
+    
+    HDFS-1017. browsedfs jsp should call JspHelper.getUGI rather than using 
+    createRemoteUser(). (jhoman)
 
     MAPREDUCE-899. Modified LinuxTaskController to check that task-controller
     has right permissions and ownership before performing any actions.
@@ -29,7 +32,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
     HDFS-1007. Fixes a bug on top of the earlier patch. (ddas)
 
-    HDFS-1005. Fsck security. Makes it workd ofver kerberized SSL(boryas and jhoman)
+    HDFS-1005. Fsck security. Makes it work over kerberized SSL(boryas and jhoman)
+
     HDFS-1007. Makes HFTP and Distcp use kerberized SSL. (ddas)
 
     MAPREDUCE-1455. Fixes a testcase in the earlier patch. 
