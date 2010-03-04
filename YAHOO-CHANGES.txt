@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1559. Fixes a problem in DelegationTokenRenewal class to
+    do with using the right credentials when talking to the NameNode.(ddas)
+
     MAPREDUCE-1550. Fixes a problem to do with creating a filesystem using
     the user's UGI in the JobHistory browsing. (ddas)
 
