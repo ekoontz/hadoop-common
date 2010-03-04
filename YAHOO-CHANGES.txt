@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1015. Intermittent failure in TestSecurityTokenEditLog. (jitendra)
+
     MAPREDUCE-1550. A bugfix on top of what was committed earlier (ddas).
 
     MAPREDUCE-1155. DISABLING THE TestStreamingExitStatus temporarily. (ddas)
