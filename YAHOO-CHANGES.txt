@@ -4,6 +4,40 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1155. DISABLING THE TestStreamingExitStatus temporarily. (ddas)
+
+    HDFS-1020. Changes the check for renewer from short name to long name
+    in the cancel/renew delegation token methods. (jitendra via ddas)
+
+    HDFS-1019. Fixes values of delegation token parameters in
+    hdfs-default.xml. (jitendra via ddas)
+
+    MAPREDUCE-1430. Fixes a backport issue with the earlier patch. (ddas)
+
+    MAPREDUCE-1559. Fixes a problem in DelegationTokenRenewal class to
+    do with using the right credentials when talking to the NameNode.(ddas)
+
+    MAPREDUCE-1550. Fixes a problem to do with creating a filesystem using
+    the user's UGI in the JobHistory browsing. (ddas)
+
+    HADOOP-6609. Fix UTF8 to use a thread local DataOutputBuffer instead of
+    a static that was causing a deadlock in RPC. (omalley)
+
+    HADOOP-6584. Fix javadoc warnings introduced by original HADOOP-6584
+    patch (jhoman)
+    
+    HDFS-1017. browsedfs jsp should call JspHelper.getUGI rather than using 
+    createRemoteUser(). (jhoman)
+
+    MAPREDUCE-899. Modified LinuxTaskController to check that task-controller
+    has right permissions and ownership before performing any actions.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HDFS-204. Revive number of files listed metrics. (hairong)
+
+    HADOOP-6569. FsShell#cat should avoid calling uneccessary getFileStatus
+    before opening a file to read. (hairong)
+
     HDFS-1014. Error in reading delegation tokens from edit logs. (jitendra)
 
     HDFS-458. Add under-10-min tests from 0.22 to 0.20.1xx, only the tests
@@ -20,7 +54,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
     HDFS-1007. Fixes a bug on top of the earlier patch. (ddas)
 
-    HDFS-1005. Fsck security. Makes it workd ofver kerberized SSL(boryas and jhoman)
+    HDFS-1005. Fsck security. Makes it work over kerberized SSL(boryas and jhoman)
+
     HDFS-1007. Makes HFTP and Distcp use kerberized SSL. (ddas)
 
     MAPREDUCE-1455. Fixes a testcase in the earlier patch. 
