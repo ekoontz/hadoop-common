@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1550. Fixes a problem to do with creating a filesystem using
+    the user's UGI in the JobHistory browsing. (ddas)
+
     HADOOP-6609. Fix UTF8 to use a thread local DataOutputBuffer instead of
     a static that was causing a deadlock in RPC. (omalley)
 
