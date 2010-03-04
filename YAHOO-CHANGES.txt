@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1020. Changes the check for renewer from short name to long name
+    in the cancel/renew delegation token methods. (jitendra via ddas)
+
     HDFS-1019. Fixes values of delegation token parameters in
     hdfs-default.xml. (jitendra via ddas)
 
