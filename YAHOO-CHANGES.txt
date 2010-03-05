@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1022. Merge all three test specs files (common, hdfs, mapred)
+    into one. (steffl)
+
     HDFS-101. DFS write pipeline: DFSClient sometimes does not detect
     second datanode failure. (hairong)
 
