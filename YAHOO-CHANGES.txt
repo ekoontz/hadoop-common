@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-814. Add an api to get the visible length of a 
+    DFSDataInputStream. (hairong)
+
     HDFS-1023. Allow http server to start as regular user if https
     principal is not defined. (jhoman)
 
