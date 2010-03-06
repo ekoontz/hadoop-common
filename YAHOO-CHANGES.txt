@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6603. Provide workaround for issue with Kerberos not
+    resolving corss-realm principal. (kan via jhoman)
+
     HDFS-1023. Update to original patch to fix username (jhoman)
 
     HDFS-814. Add an api to get the visible length of a 
