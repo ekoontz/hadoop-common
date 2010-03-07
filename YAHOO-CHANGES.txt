@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1566. Bugfix for tests on top of the earlier patch. (ddas)
+
     MAPREDUCE-1566. Mechanism to import tokens and secrets from a file in to
     the submitted job. (omalley)
 
