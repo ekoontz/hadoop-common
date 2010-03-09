@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6620. NPE if renewer is passed as null in getDelegationToken.
+    (jitendra)
+
     HDFS-1023. Second Update to original patch to fix username (jhoman)
 
     MAPREDUCE-1435. Add test cases to already committed patch for this
