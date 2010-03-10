@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1422. Fix cleanup of localized job directory to work if files
+    with non-deletable permissions are created within it.
+    (Amar Kamat via yhemanth)
+
     HDFS-1007. Fixes bugs to do with 20S cluster talking to 20 over 
     hftp (borya)
 
