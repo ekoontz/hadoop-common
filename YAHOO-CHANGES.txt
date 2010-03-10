@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-992. A bug in backport for HDFS-992. (jitendra)
+
     HADOOP-6598. Remove verbose logging from the Groups class. (borya)
     HADOOP-6620. NPE if renewer is passed as null in getDelegationToken.
     (jitendra)
