@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1007. Fixes bugs to do with 20S cluster talking to 20 over 
+    hftp (borya)
+
     MAPREDUCE:1566. Fixes bugs in the earlier patch. (ddas)
 
     HDFS-992. A bug in backport for HDFS-992. (jitendra)
