@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
+    input path. (Tsz Wo (Nicholas), SZE via cdouglas)
+
     HDFS-1005. Fixes a bug to do with calling the cross-realm API in Fsck
     client. (ddas)
 
