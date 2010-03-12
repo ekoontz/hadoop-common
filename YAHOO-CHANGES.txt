@@ -7,6 +7,23 @@ the patches applied from issues referenced in CHANGES.txt.
     MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
     input path. (Tsz Wo (Nicholas), SZE via cdouglas)
 
+    HDFS-1036. In DelegationTokenFetch pass Configuration object so getDefaultUri
+    will work correctly.
+
+    HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only if 
+    security is enabled. (jitendra)
+
+    HDFS-1036. in DelegationTokenFetch dfs.getURI returns no port (boryas)
+
+    HADOOP-6598. Verbose logging from the Group class (one more case)
+    (boryas)
+
+    HADOOP-6627. Bad Connection to FS" message in FSShell should print 
+    message from the exception (boryas)
+
+    HDFS-1033. In secure clusters, NN and SNN should verify that the remote 
+    principal during image and edits transfer (jhoman)
+
     HDFS-1005. Fixes a bug to do with calling the cross-realm API in Fsck
     client. (ddas)
 
