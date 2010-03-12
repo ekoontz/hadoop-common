@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only if 
+    security is enabled. (jitendra)
+
     HDFS-1036. in DelegationTokenFetch dfs.getURI returns no port (boryas)
 
     HADOOP-6598. Verbose logging from the Group class (one more case)
