@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1036. In DelegationTokenFetch pass Configuration object so getDefaultUri
+    will work correctly.
+
     HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only if 
     security is enabled. (jitendra)
 
