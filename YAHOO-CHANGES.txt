@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1599. MRBench reuses jobConf and credentials there in.
+    (jitendra)
+
     MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
     input path. (Tsz Wo (Nicholas), SZE via cdouglas)
 
