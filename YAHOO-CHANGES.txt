@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1039. Service should be set in the token in JspHelper.getUGI.
+    (jitendra)
+
     MAPREDUCE-1599. MRBench reuses jobConf and credentials there in.
     (jitendra)
 
