@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-5592. Fix typo in Streaming doc in reference to GzipCodec.
+    (Corinne Chandel via tomwhite)
+
     MAPREDUCE-813. Updates Streaming and M/R tutorial documents.
     (Corinne Chandel via ddas)
 
