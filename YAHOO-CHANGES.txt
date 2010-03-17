@@ -4,7 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-    HADOOP-6633. normalize property names for JT/NN kerberos principal 
+    MAPREDUCE-1606. Fixed occassinal timeout in TestJobACL. (Ravi Gummadi via
+    acmurthy)
+
+   HADOOP-6633. normalize property names for JT/NN kerberos principal 
     names in configuration. (boryas)
 
     HADOOP-6613. Changes the RPC server so that version is checked first
