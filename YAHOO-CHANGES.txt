@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6603.  Addition to original patch to be explicit
+    about new method not being for general use. (jhoman)
+
     MAPREDUCE-1543. Add audit log messages for job and queue
     access control checks. (Amar Kamat via yhemanth)
 
