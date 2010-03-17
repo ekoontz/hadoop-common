@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-813. Updates Streaming and M/R tutorial documents.
+    (Corinne Chandel via ddas)
+
     MAPREDUCE-927. Cleanup of task-logs should happen in TaskTracker instead
     of the Child. (Amareshwari Sriramadasu via vinodkv)
 
