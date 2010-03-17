@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1543. Add audit log messages for job and queue
+    access control checks. (Amar Kamat via yhemanth)
+
     MAPREDUCE-1606. Fixed occassinal timeout in TestJobACL. (Ravi Gummadi via
     acmurthy)
 
