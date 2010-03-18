@@ -3,6 +3,10 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
+    
+    HADOOP-6638. try to relogin in a case of failed RPC connection 
+    (expired tgt) only in case the subject is loginUser or  
+    proxyUgi.realUser. (boryas)
 
     HADOOP-6632. Support for using different Kerberos keys for different 
     instances of Hadoop services. (jitendra)
