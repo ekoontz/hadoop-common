@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1417. Update forrest documentation for private
+    and public distributed cache files. (Ravi Gummadi via yhemanth)
+
     HADOOP-6634. AccessControlList uses full-principal names to verify acls
     causing queue-acls to fail (vinodkv)
     
