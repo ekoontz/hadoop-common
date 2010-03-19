@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
     
+    HADOOP-6642. Fix javac, javadoc, findbugs warnings. (chrisdo via acmurthy) 
+
     HDFS-1044.  Cannot submit mapreduce job from secure client to 
     unsecure sever. (boryas)
     HADOOP-6638. try to relogin in a case of failed RPC connection 
