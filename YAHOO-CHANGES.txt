@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1609. Fixes a problem with localization of job log
+    directories when tasktracker is re-initialized that can result
+    in failed tasks. (Amareshwari Sriramadasu via yhemanth)
+
     MAPREDUCE-1610. Update forrest documentation for directory
     structure of localized files. (Ravi Gummadi via yhemanth)
 
