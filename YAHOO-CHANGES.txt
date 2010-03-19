@@ -3,6 +3,9 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
+
+    HADOOP-6634. AccessControlList uses full-principal names to verify acls
+    causing queue-acls to fail (vinodkv)
     
     HADOOP-6642. Fix javac, javadoc, findbugs warnings. (chrisdo via acmurthy) 
 
