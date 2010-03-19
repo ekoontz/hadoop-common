@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1611. Refresh nodes and refresh queues doesnt work with 
+    service authorization enabled. (Amar Kamat via vinodkv)
+
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method 
    name - should use common naming convention (boryas)
 
