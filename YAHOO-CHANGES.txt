@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6632. Fix on JobTracker to reuse filesystem handles if possible.
+    (ddas)
+
     HADOOP-6647. balancer fails with "is not authorized for protocol 
     interface NamenodeProtocol" in secure environment (boryas)
 
