@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1610. Update forrest documentation for directory
+    structure of localized files. (Ravi Gummadi via yhemanth)
+
     MAPREDUCE-1532. Fixes a javadoc and an exception message in JobInProgress
     when the authenticated user is different from the user in conf. (ddas)
 
