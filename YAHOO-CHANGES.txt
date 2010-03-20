@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6648. Credentials must ignore null tokens that can be generated
+    when using HFTP to talk to insecure clusters. (omalley)
+
     HADOOP-6632. Fix on JobTracker to reuse filesystem handles if possible.
     (ddas)
 
