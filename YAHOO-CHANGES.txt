@@ -4,6 +4,12 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6652. ShellBasedUnixGroupsMapping shouldn't have a cache. 
+    (ddas)
+
+    HADOOP-6649. login object in UGI should be inside the subject
+    (jitendra)
+
     HADOOP-6637.  Benchmark overhead of RPC session establishment
     (shv via jitendra)
 
