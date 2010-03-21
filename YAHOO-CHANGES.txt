@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6649. An error in the previous committed patch. (jitendra)
+
     HADOOP-6652. ShellBasedUnixGroupsMapping shouldn't have a cache. 
     (ddas)
 
