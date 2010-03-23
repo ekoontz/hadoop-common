@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6656. Renew Kerberos TGT when 80% of the renew lifetime has been
+    used up. (omalley)
+
     HADOOP-6653. Protect against NPE in setupSaslConnection when real user is
     null. (omalley)
 
