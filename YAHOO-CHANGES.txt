@@ -6,7 +6,7 @@ the patches applied from issues referenced in CHANGES.txt.
 
     MAPREDUCE-1624. Documents the job credentials and associated details 
     to do with delegation tokens (ddas)
- 
+    HDFS-1036. Documentation for fetchdt for forrest (boryas)
     HDFS-1039. New patch on top of previous patch. Gets namenode address
     from conf. (jitendra)
 
