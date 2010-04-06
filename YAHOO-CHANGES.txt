@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
     
+    MAPREDUCE-1376. Support for varied user submissions in Gridmix (rksingh)
+
     HDFS-1080.  SecondaryNameNode image transfer should use the defined 
     http address rather than local ip address (jhoman)
     

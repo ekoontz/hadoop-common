@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,6 +32,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -49,9 +51,11 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.security.UserGroupInformation;
 
 // TODO can replace with form of GridmixJob
 class GenerateData extends GridmixJob {
+
 
   /**
    * Total bytes to write.
@@ -73,6 +77,16 @@ class GenerateData extends GridmixJob {
    */
   public static final String GRIDMIX_GEN_INTERVAL = "gendata.interval.mb";
 
+  /**
+   * Blocksize of generated data.
+   */
+  public static final String GRIDMIX_GEN_BLOCKSIZE = "gridmix.gen.blocksize";
+
+  /**
+   * Replication of generated data.
+   */
+  public static final String GRIDMIX_GEN_REPLICATION = "gridmix.gen.replicas";
+
   public GenerateData(Configuration conf, Path outdir, long genbytes)
       throws IOException {
     super(conf, 0L, "GRIDMIX_GENDATA");
@@ -83,15 +97,26 @@ class GenerateData extends GridmixJob {
   @Override
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
-    job.setMapperClass(GenDataMapper.class);
-    job.setNumReduceTasks(0);
-    job.setMapOutputKeyClass(NullWritable.class);
-    job.setMapOutputValueClass(BytesWritable.class);
-    job.setInputFormatClass(GenDataFormat.class);
-    job.setOutputFormatClass(RawBytesOutputFormat.class);
-    job.setJarByClass(GenerateData.class);
-    FileInputFormat.addInputPath(job, new Path("ignored"));
-    job.submit();
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    job = ugi.doAs( new PrivilegedExceptionAction <Job>() {
+       public Job run() throws IOException, ClassNotFoundException,
+                               InterruptedException {
+        job.setMapperClass(GenDataMapper.class);
+        job.setNumReduceTasks(0);
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(BytesWritable.class);
+        job.setInputFormatClass(GenDataFormat.class);
+        job.setOutputFormatClass(RawBytesOutputFormat.class);
+        job.setJarByClass(GenerateData.class);
+         try {
+           FileInputFormat.addInputPath(job, new Path("ignored"));
+         } catch (IOException e) {
+           LOG.error("Error  while adding input path ",e);
+         }
+         job.submit();
+         return job;
+      }
+    });
     return job;
   }
 
@@ -248,7 +273,10 @@ class GenerateData extends GridmixJob {
     static class ChunkWriter extends RecordWriter<NullWritable,BytesWritable> {
       private final Path outDir;
       private final FileSystem fs;
+      private final int blocksize;
+      private final short replicas;
       private final long maxFileBytes;
+      private final FsPermission genPerms = new FsPermission((short) 0777);
 
       private long accFileBytes = 0L;
       private long fileIdx = -1L;
@@ -257,6 +285,8 @@ class GenerateData extends GridmixJob {
       public ChunkWriter(Path outDir, Configuration conf) throws IOException {
         this.outDir = outDir;
         fs = outDir.getFileSystem(conf);
+        blocksize = conf.getInt(GRIDMIX_GEN_BLOCKSIZE, 1 << 28);
+        replicas = (short) conf.getInt(GRIDMIX_GEN_REPLICATION, 3);
         maxFileBytes = conf.getLong(GRIDMIX_GEN_CHUNK, 1L << 30);
         nextDestination();
       }
@@ -264,7 +294,8 @@ class GenerateData extends GridmixJob {
         if (fileOut != null) {
           fileOut.close();
         }
-        fileOut = fs.create(new Path(outDir, "segment-" + (++fileIdx)), false);
+        fileOut = fs.create(new Path(outDir, "segment-" + (++fileIdx)),
+            genPerms, false, 64 * 1024, replicas, blocksize, null);
         accFileBytes = 0L;
       }
       @Override
@@ -273,14 +304,14 @@ class GenerateData extends GridmixJob {
         int written = 0;
         final int total = value.getLength();
         while (written < total) {
+          if (accFileBytes >= maxFileBytes) {
+            nextDestination();
+          }
           final int write = (int)
             Math.min(total - written, maxFileBytes - accFileBytes);
           fileOut.write(value.getBytes(), written, write);
           written += write;
           accFileBytes += write;
-          if (accFileBytes >= maxFileBytes) {
-            nextDestination();
-          }
         }
       }
       @Override
