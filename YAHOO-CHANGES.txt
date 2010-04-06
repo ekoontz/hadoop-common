@@ -3,7 +3,10 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
-
+    
+    HDFS-1080.  SecondaryNameNode image transfer should use the defined 
+    http address rather than local ip address (jhoman)
+    
     HADOOP-6661. User document for UserGroupInformation.doAs for secure
     impersonation. (jitendra)
 
