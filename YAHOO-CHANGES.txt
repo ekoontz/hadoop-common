@@ -3,6 +3,9 @@ Yahoo! Distribution of Hadoop Change Log
 Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
+
+    HDFS-1007. Fix. ServiceName for delegation token for Hftp has hftp
+    port and not RPC port. 
     
     MAPREDUCE-1376. Support for varied user submissions in Gridmix (rksingh)
 
