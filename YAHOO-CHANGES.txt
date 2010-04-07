@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
+
     BUG:3524726. Replace fork of DF with library call. (cdouglas via omalley)
 
     HDFS-999.  Secondary namenode should login using kerberos if security
