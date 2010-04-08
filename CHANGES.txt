@@ -9,7 +9,20 @@ Release 0.20.3 - Unreleased
     HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
     when name-node fails during saving. (shv)
 
-Release 0.20.2 - Unreleased
+    HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
+    the first datanode fails.  (szetszwo)
+
+  IMPROVEMENTS
+
+    MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
+    actual usage. (Benoit Sigoure via cdouglas)
+
+Release 0.20.2 - 2010-2-19
+
+  NEW FEATURES
+
+    HADOOP-6218. Adds a feature where TFile can be split by Record
+    Sequence number. (Hong Tang and Raghu Angadi via ddas)
 
   BUG FIXES
 
