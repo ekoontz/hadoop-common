@@ -74,6 +74,7 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
   protected final long submissionTimeNanos;
   private static final ConcurrentHashMap<Integer,List<InputSplit>> descCache =
      new ConcurrentHashMap<Integer,List<InputSplit>>();
+  protected static final String GRIDMIX_JOB_SEQ = "gridmix.job.seq";
 
   public GridmixJob(
     final Configuration conf, long submissionMillis, final JobStory jobdesc,
@@ -88,7 +89,7 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
         public Job run() throws IOException {
           Job ret = new Job(conf, nameFormat.get().format("%05d", seq)
               .toString());
-          ret.getConfiguration().setInt("gridmix.job.seq", seq);
+          ret.getConfiguration().setInt(GRIDMIX_JOB_SEQ, seq);
           ret.getConfiguration().set(ORIGNAME,
               null == jobdesc.getJobID() ? "<unknown>" : jobdesc.getJobID()
                   .toString());
@@ -159,8 +160,7 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
   }
 
   static List<InputSplit> pullDescription(JobContext jobCtxt) {
-    return pullDescription(jobCtxt.getConfiguration().getInt(
-        "gridmix.job.seq", -1));
+    return pullDescription(GridmixJob.getJobSeqId(jobCtxt));
   }
   
   static List<InputSplit> pullDescription(int seq) {
@@ -208,6 +208,10 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
   @Override
   public int hashCode() {
     return id();
+  }
+
+  static int getJobSeqId(JobContext job) {
+    return job.getConfiguration().getInt(GRIDMIX_JOB_SEQ,-1);
   }
 
   public static class DraftPartitioner<V> extends Partitioner<GridmixKey,V> {
