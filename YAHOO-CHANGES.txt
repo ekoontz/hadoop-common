@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1683.  Removes JNI calls to get jvm current/max heap usage in
+    ClusterStatus by default. (acmurthy)
+
     HADOOP-6687.  user object in the subject in UGI should be reused in case of a 
     relogin. (jitendra)
 
