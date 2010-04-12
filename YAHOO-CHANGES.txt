@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6687.  user object in the subject in UGI should be reused in case of a 
+    relogin. (jitendra)
+
     MAPREDUCE-1526. Cache the job related information while submitting the job
 
     HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
