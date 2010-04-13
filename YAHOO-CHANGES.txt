@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1680. Add a metric to track number of heartbeats processed by the
+    JobTracker. (Richard King via acmurthy)
+
     MAPREDUCE-1683.  Removes JNI calls to get jvm current/max heap usage in
     ClusterStatus by default. (acmurthy)
 
