@@ -13,7 +13,16 @@ the patches applied from issues referenced in CHANGES.txt.
     HADOOP-6687.  user object in the subject in UGI should be reused in case of a 
     relogin. (jitendra)
 
-    MAPREDUCE-1526. Cache the job related information while submitting the job
+    HADOOP-5647. TestJobHistory fails if /tmp/_logs is not writable to. Testcase 
+    should not depend on /tmp. (Ravi Gummadi via vinodkv)
+
+    MAPREDUCE-181. Bug fix for Secure job submission. (Ravi Gummadi via vinodkv)
+
+    MAPREDUCE-1635. ResourceEstimator does not work after MAPREDUCE-842. 
+    (Amareshwari Sriramadasu via vinodkv)
+
+    MAPREDUCE-1526. Cache the job related information while submitting the job. 
+    (rksingh)
 
     HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
 
