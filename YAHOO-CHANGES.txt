@@ -4,6 +4,10 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6706. Fixes exception handling for saslConnect. The ideal
+    solution is to the Refreshable interface but as Owen noted in 
+    HADOOP-6656, it doesn't seem to work as expected. (ddas)
+
     MAPREDUCE-1617. TestBadRecords failed once in our test runs. (Amar
     Kamat via vinodkv).
 
