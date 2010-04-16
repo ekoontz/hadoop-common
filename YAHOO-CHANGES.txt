@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1317. Reducing memory consumption of rumen objects. (htang)
+
     MAPREDUCE-1317. Reverting the patch since it caused build failures. (htang)
 
     MAPREDUCE-1683. Fixed jobtracker web-ui to correctly display heap-usage.
