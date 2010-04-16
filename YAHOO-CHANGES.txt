@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-587. Stream test TestStreamingExitStatus fails with Out of
+    Memory. (Amar Kamat via vinodkv).
+
     HDFS-1096. Reverting the patch since it caused build failures. (ddas)
 
     MAPREDUCE-1317. Reducing memory consumption of rumen objects. (htang)
