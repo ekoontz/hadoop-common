@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1692. Remove TestStreamedMerge from the streaming tests.
+    (Amareshwari Sriramadasu and Sreekanth Ramakrishnan via vinodkv)
+
     HDFS-1081. Performance regression in 
     DistributedFileSystem::getFileBlockLocations in secure systems (jhoman)
     
