@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HDFS-1012. Support for cluster specific path entries in ldap for hdfsproxy
+    (Srikanth Sundarrajan via Nicholas)
+
     HDFS-1011. Improve Logging in HDFSProxy to include cluster name associated with the request
     (Srikanth Sundarrajan via Nicholas)
 
