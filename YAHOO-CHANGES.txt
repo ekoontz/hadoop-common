@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1701.  AccessControlException while renewing a delegation token 
+    in not correctly handled in the JobTracker. (boryas)
+
     HDFS-481. Incremental patch to fix broken unit test in contrib/hdfsproxy
 
     HADOOP-6706. Fixes a bug in the earlier version of the same patch (ddas)
