@@ -53,6 +53,9 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class MiniDFSCluster {
 
+  public static final File BASE_DIR =
+    new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
+  
   public class DataNodeProperties {
     DataNode datanode;
     Configuration conf;
