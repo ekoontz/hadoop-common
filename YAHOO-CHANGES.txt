@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1607. Task controller may not set permissions for a 
+    task cleanup attempt's log directory. (Amareshwari Sreeramadasu via vinodkv)
+
     MAPREDUCE-1533. JobTracker performance enhancements. (Amar Kamat via vinodkv)
 
     MAPREDUCE-1701.  AccessControlException while renewing a delegation token 
