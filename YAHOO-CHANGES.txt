@@ -4,13 +4,18 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    HADOOP-6670. Use the UserGroupInformation's Subject as the criteria for
+    equals and hashCode. (omalley)
+
     HADOOP-6716. System won't start in non-secure mode when kerb5.conf 
    (edu.mit.kerberos on Mac) is not present. (boryas)
 
     MAPREDUCE-1607. Task controller may not set permissions for a 
-    task cleanup attempt's log directory. (Amareshwari Sreeramadasu via vinodkv)
+    task cleanup attempt's log directory. (Amareshwari Sreeramadasu via 
+    vinodkv)
 
-    MAPREDUCE-1533. JobTracker performance enhancements. (Amar Kamat via vinodkv)
+    MAPREDUCE-1533. JobTracker performance enhancements. (Amar Kamat via 
+    vinodkv)
 
     MAPREDUCE-1701.  AccessControlException while renewing a delegation token 
     in not correctly handled in the JobTracker. (boryas)
@@ -25,11 +30,11 @@ the patches applied from issues referenced in CHANGES.txt.
     HDFS-1012. Support for cluster specific path entries in ldap for hdfsproxy
     (Srikanth Sundarrajan via Nicholas)
 
-    HDFS-1011. Improve Logging in HDFSProxy to include cluster name associated with the request
-    (Srikanth Sundarrajan via Nicholas)
+    HDFS-1011. Improve Logging in HDFSProxy to include cluster name associated
+    with the request (Srikanth Sundarrajan via Nicholas)
 
-    HDFS-1010. Retrieve group information from UnixUserGroupInformation instead of LdapEntry
-    (Srikanth Sundarrajan via Nicholas)
+    HDFS-1010. Retrieve group information from UnixUserGroupInformation 
+    instead of LdapEntry (Srikanth Sundarrajan via Nicholas)
 
     HDFS-481. Bug fix - hdfsproxy: Stack overflow + Race conditions
     (Srikanth Sundarrajan via Nicholas)
@@ -72,19 +77,20 @@ the patches applied from issues referenced in CHANGES.txt.
     MAPREDUCE-1683.  Removes JNI calls to get jvm current/max heap usage in
     ClusterStatus by default. (acmurthy)
 
-    HADOOP-6687.  user object in the subject in UGI should be reused in case of a 
-    relogin. (jitendra)
+    HADOOP-6687.  user object in the subject in UGI should be reused in case 
+    of a relogin. (jitendra)
 
-    HADOOP-5647. TestJobHistory fails if /tmp/_logs is not writable to. Testcase 
-    should not depend on /tmp. (Ravi Gummadi via vinodkv)
+    HADOOP-5647. TestJobHistory fails if /tmp/_logs is not writable to. 
+    Testcase should not depend on /tmp. (Ravi Gummadi via vinodkv)
 
-    MAPREDUCE-181. Bug fix for Secure job submission. (Ravi Gummadi via vinodkv)
+    MAPREDUCE-181. Bug fix for Secure job submission. (Ravi Gummadi via 
+    vinodkv)
 
     MAPREDUCE-1635. ResourceEstimator does not work after MAPREDUCE-842. 
     (Amareshwari Sriramadasu via vinodkv)
 
-    MAPREDUCE-1526. Cache the job related information while submitting the job. 
-    (rksingh)
+    MAPREDUCE-1526. Cache the job related information while submitting the 
+    job. (rksingh)
 
     HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
 
@@ -336,7 +342,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
     HDFS-1007. Fixes a bug on top of the earlier patch. (ddas)
 
-    HDFS-1005. Fsck security. Makes it work over kerberized SSL(boryas and jhoman)
+    HDFS-1005. Fsck security. Makes it work over kerberized SSL (boryas and 
+    jhoman)
 
     HDFS-1007. Makes HFTP and Distcp use kerberized SSL. (ddas)
 
@@ -351,21 +358,25 @@ the patches applied from issues referenced in CHANGES.txt.
     HADOOP-6589. Add a framework for better error messages when rpc connections
     fail to authenticate. (Kan Zhang via omalley)
 
-    HADOOP-6600,HDFS-1003,MAPREDUCE-1539. mechanism for authorization check for 
-    inter-server protocols(boryas)
+    HADOOP-6600,HDFS-1003,MAPREDUCE-1539. mechanism for authorization check
+    for inter-server protocols(boryas)
 
-    HADOOP-6580,HDFS-993,MAPREDUCE-1516. UGI should contain authentication method.
-    Namenode and JT should issue a delegation token only for kerberos authenticated 
-    clients. (jitendra)
+    HADOOP-6580,HDFS-993,MAPREDUCE-1516. UGI should contain authentication 
+    method.
 
-    HDFS-984,HADOOP-6573,MAPREDUCE-1537. Delegation Tokens should be persisted in Namenode,
-    and corresponding changes in common and mr. (jitendra)
+    Namenode and JT should issue a delegation token only for kerberos 
+    authenticated  clients. (jitendra)
+
+    HDFS-984,HADOOP-6573,MAPREDUCE-1537. Delegation Tokens should be persisted
+    in Namenode, and corresponding changes in common and mr. (jitendra)
 
     HDFS-994. Provide methods for obtaining delegation token from Namenode for 
     hftp and other uses. Incorporates HADOOP-6594: Update hdfs script to 
     provide fetchdt tool. (jitendra)
 
-    HADOOP-6586. Log authentication and authorization failures and successes(boryas)
+    HADOOP-6586. Log authentication and authorization failures and successes
+    (boryas)
+
     HDFS-991. Allow use of delegation tokens to authenticate to the 
     HDFS servlets. (omalley)
 
@@ -629,7 +640,7 @@ yahoo-hadoop-0.20.1-3195383008
 
     HADOOP-6506. Failing tests prevent the rest of test targets from
     execution. (cos)
-
+x
     HADOOP-5457. Fix to continue to run builds even if contrib test fails.
     (gkesavan)
 
