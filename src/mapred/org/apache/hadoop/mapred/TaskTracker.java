@@ -248,9 +248,7 @@ public class TaskTracker
   private int maxReduceSlots;
   private int failures;
 
-  // MROwner's ugi
-  private UserGroupInformation mrOwner;
-  private String supergroup;
+  private ACLsManager aclsManager;
   
   // Performance-related config knob to send an out-of-band heartbeat
   // on task completion
@@ -278,9 +276,6 @@ public class TaskTracker
 
   static final String MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY =
       "mapred.tasktracker.memory_calculator_plugin";
-
-  // Manages job acls of jobs in TaskTracker
-  private TaskTrackerJobACLsManager jobACLsManager;
 
   /**
    * the minimum interval between jobtracker polls
@@ -586,16 +581,11 @@ public class TaskTracker
     this.fConf = new JobConf(originalConf);
     UserGroupInformation.setConfiguration(fConf);
     SecurityUtil.login(fConf, TT_KEYTAB_FILE, TT_USER_NAME);
-    if (UserGroupInformation.isLoginKeytabBased()) {
-      mrOwner = UserGroupInformation.getLoginUser();
-    } else {
-      mrOwner = UserGroupInformation.getCurrentUser();
-    }
 
-    supergroup = fConf.get(JobConf.MR_SUPERGROUP,
-                           "supergroup");
-    LOG.info("Starting tasktracker with owner as " + mrOwner.getShortUserName()
-             + " and supergroup as " + supergroup);
+    aclsManager = new ACLsManager(fConf, new JobACLsManager(fConf), null);
+    LOG.info("Starting tasktracker with owner as " +
+        getMROwner().getShortUserName() + " and supergroup as " +
+        getSuperGroup());
 
     localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
@@ -692,7 +682,7 @@ public class TaskTracker
         this.fConf, taskController);
 
     this.jobClient = (InterTrackerProtocol) 
-    mrOwner.doAs(new PrivilegedExceptionAction<Object>() {
+    getMROwner().doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         return RPC.waitForProxy(InterTrackerProtocol.class,
             InterTrackerProtocol.versionID,
@@ -733,19 +723,22 @@ public class TaskTracker
   }
 
   UserGroupInformation getMROwner() {
-    return mrOwner;
+    return aclsManager.getMROwner();
   }
 
   String getSuperGroup() {
-    return supergroup;
+    return aclsManager.getSuperGroup();
   }
-  
+
+  boolean isMRAdmin(UserGroupInformation ugi) {
+    return aclsManager.isMRAdmin(ugi);
+  }
+
   /**
-   * Is job level authorization enabled on the TT ?
+   * Are ACLs for authorization checks enabled on the TT ?
    */
-  boolean isJobLevelAuthorizationEnabled() {
-    return fConf.getBoolean(
-        JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, false);
+  boolean areACLsEnabled() {
+    return fConf.getBoolean(JobConf.MR_ACLS_ENABLED, false);
   }
 
   public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(
@@ -1258,8 +1251,7 @@ public class TaskTracker
     checkJettyPort(httpPort);
     // create user log manager
     setUserLogManager(new UserLogManager(conf));
-    // Initialize the jobACLSManager
-    jobACLsManager = new TaskTrackerJobACLsManager(this);
+
     initialize();
   }
 
@@ -3824,7 +3816,11 @@ public class TaskTracker
       return localJobTokenFileStr;
     }
 
-    TaskTrackerJobACLsManager getJobACLsManager() {
-      return jobACLsManager;
+    JobACLsManager getJobACLsManager() {
+      return aclsManager.getJobACLsManager();
+    }
+    
+    ACLsManager getACLsManager() {
+      return aclsManager;
     }
 }
