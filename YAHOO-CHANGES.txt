@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+    MAPREDUCE-1641. Fix DistributedCache to ensure same files cannot be put in
+    both the archives and files sections. (Richard King via acmurthy) 
+
     HADOOP-6670. Fixes a testcase issue introduced by the earlier commit
     of the HADOOP-6670 patch. (ddas)
 
