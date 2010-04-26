@@ -4,6 +4,8 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+Release 0.20.102.0 - unreleased
+
     MAPREDUCE-1641. Fix DistributedCache to ensure same files cannot be put in
     both the archives and files sections. (Richard King via acmurthy) 
 
@@ -113,6 +115,8 @@ the patches applied from issues referenced in CHANGES.txt.
     MAPREDUCE-1526. Cache the job related information while submitting the 
     job. (rksingh)
 
+Release 0.20.101.0 - 7 Apr 2010
+
     HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
 
     BUG:3524726. Replace fork of DF with library call. (cdouglas via omalley)
@@ -130,6 +134,8 @@ the patches applied from issues referenced in CHANGES.txt.
     HDFS-1080.  SecondaryNameNode image transfer should use the defined 
     http address rather than local ip address (jhoman)
     
+Release 0.20.100.0 - 1 Apr 2010
+
     HADOOP-6661. User document for UserGroupInformation.doAs for secure
     impersonation. (jitendra)
 
@@ -603,7 +609,7 @@ the patches applied from issues referenced in CHANGES.txt.
     been created by user tasks with non-writable permissions. 
     (Ravi Gummadi via yhemanth)
 
-yahoo-hadoop-0.20.1-3195383006
+Release yahoo-hadoop-0.20.1-3195383006
 
     HADOOP-5879. Read compression level and strategy from Configuration for
     gzip compression. (He Yongqiang via cdouglas)
@@ -621,7 +627,7 @@ yahoo-hadoop-0.20.1-3195383006
     to change the default 1 MB, the maximum size when large IPC handler 
     response buffer is reset. (suresh)
 
-yahoo-hadoop-0.20.1-3195383008
+Release yahoo-hadoop-0.20.1-3195383008
 
     HADOOP-6521. Fix backward compatiblity issue with umask when applications 
     use deprecated param dfs.umask in configuration or use 
@@ -741,9 +747,8 @@ x
     HADOOP-4359. Access Token: Support for data access authorization 
     checking on DataNodes. (Jitendra Nath Pandey)
 
-Yahoo Hadoop 0.20.100.0 - Unreleased
+Release yahoo-hadoop-0.20.1-3195383006
 
-yahoo-hadoop-0.20.1-3195383006
     MAPREDUCE-1372. Fixed a ConcurrentModificationException in jobtracker.
     (Arun C Murthy via yhemanth)
 
@@ -849,7 +854,7 @@ yahoo-hadoop-0.20.1-3195383006
     HADOOP-6343. Log unexpected throwable object caught in RPC.  
     Contributed by Jitendra Nath Pandey
 
-yahoo-hadoop-0.20.1-3092118007:
+Release yahoo-hadoop-0.20.1-3092118007:
 
     MAPREDUCE-1186. Fixed DistributedCache to do a recursive chmod on just the
     per-cache directory, not all of mapred.local.dir.
@@ -859,7 +864,7 @@ yahoo-hadoop-0.20.1-3092118007:
     the upgrade option.
     (Jothi Padmanabhan via yhemanth)
 
-yahoo-hadoop-0.20.1-3092118006:
+Release yahoo-hadoop-0.20.1-3092118006:
 
     MAPREDUCE-1219. Fixed JobTracker to not collect per-job metrics, thus
     easing load on it. (Amareshwari Sriramadasu via acmurthy)
@@ -867,12 +872,12 @@ yahoo-hadoop-0.20.1-3092118006:
     HDFS-761. Fix failure to process rename operation from edits log due to
     quota verification. (suresh)
 
-yahoo-hadoop-0.20.1-3092118005:
+Release yahoo-hadoop-0.20.1-3092118005:
 
     MAPREDUCE-1196. Fix FileOutputCommitter to use the deprecated cleanupJob
     api correctly. (acmurthy)
 
-yahoo-hadoop-0.20.1-3092118004:
+Release yahoo-hadoop-0.20.1-3092118004:
 
     HADOOP-6344.  rm and rmr immediately delete files rather than sending
     to trash, despite trash being enabled, if a user is over-quota. (jhoman)
@@ -964,7 +969,7 @@ yahoo-hadoop-0.20.1-3092118004:
     HADOOP-6218. Adds a feature where TFile can be split by Record
     Sequence number. Contributed by Hong Tang and Raghu Angadi.
 
-yahoo-hadoop-0.20.1-3041192001
+Release yahoo-hadoop-0.20.1-3041192001
 
     MAPREDUCE-1088. Changed permissions on JobHistory files on local disk to
     0744. Contributed by Arun C. Murthy.
@@ -972,7 +977,7 @@ yahoo-hadoop-0.20.1-3041192001
     HADOOP-6304. Use java.io.File.set{Readable|Writable|Executable} where
     possible in RawLocalFileSystem. Contributed by Arun C. Murthy.
     
-yahoo-hadoop-0.20.1-3041192000
+Release yahoo-hadoop-0.20.1-3041192000
 
     MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
     heartbeat on task-completion for better job-latency. Contributed by
@@ -1001,7 +1006,7 @@ yahoo-hadoop-0.20.1-3041192000
     ToolRunner so that options such as queue name can be 
     passed via command line. Contributed by Sreekanth Ramakrishnan.
 
-yahoo-hadoop-0.20.0-3006291003
+Release yahoo-hadoop-0.20.0-3006291003
 
     HADOOP:5420 Correct bug in earlier implementation
     by Arun C. Murthy
@@ -1013,29 +1018,29 @@ yahoo-hadoop-0.20.0-3006291003
     HADOOP-5780. Improve per block message prited by -metaSave 
     in HDFS. (Raghu Angadi)
 
-yahoo-hadoop-0.20.0-2957040010
+Release yahoo-hadoop-0.20.0-2957040010
  
     HADOOP-6227. Fix Configuration to allow final parameters to be set 
     to null and prevent them from being overridden. Contributed by 
     Amareshwari Sriramadasu.
 
-yahoo-hadoop-0.20.0-2957040007
+Release yahoo-hadoop-0.20.0-2957040007
 
     MAPREDUCE-430  Added patch supplied by Amar Kamat to allow 
                    roll forward on branch to includ externally committed
                    patch.
 
-yahoo-hadoop-0.20.0-2957040006
+Release yahoo-hadoop-0.20.0-2957040006
 
     MAPREDUCE-768. Provide an option to dump jobtracker configuration in 
     JSON format to standard output. Contributed by V.V.Chaitanya
 
-yahoo-hadoop-0.20.0-2957040004
+Release yahoo-hadoop-0.20.0-2957040004
 
     MAPREDUCE-834 Correct an issue created by merging this issue with
     patch attached to external Jira.
 
-yahoo-hadoop-0.20.0-2957040003
+Release yahoo-hadoop-0.20.0-2957040003
 
     HADOOP-6184 Provide an API to dump Configuration in a JSON format. 
     Contributed by V.V.Chaitanya Krishna.
@@ -1043,7 +1048,7 @@ yahoo-hadoop-0.20.0-2957040003
     MAPREDUCE-745  Patch added for this issue to allow branch-0.20 to 
     merge cleanly.
 
-yahoo-hadoop-0.20.0-2957040000
+Release yahoo-hadoop-0.20.0-2957040000
 
     MAPREDUCE:478 Allow map and reduce jvm parameters, environment 
     variables and ulimit to be set separately.
@@ -1061,7 +1066,7 @@ yahoo-hadoop-0.20.0-2957040000
     MAPREDUCE:467 Provide ability to collect statistics about total tasks and 
     succeeded tasks in different time windows.
 
-yahoo-hadoop-0.20.0.2949784002:
+Release yahoo-hadoop-0.20.0.2949784002:
 
     MAPREDUCE-817. Add a cache for retired jobs with minimal job
     info and provide a way to access history file url
@@ -1073,7 +1078,7 @@ yahoo-hadoop-0.20.0.2949784002:
     happens. The bug was that even if commit failed, the task would be
     declared as successful. Contributed by Amareshwari Sriramadasu.
 
-yahoo-hadoop-0.20.0.2902658004:
+Release yahoo-hadoop-0.20.0.2902658004:
 
     MAPREDUCE-809 Fix job-summary logs to correctly record final status of 
     FAILED and KILLED jobs.  
