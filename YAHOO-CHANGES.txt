@@ -8,6 +8,10 @@ Release 0.20.103.0 - unreleased
 
 Release 0.20.102.0 - unreleased
 
+    MAPREDUCE-1641. Bug-fix to ensure command line options such as
+    -files/-archives are checked for duplicate artifacts in the
+    DistributedCache. (Amareshwari Sreeramadasu via acmurthy) 
+
     MAPREDUCE-1641. Fix DistributedCache to ensure same files cannot be put in
     both the archives and files sections. (Richard King via acmurthy) 
 
