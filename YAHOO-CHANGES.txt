@@ -8,6 +8,9 @@ Release 0.20.103.0 - unreleased
 
 Release 0.20.102.0 - unreleased
 
+	MAPREDUCE-1687. Stress submission policy does not always stress the
+	cluster. (htang)
+
     MAPREDUCE-1641. Bug-fix to ensure command line options such as
     -files/-archives are checked for duplicate artifacts in the
     DistributedCache. (Amareshwari Sreeramadasu via acmurthy) 
