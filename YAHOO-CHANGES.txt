@@ -8,6 +8,9 @@ Release 0.20.103.0 - unreleased
 
     HADOOP-6526. Additional fix for test context on top of existing one. (cos)
 
+    HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
+    (suresh)
+    
 Release 0.20.102.0 - unreleased
 
     MAPREDUCE-1711. Gridmix should provide an option to submit jobs to the same
