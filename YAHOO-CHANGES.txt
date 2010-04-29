@@ -129,6 +129,11 @@ Release 0.20.102.0 - unreleased
     MAPREDUCE-1526. Cache the job related information while submitting the 
     job. (rksingh)
 
+Release 0.20.101.1 - unreleased
+
+    BUG:3611917. Fixes NPE in the distcp to do with handling of null Tokens
+    (ddas)
+    
 Release 0.20.101.0 - 7 Apr 2010
 
     HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
