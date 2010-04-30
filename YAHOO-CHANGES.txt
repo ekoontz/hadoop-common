@@ -10,6 +10,9 @@ Release 0.20.103.0 - unreleased
 
     HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
     (suresh)
+
+    HADOOP-6693. Added metrics to track kerberos login success and failure.
+    (suresh)
     
 Release 0.20.102.0 - unreleased
 
