@@ -858,8 +858,6 @@
     <attribute name="classpath" />
     <attribute name="test.dir" />
     <attribute name="fileset.dir" />
-    <attribute name="hadoop.home" default="" />
-    <attribute name="hadoop.conf.dir" default="" />
     <attribute name="hadoop.conf.dir.deployed" default="" />
     <attribute name="test.krb5.conf" default="" />
     <attribute name="test.krb5.conf.filename" default="" />
@@ -904,9 +902,6 @@
         <sysproperty key="testjar"
                      value="@{test.dir}/testjar" />
         <!-- System properties that are specifically set for system tests -->
-        <sysproperty key="test.system.hdrc.hadoophome" value="@{hadoop.home}" />
-        <sysproperty key="test.system.hdrc.hadoopconfdir"
-                     value="@{hadoop.conf.dir}" />
         <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
                      value="@{hadoop.conf.dir.deployed}" />
         <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
