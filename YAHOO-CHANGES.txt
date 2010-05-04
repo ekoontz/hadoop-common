@@ -6,6 +6,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    HDFS-1104. Fsck triggers full GC on NameNode. (hairong)
+
     HADOOP-6332. Large-scale Automated Test Framework (sharad, Sreekanth
     Ramakrishnan, at all via cos)
 
