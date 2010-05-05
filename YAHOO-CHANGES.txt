@@ -6,6 +6,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    HADOOP-6640. FileSystem.get() does RPC retires within a static
+    synchronized block. (hairong)
+
     HDFS-1006. Removes unnecessary logins from the previous patch. (ddas)
 
     HADOOP-6745. adding some java doc to Server.RpcMetrics, UGI (boryas)
