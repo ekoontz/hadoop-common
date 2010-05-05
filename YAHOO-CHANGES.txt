@@ -4,9 +4,11 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-    HADOOP-6745. adding some java doc to Server.RpcMetrics, UGI (boryas)
-
 Release 0.20.103.0 - unreleased
+
+    HDFS-1006. Removes unnecessary logins from the previous patch. (ddas)
+
+    HADOOP-6745. adding some java doc to Server.RpcMetrics, UGI (boryas)
 
     HDFS-1104. Fsck triggers full GC on NameNode. (hairong)
 
