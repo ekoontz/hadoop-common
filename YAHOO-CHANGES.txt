@@ -18,6 +18,8 @@ Release 0.20.103.0 - unreleased
 
     HADOOP-6693. Added metrics to track kerberos login success and failure.
     (suresh)
+
+    MAPREDUCE-1707. TaskRunner can get NPE in getting ugi from TaskTracker. (vinodkv)
     
 Release 0.20.102.0 - unreleased
 
