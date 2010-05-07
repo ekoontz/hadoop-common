@@ -569,6 +569,11 @@ public class TaskTracker
                             protocol);
     }
   }
+  
+  int getHttpPort() {
+    return httpPort;
+  }
+
   public static final String TT_USER_NAME = "mapreduce.tasktracker.kerberos.principal";
   public static final String TT_KEYTAB_FILE =
     "mapreduce.tasktracker.keytab.file";  
@@ -582,10 +587,8 @@ public class TaskTracker
     UserGroupInformation.setConfiguration(fConf);
     SecurityUtil.login(fConf, TT_KEYTAB_FILE, TT_USER_NAME);
 
-    aclsManager = new ACLsManager(fConf, new JobACLsManager(fConf), null);
-    LOG.info("Starting tasktracker with owner as " +
-        getMROwner().getShortUserName() + " and supergroup as " +
-        getSuperGroup());
+    LOG.info("Starting tasktracker with owner as "
+        + getMROwner().getShortUserName());
 
     localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
@@ -724,14 +727,6 @@ public class TaskTracker
 
   UserGroupInformation getMROwner() {
     return aclsManager.getMROwner();
-  }
-
-  String getSuperGroup() {
-    return aclsManager.getSuperGroup();
-  }
-
-  boolean isMRAdmin(UserGroupInformation ugi) {
-    return aclsManager.isMRAdmin(ugi);
   }
 
   /**
@@ -1221,6 +1216,7 @@ public class TaskTracker
                   "mapred.tasktracker.map.tasks.maximum", 2);
     maxReduceSlots = conf.getInt(
                   "mapred.tasktracker.reduce.tasks.maximum", 2);
+    aclsManager = new ACLsManager(conf, new JobACLsManager(conf), null);
     this.jobTrackAddr = JobTracker.getAddress(conf);
     String infoAddr = 
       NetUtils.getServerAddress(conf,
@@ -1231,7 +1227,7 @@ public class TaskTracker
     String httpBindAddress = infoSocAddr.getHostName();
     int httpPort = infoSocAddr.getPort();
     this.server = new HttpServer("task", httpBindAddress, httpPort,
-        httpPort == 0, conf);
+        httpPort == 0, conf, aclsManager.getAdminsAcl());
     workerThreads = conf.getInt("tasktracker.http.threads", 40);
     this.shuffleServerMetrics = new ShuffleServerMetrics(conf);
     server.setThreads(1, workerThreads);
