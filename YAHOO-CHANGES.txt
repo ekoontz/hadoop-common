@@ -4,6 +4,9 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
+     HDFS-1136. FileChecksumServlets.RedirectServlet doesn't carry forward 
+     the delegation token (boryas)
+
 Release 0.20.103.0 - unreleased
 
     MAPREDUCE-1759. Exception message for unauthorized user doing killJob,
