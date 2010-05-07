@@ -6,6 +6,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    MAPREDUCE-1317. NPE in setHostName in Rumen. (rksingh)
+
     HADOOP-6701.  Incorrect exit codes for "dfs -chown", "dfs -chgrp"
     (rphulari)
 
