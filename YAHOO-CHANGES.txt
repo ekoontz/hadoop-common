@@ -6,6 +6,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    MAPREDUCE-1759. Exception message for unauthorized user doing killJob,
+    killTask, setJobPriority needs to be improved. (gravi via vinodkv)
+
     HADOOP-6715. AccessControlList.toString() returns empty string when
     we set acl to "*". (gravi via vinodkv)
 
