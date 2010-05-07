@@ -6,7 +6,14 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    HADOOP-6631. FileUtil.fullyDelete() should continue to delete other files
+    despite failure at any level. (vinodkv)
+
     MAPREDUCE-1317. NPE in setHostName in Rumen. (rksingh)
+
+    MAPREDUCE-1754. Replace mapred.persmissions.supergroup with an acl : 
+    mapreduce.cluster.administrators and HADOOP-6748.: Remove
+    hadoop.cluster.administrators. Contributed by Amareshwari Sriramadasu.
 
     HADOOP-6701.  Incorrect exit codes for "dfs -chown", "dfs -chgrp"
     (rphulari)
@@ -17,6 +24,8 @@ Release 0.20.103.0 - unreleased
     HDFS-1006. Removes unnecessary logins from the previous patch. (ddas)
 
     HADOOP-6745. adding some java doc to Server.RpcMetrics, UGI (boryas)
+
+    MAPREDUCE-1707. TaskRunner can get NPE in getting ugi from TaskTracker. (vinodkv)
 
     HDFS-1104. Fsck triggers full GC on NameNode. (hairong)
 
@@ -31,12 +40,6 @@ Release 0.20.103.0 - unreleased
     HADOOP-6693. Added metrics to track kerberos login success and failure.
     (suresh)
 
-    MAPREDUCE-1707. TaskRunner can get NPE in getting ugi from TaskTracker. (vinodkv)
-
-    MAPREDUCE-1754. Replace mapred.persmissions.supergroup with an acl : 
-    mapreduce.cluster.administrators and HADOOP-6748.: Remove
-    hadoop.cluster.administrators. Contributed by Amareshwari Sriramadasu.
-    
 Release 0.20.102.0 - unreleased
 
     MAPREDUCE-1711. Gridmix should provide an option to submit jobs to the same
