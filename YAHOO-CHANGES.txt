@@ -9,6 +9,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    HADOOP-6756. Change value of FS_DEFAULT_NAME_KEY from fs.defaultFS
+    to fs.default.name which is a correct name for 0.20 (steffl)
+
     HADOOP-6756. Document (javadoc comments) and cleanup configuration
     keys in CommonConfigurationKeys.java (steffl)
 
