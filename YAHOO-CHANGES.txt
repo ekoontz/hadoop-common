@@ -4,10 +4,13 @@ Patches from the following Apache Jira issues have been applied
 to this release in the order indicated. This is in addition to
 the patches applied from issues referenced in CHANGES.txt.
 
-     HDFS-1136. FileChecksumServlets.RedirectServlet doesn't carry forward 
-     the delegation token (boryas)
 
 Release 0.20.103.0 - unreleased
+
+    MAPREDUCE-1664. Bugfix on top of the previous patch. (ddas)
+
+    HDFS-1136. FileChecksumServlets.RedirectServlet doesn't carry forward 
+    the delegation token (boryas)
 
     HADOOP-6756. Change value of FS_DEFAULT_NAME_KEY from fs.defaultFS
     to fs.default.name which is a correct name for 0.20 (steffl)
