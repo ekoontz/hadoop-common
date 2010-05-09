@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    MAPREDUCE-1744. Fixed DistributedCache apis to take a user-supplied
+    FileSystem to allow for better proxy behaviour for Oozie. (Richard King) 
+
     MAPREDUCE-1733. Authentication between pipes processes and java counterparts.
     (jitendra)
 
