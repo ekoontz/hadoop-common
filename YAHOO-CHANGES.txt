@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.103.0 - unreleased
 
+    MAPREDUCE-1733. Authentication between pipes processes and java counterparts.
+    (jitendra)
+
     MAPREDUCE-1664. Bugfix on top of the previous patch. (ddas)
 
     HDFS-1136. FileChecksumServlets.RedirectServlet doesn't carry forward 
