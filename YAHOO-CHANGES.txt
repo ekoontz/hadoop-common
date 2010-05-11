@@ -7,6 +7,10 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HADOOP-6706. Fix on top of the earlier patch. Closes the connection
+    on a SASL connection failure, and retries again with a new
+    connection. (ddas)
+
 Release 0.20.103.0 - unreleased
 
     MAPREDUCE-1744. Fixed DistributedCache apis to take a user-supplied
