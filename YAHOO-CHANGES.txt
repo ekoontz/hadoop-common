@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HDFS-1146. Javadoc for getDelegationTokenSecretManager in FSNamesystem.
+    (jitendra)
+
     HADOOP-6706. Fix on top of the earlier patch. Closes the connection
     on a SASL connection failure, and retries again with a new
     connection. (ddas)
