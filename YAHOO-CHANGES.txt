@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    MAPREDUCE-1442. Fixed regex in job-history related to parsing Counter
+    values. (Luke Lu via acmurthy)  
+
     HDFS-1146. Javadoc for getDelegationTokenSecretManager in FSNamesystem.
     (jitendra)
 
