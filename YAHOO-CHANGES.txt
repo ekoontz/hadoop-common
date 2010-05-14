@@ -17,6 +17,11 @@ Release 0.20.104.0 - unreleased
     on a SASL connection failure, and retries again with a new
     connection. (ddas)
 
+    MAPREDUCE-1716. Fix on top of earlier patch for logs truncation a.k.a 
+    MAPREDUCE-1100. Addresses log truncation issues when binary data is
+    written to log files and adds a header to a truncated log file to
+    inform users of the done trucation.
+
 Release 0.20.103.0 - unreleased
 
     MAPREDUCE-1744. Fixed DistributedCache apis to take a user-supplied
