@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HDFS-1150. Verify datanodes' identities to clients in secure clusters.
+    (jghoman)
+
     MAPREDUCE-1442. Fixed regex in job-history related to parsing Counter
     values. (Luke Lu via acmurthy)  
 
