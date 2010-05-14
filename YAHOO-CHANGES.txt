@@ -10,6 +10,9 @@ Release 0.20.104.0 - unreleased
     MAPREDUCE-1442. Fixed regex in job-history related to parsing Counter
     values. (Luke Lu via acmurthy)  
 
+    HADOOP-6760. WebServer shouldn't increase port number in case of negative
+    port setting caused by Jetty's race. (cos)
+
     HDFS-1146. Javadoc for getDelegationTokenSecretManager in FSNamesystem.
     (jitendra)
 
