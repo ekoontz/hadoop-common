@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HADOOP-6706.FIX. Relogin behavior for RPC clients could be improved 
+    (boryas)
+
     HDFS-1150. Verify datanodes' identities to clients in secure clusters.
     (jghoman)
 
