@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HDFS-1130. Adds a configuration dfs.cluster.administrators for 
+    controlling access to the default servlets in hdfs. (ddas)
+
     HADOOP-6706.FIX. Relogin behavior for RPC clients could be improved 
     (boryas)
 
