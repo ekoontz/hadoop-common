@@ -6,6 +6,11 @@ the patches applied from issues referenced in CHANGES.txt.
 
 
 Release 0.20.104.0 - unreleased
+
+    MAPREDUCE-1664. Bugfix to enable queue administrators of a queue to
+    view job details of jobs submitted to that queue even though they
+    are not part of acl-view-job. 
+
     HDFS-1150. Bugfix to add more knobs to secure datanode starter.
 
     HDFS-1157. Modifications introduced by HDFS-1150 are breaking aspect's
