@@ -7,6 +7,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HDFS-1150. Bugfix in the hadoop shell script on top of earlier patches (ddas)
+
     MAPREDUCE-1664. Bugfix to enable queue administrators of a queue to
     view job details of jobs submitted to that queue even though they
     are not part of acl-view-job. 
