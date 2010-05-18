@@ -6,6 +6,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 
 Release 0.20.104.0 - unreleased
+    HDFS-1150. Bugfix to add more knobs to secure datanode starter.
+
     HDFS-1157. Modifications introduced by HDFS-1150 are breaking aspect's
     bindings (cos)
 
