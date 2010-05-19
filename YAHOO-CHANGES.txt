@@ -7,6 +7,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HADOOP-6776. Fixes the javadoc in UGI.createProxyUser. (ddas)
+
     HDFS-1150. building jsvc from source tar. source tar is also checked in.
     (jitendra)
 
