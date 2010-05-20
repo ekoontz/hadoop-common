@@ -6,6 +6,7 @@ the patches applied from issues referenced in CHANGES.txt.
 
 
 Release 0.20.104.0 - unreleased
+    HADOOP-6781. security audit log shouldn't have exception in it. (boryas)
 
     HADOOP-6776. Fixes the javadoc in UGI.createProxyUser. (ddas)
 
