@@ -6,6 +6,11 @@ the patches applied from issues referenced in CHANGES.txt.
 
 
 Release 0.20.104.0 - unreleased
+
+    HDFS-1150. Fixes the earlier patch to do logging in the right directory
+    and also adds facility for monitoring processes (via -Dprocname in the
+    command line). (Jakob Homan via ddas)
+
     HADOOP-6781. security audit log shouldn't have exception in it. (boryas)
 
     HADOOP-6776. Fixes the javadoc in UGI.createProxyUser. (ddas)
