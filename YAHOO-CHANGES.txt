@@ -7,6 +7,8 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    MAPREDUCE-1807. Re-factor TestQueueManager. (Richard King via acmurthy)
+
     HDFS-1150. Fixes the earlier patch to do logging in the right directory
     and also adds facility for monitoring processes (via -Dprocname in the
     command line). (Jakob Homan via ddas)
