@@ -1,0 +1,23 @@
+--- src/java/org/apache/hadoop/hdfs/server/namenode/BlockManager.java
++++ src/java/org/apache/hadoop/hdfs/server/namenode/BlockManager.java
+@@ -647,13 +647,14 @@ public class BlockManager {
+    * @return total number of block for deletion
+    */
+   int computeInvalidateWork(int nodesToProcess) {
+-    int numOfNodes = recentInvalidateSets.size();
+-    nodesToProcess = Math.min(numOfNodes, nodesToProcess);
++    int numOfNodes = 0;
++    ArrayList<String> keyArray = null;
++    synchronized(namesystem) {
++      numOfNodes = recentInvalidateSets.size();
++      keyArray = new ArrayList<String>(recentInvalidateSets.keySet());
++    }
+ 
+-    // TODO should using recentInvalidateSets be synchronized?
+-    // get an array of the keys
+-    ArrayList<String> keyArray =
+-      new ArrayList<String>(recentInvalidateSets.keySet());
++    nodesToProcess = Math.min(numOfNodes, nodesToProcess);
+ 
+     // randomly pick up <i>nodesToProcess</i> nodes
+     // and put them at [0, nodesToProcess)

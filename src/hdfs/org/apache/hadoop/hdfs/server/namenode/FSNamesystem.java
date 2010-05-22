@@ -304,7 +304,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private final GenerationStamp generationStamp = new GenerationStamp();
 
   // Ask Datanode only up to this many blocks to delete.
-  private int blockInvalidateLimit = FSConstants.BLOCK_INVALIDATE_CHUNK;
+  int blockInvalidateLimit;
 
   // precision of access times.
   private long accessTimePrecision = 0;
@@ -433,7 +433,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
 
-
     this.replicator = new ReplicationTargetChooser(
                          conf.getBoolean("dfs.replication.considerLoad", true),
                          this,
@@ -459,15 +458,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.maxReplicationStreams = conf.getInt("dfs.max-repl-streams", 2);
     long heartbeatInterval = conf.getLong("dfs.heartbeat.interval", 3) * 1000;
     this.heartbeatRecheckInterval = conf.getInt(
-        "heartbeat.recheck.interval", 5 * 60 * 1000); // 5 minutes
+        "dfs.heartbeat.recheck.interval", 5 * 60 * 1000); // 5 minutes
     this.heartbeatExpireInterval = 2 * heartbeatRecheckInterval +
       10 * heartbeatInterval;
     this.replicationRecheckInterval = 
       conf.getInt("dfs.replication.interval", 3) * 1000L;
     this.defaultBlockSize = conf.getLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     this.maxFsObjects = conf.getLong("dfs.max.objects", 0);
-    this.blockInvalidateLimit = Math.max(this.blockInvalidateLimit, 
-                                         20*(int)(heartbeatInterval/1000));
+    this.blockInvalidateLimit = conf.getInt("dfs.block.invalidate.limit",
+      Math.max(FSConstants.BLOCK_INVALIDATE_CHUNK,
+        20*(int)(heartbeatInterval/1000)));
     this.accessTimePrecision = conf.getLong("dfs.access.time.precision", 0);
     this.supportAppends = conf.getBoolean("dfs.support.append", false);
     this.isAccessTokenEnabled = conf.getBoolean(
@@ -1325,15 +1325,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           // remove this block from the list of pending blocks to be deleted. 
           // This reduces the possibility of triggering HADOOP-1349.
           //
-          for (Iterator<Collection<Block>> iter = recentInvalidateSets.values().iterator();
-               iter.hasNext();
-               ) {
-            Collection<Block> v = iter.next();
-            if (v.remove(last)) {
+          for (DatanodeDescriptor dd : targets) {
+            String datanodeId = dd.getStorageID();
+            Collection<Block> v = recentInvalidateSets.get(datanodeId);
+            boolean removed = false;
+            if (v != null && (removed = v.remove(last)) && v.isEmpty()) {
+              recentInvalidateSets.remove(datanodeId);
+            }
+            if (removed) {
               pendingDeletionBlocksCount--;
-              if (v.isEmpty()) {
-                iter.remove();
-              }
             }
           }
         }
@@ -1657,7 +1657,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @param b block
    * @param n datanode
    */
-  private void addToInvalidatesNoLog(Block b, DatanodeInfo n) {
+  void addToInvalidatesNoLog(Block b, DatanodeInfo n) {
     Collection<Block> invalidateSet = recentInvalidateSets.get(n.getStorageID());
     if (invalidateSet == null) {
       invalidateSet = new HashSet<Block>();
@@ -2613,13 +2613,39 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return workFound;
   }
 
-  private int computeInvalidateWork(int nodesToProcess) {
+  /**
+   * Schedule blocks for deletion at datanodes
+   * @param nodesToProcess number of datanodes to schedule deletion work
+   * @return total number of block for deletion
+   */
+  int computeInvalidateWork(int nodesToProcess) {
+    int numOfNodes = 0;
+    ArrayList<String> keyArray = null;
+    synchronized (this) {
+      numOfNodes = recentInvalidateSets.size();
+      keyArray = new ArrayList<String>(recentInvalidateSets.keySet());
+    }
+
+    nodesToProcess = Math.min(numOfNodes, nodesToProcess);
+
+    // randomly pick up <i>nodesToProcess</i> nodes 
+    // and put them at [0, nodesToProcess)
+    int remainingNodes = numOfNodes - nodesToProcess;
+    if (nodesToProcess < remainingNodes) {
+      for(int i=0; i<nodesToProcess; i++) {
+        int keyIndex = r.nextInt(numOfNodes-i)+i;
+        Collections.swap(keyArray, keyIndex, i); // swap to front
+      }
+    } else {
+      for(int i=0; i<remainingNodes; i++) {
+        int keyIndex = r.nextInt(numOfNodes-i);
+        Collections.swap(keyArray, keyIndex, numOfNodes-i-1); // swap to end
+      }
+    }
+
     int blockCnt = 0;
     for(int nodeCnt = 0; nodeCnt < nodesToProcess; nodeCnt++ ) {
-      int work = invalidateWorkForOneNode();
-      if(work == 0)
-        break;
-      blockCnt += work;
+      blockCnt += invalidateWorkForOneNode(keyArray.get(nodeCnt));
     }
     return blockCnt;
   }
@@ -2905,28 +2931,25 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Get blocks to invalidate for the first node 
+   * Get blocks to invalidate for <i>nodeId</i> 
    * in {@link #recentInvalidateSets}.
    * 
    * @return number of blocks scheduled for removal during this iteration.
    */
-  private synchronized int invalidateWorkForOneNode() {
+  private synchronized int invalidateWorkForOneNode(String nodeId) {
     // blocks should not be replicated or removed if safe mode is on
     if (isInSafeMode())
       return 0;
-    if(recentInvalidateSets.isEmpty())
-      return 0;
-    // get blocks to invalidate for the first node
-    String firstNodeId = recentInvalidateSets.keySet().iterator().next();
-    assert firstNodeId != null;
-    DatanodeDescriptor dn = datanodeMap.get(firstNodeId);
+    // get blocks to invalidate for the nodeId
+    assert nodeId != null;
+    DatanodeDescriptor dn = datanodeMap.get(nodeId);
     if (dn == null) {
-       removeFromInvalidates(firstNodeId);
-       return 0;
+      recentInvalidateSets.remove(nodeId);
+      return 0;
     }
 
-    Collection<Block> invalidateSet = recentInvalidateSets.get(firstNodeId);
-    if(invalidateSet == null)
+    Collection<Block> invalidateSet = recentInvalidateSets.get(nodeId);
+    if (invalidateSet == null)
       return 0;
 
     ArrayList<Block> blocksToInvalidate = 
@@ -2941,9 +2964,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
 
     // If we send everything in this message, remove this node entry
-    if (!it.hasNext()) {
-      removeFromInvalidates(firstNodeId);
-    }
+    if(!it.hasNext())
+      recentInvalidateSets.remove(nodeId);
 
     dn.addBlocksToBeInvalidated(blocksToInvalidate);
 
