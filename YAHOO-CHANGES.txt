@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HDFS-1178. The NameNode servlets should not use RPC to connect to the
+    NameNode. (omalley)
+
     MAPREDUCE-1807. Re-factor TestQueueManager. (Richard King via acmurthy)
 
     HDFS-1150. Fixes the earlier patch to do logging in the right directory
