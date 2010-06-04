@@ -33,6 +33,7 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
 
   /**
    * 4: never return null and always return a newly generated access token
+   * 4: added getBlockInfo
    */
   public static final long versionID = 4L;
 
@@ -47,4 +48,12 @@ public interface ClientDatanodeProtocol extends VersionedProtocol {
    */
   LocatedBlock recoverBlock(Block block, boolean keepLength,
       DatanodeInfo[] targets) throws IOException;
+
+  /** Returns a block object that contains the specified block object
+   * from the specified Datanode.
+   * @param block the specified block
+   * @return the Block object from the specified Datanode
+   * @throws IOException if the block does not exist
+   */
+  Block getBlockInfo(Block block) throws IOException;
 }

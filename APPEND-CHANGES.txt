@@ -7,3 +7,10 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20-append - unreleased
 
+  NEW FEATURES
+
+    HDFS-200. Support append and sync for hadoop 0.20 branch.
+
+  IMPROVEMENTS
+
+  BUG FIXES
