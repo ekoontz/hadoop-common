@@ -7,9 +7,12 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HDFS-1007. Fixes a bug in SecurityUtil.buildDTServiceName to do
+    with handling of null hostname. (omalley)
+
     HDFS-1007. makes long running servers using hftp work. Also has some
     refactoring in the MR code to do with handling of delegation tokens. 
-    (oom & ddas)
+    (omalley & ddas)
 
     HDFS-1178. The NameNode servlets should not use RPC to connect to the
     NameNode. (omalley)
