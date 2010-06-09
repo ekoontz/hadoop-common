@@ -869,9 +869,17 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
         try {
+            /**
+             * Sequence number -2 is a special value that is used when
+             * a DN fails to read an ack from a downstream. In this case,
+             * it needs to tell the client that there's been an error downstream
+             * but has no valid sequence number to use. Thus, -2 is used
+             * as an UNKNOWN value.
+             */
             long expected = -2;
-            PipelineAck ack = new PipelineAck();
             long seqno = -2;
+
+            PipelineAck ack = new PipelineAck();
             try { 
               if (!mirrorError) {
                 // read an ack from downstream datanode
