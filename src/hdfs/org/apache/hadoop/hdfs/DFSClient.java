@@ -1607,7 +1607,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           ClientDatanodeProtocol primary =  null;
           DatanodeInfo primaryNode = last.getLocations()[0];
           try {
-            primary = createClientDatanodeProtocolProxy(primaryNode, conf);
+            primary = createClientDatanodeProtocolProxy(primaryNode, conf, last.getBlock(), last.getBlockToken());
             Block newBlock = primary.getBlockInfo(last.getBlock());
             long newBlockSize = newBlock.getNumBytes();
             long delta = newBlockSize - last.getBlockSize();
