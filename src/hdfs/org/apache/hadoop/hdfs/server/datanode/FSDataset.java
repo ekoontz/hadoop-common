@@ -1476,7 +1476,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       DataNode datanode = DataNode.getDataNode();
       datanode.checkDiskError();
     }
-    
+
     if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
       InterDatanodeProtocol.LOG.debug("b=" + b + ", f=" + f);
     }
