@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-kRelease 0.20.3 - Unreleased
+Release 0.20.3 - Unreleased
 
   IMPROVEMENTS
 
