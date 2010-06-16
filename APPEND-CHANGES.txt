@@ -39,3 +39,6 @@ Release 0.20-append - unreleased
     (Todd Lipcon via dhruba)
 
   BUG FIXES
+
+    HDFS-561. Fix write pipeline READ_TIMEOUT.
+    (Todd Lipcon via dhruba)
