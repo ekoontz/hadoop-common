@@ -30,6 +30,9 @@ Release 0.20-append - unreleased
     HDFS-457. Better handling of volume failure in DataNode Storage.
     (Nicolas Spiegelberg via dhruba)
 
+    HDFS-445. pread should refetch block locations when necessary.
+    (Todd Lipcon via dhruba)
+
   IMPROVEMENTS
 
     HDFS-1054. remove sleep before retry for allocating a block.

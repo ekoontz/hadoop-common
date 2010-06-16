@@ -2010,6 +2010,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         // or fetchBlockAt(). Always get the latest list of locations at the 
         // start of the loop.
         block = getBlockAt(block.getStartOffset(), false);
+
         DNAddrPair retval = chooseDataNode(block);
         DatanodeInfo chosenNode = retval.info;
         InetSocketAddress targetAddr = retval.addr;
@@ -2049,9 +2050,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             fetchBlockAt(block.getStartOffset());
             continue;
           } else {
-            LOG.warn("Failed to connect to " + targetAddr + " for file " + src
-                + " for block " + block.getBlock() + ":"
-                + StringUtils.stringifyException(e));
+            LOG.warn("Failed to connect to " + targetAddr + 
+                     " for file " + src + 
+                     " for block " + block.getBlock().getBlockId() + ":"  +
+                     StringUtils.stringifyException(e));
           }
         } finally {
           IOUtils.closeStream(reader);
