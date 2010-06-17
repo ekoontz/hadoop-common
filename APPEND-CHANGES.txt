@@ -35,10 +35,10 @@ Release 0.20-append - unreleased
 
   IMPROVEMENTS
 
+  BUG FIXES
+
     HDFS-1054. remove sleep before retry for allocating a block.
     (Todd Lipcon via dhruba)
-
-  BUG FIXES
 
     HDFS-561. Fix write pipeline READ_TIMEOUT.
     (Todd Lipcon via dhruba)
@@ -50,4 +50,7 @@ Release 0.20-append - unreleased
     (Todd Lipcon via dhruba)
 
     HDFS-606. Fix ConcurrentModificationException in invalidateCorruptReplicas.
+    (Todd Lipcon via dhruba)
+
+    HDFS-1210. DFSClient should log exception when block recovery fails.
     (Todd Lipcon via dhruba)
