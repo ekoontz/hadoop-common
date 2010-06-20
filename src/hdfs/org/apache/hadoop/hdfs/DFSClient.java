@@ -3070,6 +3070,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       // persist blocks on namenode on next flush
       persistBlocks = true;
 
+      boolean result = false;
       try {
         LOG.debug("Connecting to " + nodes[0].getName());
         InetSocketAddress target = NetUtils.createSocketAddr(nodes[0].getName());
@@ -3121,7 +3122,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         }
 
         blockStream = out;
-        return true;     // success
+        result = true;     // success
 
       } catch (IOException ie) {
 
@@ -3139,8 +3140,14 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         hasError = true;
         setLastException(ie);
         blockReplyStream = null;
-        return false;  // error
+        result = false;
+      } finally {
+        if (!result) {
+          IOUtils.closeSocket(s);
+          s = null;
+        }
       }
+      return result;
     }
   
     private LocatedBlock locateFollowingBlock(long start,
