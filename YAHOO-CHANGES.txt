@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    HADOOP-6832. Add a static user plugin for web auth for external users.
+    (omalley)
+
     HDFS-1007. Fixes a bug in SecurityUtil.buildDTServiceName to do
     with handling of null hostname. (omalley)
 
