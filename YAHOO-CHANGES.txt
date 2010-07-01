@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    MAPREDUCE-1900. Fixes a FS leak that i missed in the earlier patch.
+    (ddas)
+
     MAPREDUCE-1900. Makes JobTracker/TaskTracker close filesystems, created
     on behalf of users, when they are no longer needed. (ddas)
 
