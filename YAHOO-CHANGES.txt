@@ -7,6 +7,9 @@ the patches applied from issues referenced in CHANGES.txt.
 
 Release 0.20.104.0 - unreleased
 
+    MAPREDUCE-1914. Ensure unique sub-directories for artifacts in the
+    DistributedCache are cleaned up. (Dick King via acmurthy) 
+
     MAPREDUCE-1538. Add a limit on the number of artifacts in the
     DistributedCache to ensure we cleanup aggressively. (Dick King via
     acmurthy)
