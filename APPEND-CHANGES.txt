@@ -72,3 +72,6 @@ Release 0.20-append - unreleased
 
     HDFS-1254. Support append/sync via the default configuration.
     (dhruba)
+
+    HDFS-1258. Clearing namespace quota on "/" corrupts fs image.
+    (Aaron T. Myers via szetszwo)
