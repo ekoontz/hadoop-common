@@ -20,13 +20,19 @@ package org.apache.hadoop.fs;
 
 import java.net.*;
 import java.io.*;
+import org.apache.avro.reflect.Stringable;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /** Names a file or directory in a {@link FileSystem}.
  * Path strings use slash as the directory separator.  A path string is
  * absolute if it begins with a slash.
  */
+@Stringable
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Path implements Comparable {
 
   /** The directory separator, a slash. */
@@ -236,7 +242,7 @@ public class Path implements Comparable {
   public String toString() {
     // we can't use uri.toString(), which escapes everything, because we want
     // illegal characters unescaped in the string, for glob processing, etc.
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     if (uri.getScheme() != null) {
       buffer.append(uri.getScheme());
       buffer.append(":");
@@ -304,6 +310,7 @@ public class Path implements Comparable {
   
   
   /** Returns a qualified path object. */
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   public Path makeQualified(URI defaultUri, Path workingDir ) {
     Path path = this;
     if (!isAbsolute()) {

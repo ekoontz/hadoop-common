@@ -31,6 +31,8 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.StringTokenizer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -41,6 +43,8 @@ import org.apache.hadoop.util.StringUtils;
  * Implement the FileSystem API for the raw local filesystem.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
@@ -215,7 +219,7 @@ public class RawLocalFileSystem extends FileSystem {
     if (!exists(f)) {
       throw new FileNotFoundException("File " + f + " not found.");
     }
-    if (getFileStatus(f).isDir()) {
+    if (getFileStatus(f).isDirectory()) {
       throw new IOException("Cannot append to a diretory (=" + f + " ).");
     }
     return new FSDataOutputStream(new BufferedOutputStream(
@@ -240,14 +244,13 @@ public class RawLocalFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-    EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+    boolean overwrite, int bufferSize, short replication, long blockSize,
     Progressable progress) throws IOException {
-    return primitiveCreate(f,
-        permission.applyUMask(FsPermission.getUMask(getConf())), flag,
-        bufferSize,  replication,  blockSize,  progress,  -1);
-    
-    
-     
+
+    FSDataOutputStream out = create(f,
+        overwrite, bufferSize, replication, blockSize, progress);
+    setPermission(f, permission);
+    return out;
   }
   
 

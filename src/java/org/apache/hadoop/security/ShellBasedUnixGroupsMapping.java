@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
@@ -34,20 +36,15 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
  * that exec's the <code>groups</code> shell command to fetch the group
  * memberships of a given user.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider {
-  Map<String, List<String>> userGroups = 
-    new ConcurrentHashMap<String, List<String>>();
   
   private static final Log LOG = LogFactory.getLog(ShellBasedUnixGroupsMapping.class);
   
   @Override
   public List<String> getGroups(String user) throws IOException {
-    List<String> groups = userGroups.get(user);
-    if (groups == null) {
-      groups = getUnixGroups(user);
-      userGroups.put(user, groups);
-    }
-    return groups;
+    return getUnixGroups(user);
   }
 
   /** 
@@ -60,7 +57,7 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
   private static List<String> getUnixGroups(final String user) throws IOException {
     String result = "";
     try {
-      result = Shell.execCommand(Shell.getGROUPS_FOR_USER_COMMAND(user));
+      result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
     } catch (ExitCodeException e) {
       // if we didn't get the group - just return empty list;
       LOG.warn("got exception trying to get groups for user " + user, e);

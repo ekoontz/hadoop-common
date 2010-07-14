@@ -25,8 +25,13 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.security.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /** A Writable for MD5 hash values.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class MD5Hash implements WritableComparable<MD5Hash> {
   public static final int MD5_LEN = 16;
 
@@ -183,7 +188,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
 
   /** Returns a string representation of this object. */
   public String toString() {
-    StringBuffer buf = new StringBuffer(MD5_LEN*2);
+    StringBuilder buf = new StringBuilder(MD5_LEN*2);
     for (int i = 0; i < MD5_LEN; i++) {
       int b = digest[i];
       buf.append(HEX_DIGITS[(b >> 4) & 0xf]);

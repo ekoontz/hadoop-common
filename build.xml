@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop-Core" default="compile" 
+<project name="Hadoop-Common" default="compile" 
    xmlns:ivy="antlib:org.apache.ivy.ant"
    xmlns:artifact="urn:maven-artifact-ant"> 
 
@@ -26,8 +26,8 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Hadoop-core"/>
-  <property name="name" value="hadoop-core"/>
+  <property name="Name" value="Hadoop-common"/>
+  <property name="name" value="hadoop-common"/>
   <property name="version" value="0.22.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
@@ -79,6 +79,7 @@
   <property name="test.build.extraconf" value="${test.build.dir}/extraconf"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
+  <property name="test.build.webapps" value="${build.dir}/webapps"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="no"/>
@@ -92,6 +93,7 @@
 
   <property name="test.core.build.classes" value="${test.build.dir}/core/classes"/>
 
+  <property name="test.all.tests.file" value="${test.src.dir}/all-tests"/>
 
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/javase/6/docs/api/"/>
@@ -114,7 +116,9 @@
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
   <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
-  <property name="jdiff.stable" value="0.20.1"/>
+  <property name="jdiff.stability" value="-unstable"/>
+  <property name="jdiff.compatibility" value=""/>
+  <property name="jdiff.stable" value="0.20.2"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
@@ -146,19 +150,21 @@
   <property name="build.ivy.report.dir" location="${build.ivy.dir}/report"/>
   <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven"/>
   <property name="pom.xml" location="${build.ivy.maven.dir}/pom.xml"/>
-  <property name="hadoop-core.pom" location="${ivy.dir}/hadoop-core.xml"/>
-  <property name="build.ivy.maven.core.jar" location="${build.ivy.maven.dir}/hadoop-core-${version}.jar"/>
-  <property name="hadoop-core-test.pom" location="${ivy.dir}/hadoop-core-test.xml" />
-  <property name="build.ivy.maven.core-test.jar" location="${build.ivy.maven.dir}/hadoop-core-test-${version}.jar"/>
+  <property name="hadoop-common.pom" location="${ivy.dir}/hadoop-common.xml"/>
+  <property name="build.ivy.maven.common.jar" location="${build.ivy.maven.dir}/hadoop-common-${version}.jar"/>
+  <property name="hadoop-common-test.pom" location="${ivy.dir}/hadoop-common-test.xml" />
+  <property name="build.ivy.maven.common-test.jar" location="${build.ivy.maven.dir}/hadoop-common-test-${version}.jar"/>
 
   <!--this is the naming policy for artifacts we want pulled down-->
-  <property name="ivy.module" location="hadoop-core" />
+  <property name="ivy.module" location="hadoop-common" />
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="[artifact]-[revision].[ext]"/>
-  <property name="hadoop-core.jar" location="${build.dir}/${final.name}.jar" />
-  <property name="hadoop-core-test.jar" location="${build.dir}/${test.final.name}.jar" />
+  <property name="hadoop-common.jar" location="${build.dir}/${final.name}.jar" />
+  <property name="hadoop-common-test.jar" location="${build.dir}/${test.final.name}.jar" />
+  <property name="hadoop-common-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
+  <property name="hadoop-common-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -167,6 +173,12 @@
 
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
+	
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value="build/eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+  <property name="build.dir.eclipse-test-generated-classes" value="${build.dir.eclipse}/classes-test-generated"/>
 
   <!-- check if clover reports should be generated -->
   <condition property="clover.enabled">
@@ -395,11 +407,11 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Make hadoop-core.jar                                               -->
+  <!-- Make hadoop-common.jar                                               -->
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="jar" depends="compile-core" description="Make hadoop-core.jar">
+  <target name="jar" depends="compile-core" description="Make hadoop-common.jar">
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
@@ -415,6 +427,11 @@
       </manifest>
       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
       <fileset file="${jar.extra.properties.list}" />
+    </jar>
+
+    <jar jarfile="${hadoop-common-sources.jar}">
+      <fileset dir="${java.src.dir}" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${build.src}" includes="org/apache/hadoop/**/*.java"/>
     </jar>
   </target>
 
@@ -520,6 +537,11 @@
           </section>
          </manifest>
     </jar>
+
+    <jar jarfile="${hadoop-common-test-sources.jar}">
+      <fileset dir="${test.generated.dir}" includes="org/apache/hadoop/**/*.java"/>
+      <fileset dir="${test.src.dir}/core" includes="org/apache/hadoop/**/*.java"/>
+    </jar>
   </target>
 
   <!-- ================================================================== -->
@@ -545,6 +567,7 @@
     description="Make hadoop-fi.jar">
     <macro-jar-fault-inject
       target.name="jar"
+      build.dir="${build-fi.dir}"
       jar.final.name="final.name"
       jar.final.value="${final.name}-fi" />
   </target>
@@ -598,71 +621,101 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="run-test-core" depends="compile-core-test" description="Run core unit tests">
+  <macrodef name="macro-test-runner">
+    <attribute name="test.file" />
+    <attribute name="classpath" />
+    <attribute name="test.dir" />
+    <attribute name="fileset.dir" />
+    <attribute name="hadoop.conf.dir.deployed" default="" />
+    <attribute name="test.krb5.conf.filename" default="" />
+    <sequential>
+      <delete file="${test.build.dir}/testsfailed"/>
+      <delete dir="@{test.dir}/data" />
+      <mkdir dir="@{test.dir}/data" />
+      <delete dir="${test.build.webapps}"/>
+      <mkdir dir="${test.build.webapps}/test" />
+      <delete dir="@{test.dir}/logs" />
+      <mkdir dir="@{test.dir}/logs" />
+      <copy file="${test.src.dir}/hadoop-policy.xml"
+            todir="@{test.dir}/extraconf" />
+      <copy file="${test.src.dir}/fi-site.xml"
+            todir="@{test.dir}/extraconf" />
+      <junit showoutput="${test.output}"
+             printsummary="${test.junit.printsummary}"
+             haltonfailure="${test.junit.haltonfailure}"
+             fork="yes"
+             forkmode="${test.junit.fork.mode}"
+             maxmemory="${test.junit.maxmemory}"
+             dir="${basedir}"
+             timeout="${test.timeout}"
+             errorProperty="tests.failed"
+             failureProperty="tests.failed">
+        <jvmarg value="-ea" />
+        <sysproperty key="test.build.data" value="${test.build.data}" />
+        <sysproperty key="test.cache.data" value="${test.cache.data}" />
+        <sysproperty key="test.debug.data" value="${test.debug.data}" />
+        <sysproperty key="hadoop.log.dir" value="${test.log.dir}" />
+        <sysproperty key="test.src.dir" value="${test.src.dir}" />
+        <sysproperty key="test.build.extraconf" value="@{test.dir}/extraconf" />
+         <sysproperty key="java.security.krb5.conf" value="@{test.krb5.conf.filename}"/>
+        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
+        <sysproperty key="java.library.path"
+          value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
+        <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
+        <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
+        <syspropertyset dynamic="no">
+          <propertyref name="io.compression.codec.lzo.class"/>
+        </syspropertyset>
+        <!-- set compile.c++ in the child jvm only if it is set -->
+        <syspropertyset dynamic="no">
+          <propertyref name="compile.c++"/>
+        </syspropertyset>
+        <classpath refid="@{classpath}" />
+        <!-- Pass probability specifications to the spawn JVM -->
+        <syspropertyset id="FaultProbabilityProperties">
+          <propertyref regex="fi.*"/>
+        </syspropertyset>
+        <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
+                     value="@{hadoop.conf.dir.deployed}" />
+        <formatter type="${test.junit.output.format}" />
+        <batchtest todir="@{test.dir}" if="tests.notestcase">
+          <fileset dir="@{fileset.dir}/core"
+                   excludes="**/${test.exclude}.java aop/** system/**">
+             <patternset>
+               <includesfile name="@{test.file}"/>
+             </patternset>
+         </fileset>
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
+          <fileset dir="@{fileset.dir}/aop"
+                   includes="**/${test.include}.java"
+                   excludes="**/${test.exclude}.java" />
+         </batchtest>
+         <batchtest todir="@{test.dir}" if="tests.testcase">
+           <fileset dir="@{fileset.dir}/core"
+             includes="**/${testcase}.java" excludes="aop/** system/**"/>
+         </batchtest>
+         <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
+           <fileset dir="@{fileset.dir}/aop" includes="**/${testcase}.java" />
+         </batchtest>
+         <!--The following batch is for very special occasions only when
+                a non-FI tests are needed to be executed against FI-environment -->
+         <batchtest todir="${test.build.dir}" if="tests.testcaseonly">
+           <fileset dir="@{fileset.dir}/core" includes="**/${testcase}.java" />
+         </batchtest>
+      </junit>
+      <antcall target="checkfailure"/>
+    </sequential>
+  </macrodef>
 
-    <delete dir="${test.build.data}"/>
-    <mkdir dir="${test.build.data}"/>
-    <delete dir="${test.log.dir}"/>
-    <mkdir dir="${test.log.dir}"/>
-  	<copy file="${test.src.dir}/hadoop-policy.xml" 
-  	  todir="${test.build.extraconf}" />
-    <copy file="${test.src.dir}/fi-site.xml"
-      todir="${test.build.extraconf}" />
-    <junit showoutput="${test.output}"
-      printsummary="${test.junit.printsummary}"
-      haltonfailure="${test.junit.haltonfailure}"
-      fork="yes"
-      forkmode="${test.junit.fork.mode}"
-      maxmemory="${test.junit.maxmemory}"
-      dir="${basedir}" timeout="${test.timeout}"
-      errorProperty="tests.failed" failureProperty="tests.failed">
-      <jvmarg value="-ea" />
-      <sysproperty key="test.build.data" value="${test.build.data}"/>
-      <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
-      <sysproperty key="test.debug.data" value="${test.debug.data}"/>
-      <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
-      <sysproperty key="test.src.dir" value="${test.src.dir}/core"/>
-      <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
-      <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
-      <sysproperty key="java.library.path"
-       value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
-      <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
-      <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
-      <syspropertyset dynamic="no">
-         <propertyref name="io.compression.codec.lzo.class"/>
-      </syspropertyset>
-      <!-- set compile.c++ in the child jvm only if it is set -->
-      <syspropertyset dynamic="no">
-         <propertyref name="compile.c++"/>
-      </syspropertyset>
-      <classpath refid="test.classpath"/>
-      <syspropertyset id="FaultProbabilityProperties">
-        <propertyref regex="fi.*"/>
-      </syspropertyset>
-      <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}" if="tests.notestcase">
-        <fileset dir="${test.src.dir}/core"
-	         includes="**/${test.include}.java"
-		 excludes="**/${test.exclude}.java" />
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
-        <fileset dir="${test.src.dir}/aop"
-          includes="**/${test.include}.java"
-          excludes="**/${test.exclude}.java" />
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.testcase">
-        <fileset dir="${test.src.dir}/core" includes="**/${testcase}.java"/>
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
-        <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
-      </batchtest>
-      <!--The following batch is for very special occasions only when
-      a non-FI tests are needed to be executed against FI-environment -->
-      <batchtest todir="${test.build.dir}" if="tests.testcaseonly">
-        <fileset dir="${test.src.dir}/core" includes="**/${testcase}.java"/>
-      </batchtest>
-    </junit>
-    <antcall target="checkfailure"/> 
+  <target name="run-test-core" depends="compile-core-test" description="Run core unit tests">
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
   </target>   
 
   <target name="checkfailure" if="tests.failed">
@@ -861,7 +914,7 @@
     </uptodate>
   </target>
  
-  <target name="javadoc" description="Generate javadoc" depends="javadoc-uptodate"
+  <target name="javadoc" description="Generate javadoc" depends="jar, javadoc-uptodate"
        unless="javadoc.is.uptodate">
     <mkdir dir="${build.javadoc}"/>
     <javadoc
@@ -892,15 +945,19 @@
 
        <group title="Core" packages="org.apache.*"/>
        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet"
+               path="${build.dir}/${final.name}.jar"/>
     </javadoc>
   </target>	
 
   <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
     <javadoc maxmemory="${javadoc.maxmemory}">
-       <doclet name="jdiff.JDiff"
-               path="${jdiff.jar}:${xerces.jar}">
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+               path="${build.dir}/${final.name}.jar:${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
          <param name="-apiname" value="hadoop-core ${version}"/>
+         <param name="${jdiff.stability}"/>
+         <param name="${jdiff.compatibility}"/>
        </doclet>
        <packageset dir="src/java"/>
        <classpath >
@@ -923,8 +980,8 @@
              destdir="${jdiff.build.dir}"
 	     sourceFiles="${jdiff.home}/Null.java"
 	     maxmemory="${javadoc.maxmemory}">
-       <doclet name="jdiff.JDiff"
-               path="${jdiff.jar}:${xerces.jar}">
+       <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsJDiffDoclet"
+              path="${build.dir}/${final.name}.jar:${jdiff.jar}:${xerces.jar}">
          <param name="-oldapi" value="hadoop-core ${jdiff.stable}"/>
          <param name="-newapi" value="hadoop-core ${version}"/>
          <param name="-oldapidir" value="${jdiff.xml.dir}"/>
@@ -932,6 +989,8 @@
          <param name="-javadocold" value="${jdiff.stable.javadoc}"/>
          <param name="-javadocnew" value="../../api/"/>
          <param name="-stats"/>
+         <param name="${jdiff.stability}"/>
+         <param name="${jdiff.compatibility}"/>
        </doclet>
        <classpath >
          <path refid="classpath" />
@@ -1149,45 +1208,54 @@
          classpathref="mvn-ant-task.classpath"/>
   </target>   
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version" 
-     description="To install hadoop core and test jars to local filesystem's m2 cache">
-     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
-     <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
-     <artifact:install file="${hadoop-core.jar}">
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+     description="To install hadoop common and test jars to local filesystem's m2 cache">
+     <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
+     <artifact:install file="${hadoop-common.jar}">
         <pom refid="hadoop.core"/>
+	<attach file="${hadoop-common-sources.jar}" classifier="sources" />
      </artifact:install>
-     <artifact:install file="${hadoop-core-test.jar}">
+     <artifact:install file="${hadoop-common-test.jar}">
         <pom refid="hadoop.core.test"/>
+	<attach file="${hadoop-common-test-sources.jar}" classifier="sources" />
      </artifact:install>
   </target>
 
-  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version"
-     description="To deploy hadoop core and test jar's to apache snapshot's repository">
-     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
-     <artifact:pom file="${hadoop-core-test.pom}" id="hadoop.core.test"/>
+  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test, set-version,
+    -mvn-system-deploy"
+     description="To deploy hadoop common and test jar's to apache snapshot's repository">
+     <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
 
      <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
-     <artifact:deploy file="${hadoop-core.jar}">
+     <artifact:deploy file="${hadoop-common.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core"/>
+	<attach file="${hadoop-common-sources.jar}" classifier="sources" />
      </artifact:deploy>
-     <artifact:deploy file="${hadoop-core-test.jar}">
+     <artifact:deploy file="${hadoop-common-test.jar}">
          <remoteRepository id="apache.snapshots.https" url="${asfrepo}"/>
          <pom refid="hadoop.core.test"/>
+	<attach file="${hadoop-common-test-sources.jar}" classifier="sources" />
      </artifact:deploy>
   </target>
   
   <target name="set-version">
-    <delete file="${basedir}/ivy/hadoop-core.xml"/>
-    <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
-    <copy file="${basedir}/ivy/hadoop-core-template.xml" tofile="${basedir}/ivy/hadoop-core.xml"/>
-    <copy file="${basedir}/ivy/hadoop-core-test-template.xml" tofile="${basedir}/ivy/hadoop-core-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
+    <copy file="${basedir}/ivy/hadoop-common-template.xml" tofile="${basedir}/ivy/hadoop-common.xml"/>
+    <copy file="${basedir}/ivy/hadoop-common-test-template.xml" tofile="${basedir}/ivy/hadoop-common-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-common-${herriot.suffix}-template.xml"
+      tofile="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
     <replaceregexp byline="true">
       <regexp pattern="@version"/>
       <substitution expression="${version}"/>
       <fileset dir="${basedir}/ivy">
-        <include name="hadoop-core.xml"/>
-        <include name="hadoop-core-test.xml"/>
+        <include name="hadoop-common.xml"/>
+        <include name="hadoop-common-test.xml"/>
+        <include name="hadoop-common-${herriot.suffix}.xml"/>
       </fileset>
     </replaceregexp>
   </target>
@@ -1221,8 +1289,9 @@
   <!-- ================================================================== -->
   <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
-    <delete file="${basedir}/ivy/hadoop-core.xml"/>
-    <delete file="${basedir}/ivy/hadoop-core-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-common-${herriot.suffix}.xml"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
   </target>
@@ -1332,20 +1401,51 @@
   </exec>
 </target>
 	
-  <target name="eclipse-files" depends="init"
-          description="Generate files for Eclipse">
-    <pathconvert property="eclipse.project">
-      <path path="${basedir}"/>
-      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
-    </pathconvert>
-    <copy todir="." overwrite="true">
-      <fileset dir=".eclipse.templates">
-      	<exclude name="**/README.txt"/>
-      </fileset>
-      <filterset>
-        <filter token="PROJECT" value="${eclipse.project}"/>
-      </filterset>
-    </copy>
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
+
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" />
+  </target>
+
+  <target name="eclipse" 
+          depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test,compile-core-test"
+          description="Create eclipse project files">
+	     <pathconvert property="eclipse.project">
+	       <path path="${basedir}"/>
+	       <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+	     </pathconvert>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse updatealways="true">
+      <project name="${eclipse.project}" />
+      <classpath>
+        <source path="${java.src.dir}"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${test.src.dir}/core"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.src.dir}/aop"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.generated.dir}"
+                output="${build.dir.eclipse-test-generated-classes}" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <library pathref="ivy-common.classpath" exported="true" />
+        <library pathref="ivy-test.classpath" exported="false" />
+        <library path="${conf.dir}" exported="false" />
+      </classpath>
+    </eclipse>
   </target>
 
   <target name="ivy-init-dirs">

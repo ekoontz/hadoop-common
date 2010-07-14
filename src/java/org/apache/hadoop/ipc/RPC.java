@@ -23,6 +23,7 @@ import java.lang.reflect.Method;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.io.*;
 import java.util.Map;
@@ -34,6 +35,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -186,6 +188,9 @@ public class RPC {
       } catch(SocketTimeoutException te) {  // namenode is busy
         LOG.info("Problem connecting to server: " + addr);
         ioe = te;
+      } catch(NoRouteToHostException nrthe) { // perhaps a VIP is failing over
+        LOG.info("No route to host for server: " + addr);
+        ioe = nrthe;
       }
       // check if timed out
       if (System.currentTimeMillis()-timeout >= startTime) {
@@ -217,6 +222,9 @@ public class RPC {
                                 UserGroupInformation ticket,
                                 Configuration conf,
                                 SocketFactory factory) throws IOException {    
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SaslRpcServer.init(conf);
+    }
     return getProtocolEngine(protocol,conf)
       .getProxy(protocol, clientVersion, addr, ticket, conf, factory);
   }

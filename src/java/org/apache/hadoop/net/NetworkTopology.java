@@ -25,6 +25,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /** The class represents a cluster of computer with a tree hierarchical
  * network topology.
@@ -35,6 +37,8 @@ import org.apache.commons.logging.LogFactory;
  * or racks.  
  * 
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 public class NetworkTopology {
   public final static String DEFAULT_RACK = "/default-rack";
   public final static int DEFAULT_HOST_LEVEL = 2;
@@ -580,7 +584,7 @@ public class NetworkTopology {
   /** convert a network tree to a string */
   public String toString() {
     // print the number of racks
-    StringBuffer tree = new StringBuffer();
+    StringBuilder tree = new StringBuilder();
     tree.append("Number of racks: ");
     tree.append(numOfRacks);
     tree.append("\n");

@@ -21,18 +21,21 @@ package org.apache.hadoop.fs;
 import static junit.framework.Assert.assertSame;
 import static junit.framework.Assert.assertNotSame;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import static org.mockito.Mockito.mock;
+import java.util.concurrent.Semaphore;
 
+import static org.mockito.Mockito.mock;
+import static junit.framework.Assert.assertTrue;
 
 
 public class TestFileSystemCaching {
@@ -44,6 +47,47 @@ public class TestFileSystemCaching {
     FileSystem fs1 = FileSystem.get(new URI("cachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("cachedfile://a"), conf);
     assertSame(fs1, fs2);
+  }
+
+  public static class InitializeForeverFileSystem extends LocalFileSystem {
+    final static Semaphore sem = new Semaphore(0);
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      // notify that InitializeForeverFileSystem started initialization
+      sem.release();
+      try {
+        while (true) {
+          Thread.sleep(1000);
+        }
+      } catch (InterruptedException e) {
+        return;
+      }
+    }
+  }
+  
+  @Test
+  public void testCacheEnabledWithInitializeForeverFS() throws Exception {
+    final Configuration conf = new Configuration();
+    Thread t = new Thread() {
+      public void run() {
+        conf.set("fs.localfs1.impl", "org.apache.hadoop.fs." +
+         "TestFileSystemCaching$InitializeForeverFileSystem");
+        try {
+          FileSystem.get(new URI("localfs1://a"), conf);
+        } catch (IOException e) {
+          e.printStackTrace();
+        } catch (URISyntaxException e) {
+          e.printStackTrace();
+        }
+      }
+    };
+    t.start();
+    // wait for InitializeForeverFileSystem to start initialization
+    InitializeForeverFileSystem.sem.acquire();
+    
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    FileSystem.get(new URI("cachedfile://a"), conf);
+    t.interrupt();
+    t.join();
   }
 
   @Test
@@ -110,5 +154,31 @@ public class TestFileSystemCaching {
     //We should have the same filesystem for both
     assertSame(fsA, fsA1);
   }
+  
+  @Test
+  public void testUserFS() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    FileSystem fsU1 = FileSystem.get(new URI("cachedfile://a"), conf, "bar");
+    FileSystem fsU2 = FileSystem.get(new URI("cachedfile://a"), conf, "foo");
+    
+    assertNotSame(fsU1, fsU2);   
+  }
+  
+  @Test
+  public void testFsUniqueness() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    // multiple invocations of FileSystem.get return the same object.
+    FileSystem fs1 = FileSystem.get(conf);
+    FileSystem fs2 = FileSystem.get(conf);
+    assertTrue(fs1 == fs2);
 
+    // multiple invocations of FileSystem.newInstance return different objects
+    fs1 = FileSystem.newInstance(new URI("cachedfile://a"), conf, "bar");
+    fs2 = FileSystem.newInstance(new URI("cachedfile://a"), conf, "bar");
+    assertTrue(fs1 != fs2 && !fs1.equals(fs2));
+    fs1.close();
+    fs2.close();
+  }
 }

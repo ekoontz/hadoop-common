@@ -22,6 +22,8 @@ import java.lang.annotation.Documented;
 /**
  * Annotation to inform users of a package, class or method's intended audience.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class InterfaceAudience {
   /**
    * Intended for use by any project or application.
@@ -29,13 +31,11 @@ public class InterfaceAudience {
   @Documented public @interface Public {};
   
   /**
-   * Intended only for the project(s) specified in the annotation
+   * Intended only for the project(s) specified in the annotation.
+   * For example, "Common", "HDFS", "MapReduce", "ZooKeeper", "HBase".
    */
   @Documented public @interface LimitedPrivate {
-    public enum Project {COMMON, AVRO, CHUKWA, HBASE, HDFS, 
-                         HIVE, MAPREDUCE, PIG, ZOOKEEPER};
-    
-    Project[] value();
+    String[] value();
   };
   
   /**

@@ -21,6 +21,8 @@ package org.apache.hadoop.io.serializer;
 import java.io.IOException;
 import java.util.Comparator;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.InputBuffer;
 import org.apache.hadoop.io.RawComparator;
 
@@ -37,6 +39,8 @@ import org.apache.hadoop.io.RawComparator;
  * </p>
  * @param <T>
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public abstract class DeserializerComparator<T> implements RawComparator<T> {
   
   private InputBuffer buffer = new InputBuffer();
@@ -46,13 +50,6 @@ public abstract class DeserializerComparator<T> implements RawComparator<T> {
   private T key2;
 
   protected DeserializerComparator(Deserializer<T> deserializer)
-    throws IOException {
-    
-    this.deserializer = deserializer;
-    this.deserializer.open(buffer);
-  }
-
-  protected DeserializerComparator(DeserializerBase<T> deserializer)
     throws IOException {
     
     this.deserializer = deserializer;

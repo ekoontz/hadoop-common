@@ -30,7 +30,6 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,9 +39,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BufferedFSInputStream;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSInputStream;
@@ -77,6 +77,8 @@ import org.apache.hadoop.util.Progressable;
  * </p>
  * @see org.apache.hadoop.fs.s3.S3FileSystem
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class NativeS3FileSystem extends FileSystem {
   
   public static final Log LOG = 
@@ -322,18 +324,11 @@ public class NativeS3FileSystem extends FileSystem {
   
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
 
-    if(exists(f)) {
-      if(flag.contains(CreateFlag.APPEND)){
-        return append(f, bufferSize, progress);
-      } else if(!flag.contains(CreateFlag.OVERWRITE)) {
-        throw new IOException("File already exists: "+f);
-      }
-    } else {
-      if (flag.contains(CreateFlag.APPEND) && !flag.contains(CreateFlag.CREATE))
-        throw new IOException("File already exists: " + f.toString());
+    if (exists(f) && !overwrite) {
+      throw new IOException("File already exists:"+f);
     }
     
     LOG.debug("Creating new file '" + f + "' in S3");
@@ -354,7 +349,7 @@ public class NativeS3FileSystem extends FileSystem {
     }
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
-    if (status.isDir()) {
+    if (status.isDirectory()) {
       if (!recurse && listStatus(f).length > 0) {
         throw new IOException("Can not delete " + f + " at is a not empty directory and recurse option is false");
       }
@@ -509,7 +504,7 @@ public class NativeS3FileSystem extends FileSystem {
   private boolean mkdir(Path f) throws IOException {
     try {
       FileStatus fileStatus = getFileStatus(f);
-      if (!fileStatus.isDir()) {
+      if (fileStatus.isFile()) {
         throw new IOException(String.format(
             "Can't make directory for path '%s' since it is a file.", f));
 
@@ -525,7 +520,7 @@ public class NativeS3FileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     FileStatus fs = getFileStatus(f); // will throw if the file doesn't exist
-    if (fs.isDir()) {
+    if (fs.isDirectory()) {
       throw new IOException("'" + f + "' is a directory");
     }
     LOG.info("Opening '" + f + "' for reading");
@@ -563,7 +558,7 @@ public class NativeS3FileSystem extends FileSystem {
     // Figure out the final destination
     String dstKey;
     try {
-      boolean dstIsFile = !getFileStatus(dst).isDir();
+      boolean dstIsFile = getFileStatus(dst).isFile();
       if (dstIsFile) {
         LOG.debug(debugPreamble + "returning false as dst is an already existing file");
         return false;
@@ -575,7 +570,7 @@ public class NativeS3FileSystem extends FileSystem {
       LOG.debug(debugPreamble + "using dst as output destination");
       dstKey = pathToKey(makeAbsolute(dst));
       try {
-        if (!getFileStatus(dst.getParent()).isDir()) {
+        if (getFileStatus(dst.getParent()).isFile()) {
           LOG.debug(debugPreamble + "returning false as dst parent exists and is a file");
           return false;
         }
@@ -587,7 +582,7 @@ public class NativeS3FileSystem extends FileSystem {
 
     boolean srcIsFile;
     try {
-      srcIsFile = !getFileStatus(src).isDir();
+      srcIsFile = getFileStatus(src).isFile();
     } catch (FileNotFoundException e) {
       LOG.debug(debugPreamble + "returning false as src does not exist");
       return false;

@@ -23,10 +23,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * @deprecated Replaced by <a href="http://hadoop.apache.org/avro/">Avro</a>.
  */
 @Deprecated
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class JRecord extends JCompType {
   
   class JavaRecord extends JavaCompType {
@@ -782,7 +787,7 @@ public class JRecord extends JCompType {
     // precompute signature
     int idx = name.lastIndexOf('.');
     String recName = name.substring(idx+1);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("L").append(recName).append("(");
     for (Iterator<JField<JType>> i = flist.iterator(); i.hasNext();) {
       String s = i.next().getType().getSignature();

@@ -31,8 +31,7 @@ import java.util.regex.Pattern;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
-import org.codehaus.jackson.map.ObjectMapper;
-
+import org.codehaus.jackson.map.ObjectMapper; 
 
 public class TestConfiguration extends TestCase {
 
@@ -366,49 +365,6 @@ public class TestConfiguration extends TestCase {
     assertTrue(fail);
   }
 
-  public void testMap() throws IOException {
-    Configuration conf = new Configuration();
-
-    // manually create a map in the config; extract
-    // its values as a map object.
-    conf.set("foo.bar", "A");
-    conf.set("foo.baz", "B");
-    assertEquals("A", conf.get("foo.bar"));
-    assertEquals("B", conf.get("foo.baz"));
-
-    Map<String, String> out = conf.getMap("foo");
-    assertEquals("A", out.get("bar"));
-    assertEquals("B", out.get("baz"));
-
-    Map<String, String> in = new HashMap<String, String>();
-    in.put("yak", "123");
-    in.put("bop", "456");
-    conf.setMap("quux", in);
-
-    // Assert that we can extract individual entries in
-    // the nested map ok.
-    assertEquals("123", conf.get("quux.yak"));
-
-    // Assert that we can get the whole map back out again.
-    out = conf.getMap("quux");
-    assertEquals("123", out.get("yak"));
-    assertEquals("456", out.get("bop"));
-
-    // Test that substitution is handled by getMap().
-    conf.set("subparam", "foo");
-    conf.set("mymap.someprop", "AAA${subparam}BBB");
-    out = conf.getMap("mymap");
-    assertEquals("AAAfooBBB", out.get("someprop"));
-
-    // Test deprecation of maps.
-    Configuration.addDeprecation("oldfoo", new String[]{"newfoo"});
-    conf.set("newfoo.a", "A");
-    conf.set("newfoo.b", "B");
-    out = conf.getMap("oldfoo");
-    assertEquals("A", out.get("a"));
-    assertEquals("B", out.get("b"));
-  }
-
   public void testPattern() throws IOException {
     out = new BufferedWriter(new FileWriter(CONFIG));
     startConfig();
@@ -680,6 +636,25 @@ public class TestConfiguration extends TestCase {
     }
   }
   
+    
+  public void testGetValByRegex() {
+    Configuration conf = new Configuration();
+    String key1 = "t.abc.key1";
+    String key2 = "t.abc.key2";
+    String key3 = "tt.abc.key3";
+    String key4 = "t.abc.ey3";
+    conf.set(key1, "value1");
+    conf.set(key2, "value2");
+    conf.set(key3, "value3");
+    conf.set(key4, "value3");
+
+    Map<String,String> res = conf.getValByRegex("^t\\..*\\.key\\d");
+    assertTrue("Conf didn't get key " + key1, res.containsKey(key1));
+    assertTrue("Conf didn't get key " + key2, res.containsKey(key2));
+    assertTrue("Picked out wrong key " + key3, !res.containsKey(key3));
+    assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
+  }
+
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{
       TestConfiguration.class.getName()

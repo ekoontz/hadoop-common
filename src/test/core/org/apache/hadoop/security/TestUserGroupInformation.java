@@ -21,19 +21,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import static org.mockito.Mockito.mock;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.security.auth.login.LoginContext;
+
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
@@ -45,6 +48,15 @@ public class TestUserGroupInformation {
   final private static String GROUP3_NAME = "group3";
   final private static String[] GROUP_NAMES = 
     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+  
+  static {
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.auth_to_local",
+        "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
+        "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
+        + "DEFAULT");
+    UserGroupInformation.setConfiguration(conf);
+  }
 
   /**
    * given user name - get all the groups.
@@ -211,5 +223,108 @@ public class TestUserGroupInformation {
       });
     assertTrue(otherSet.contains(t1));
     assertTrue(otherSet.contains(t2));
+  }
+  
+  @Test
+  public void testTokenIdentifiers() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        "TheDoctor", new String[] { "TheTARDIS" });
+    TokenIdentifier t1 = mock(TokenIdentifier.class);
+    TokenIdentifier t2 = mock(TokenIdentifier.class);
+
+    ugi.addTokenIdentifier(t1);
+    ugi.addTokenIdentifier(t2);
+
+    Collection<TokenIdentifier> z = ugi.getTokenIdentifiers();
+    assertTrue(z.contains(t1));
+    assertTrue(z.contains(t2));
+    assertEquals(2, z.size());
+
+    // ensure that the token identifiers are passed through doAs
+    Collection<TokenIdentifier> otherSet = ugi
+        .doAs(new PrivilegedExceptionAction<Collection<TokenIdentifier>>() {
+          public Collection<TokenIdentifier> run() throws IOException {
+            return UserGroupInformation.getCurrentUser().getTokenIdentifiers();
+          }
+        });
+    assertTrue(otherSet.contains(t1));
+    assertTrue(otherSet.contains(t2));
+    assertEquals(2, otherSet.size());
+  }
+
+  @Test
+  public void testUGIAuthMethod() throws Exception {
+    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
+    ugi.setAuthenticationMethod(am);
+    Assert.assertEquals(am, ugi.getAuthenticationMethod());
+    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
+            .getAuthenticationMethod());
+        return null;
+      }
+    });
+  }
+  
+  @Test
+  public void testUGIAuthMethodInRealUser() throws Exception {
+    final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation proxyUgi = UserGroupInformation.createProxyUser(
+        "proxy", ugi);
+    final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
+    ugi.setAuthenticationMethod(am);
+    Assert.assertEquals(am, ugi.getAuthenticationMethod());
+    Assert.assertEquals(null, proxyUgi.getAuthenticationMethod());
+    proxyUgi.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    Assert.assertEquals(am, UserGroupInformation
+        .getRealAuthenticationMethod(proxyUgi));
+    proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
+            .getCurrentUser().getAuthenticationMethod());
+        Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
+            .getRealUser().getAuthenticationMethod());
+        return null;
+      }
+    });
+    UserGroupInformation proxyUgi2 = UserGroupInformation.createProxyUser(
+        "proxy", ugi);
+    proxyUgi2.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    Assert.assertEquals(proxyUgi, proxyUgi2);
+    // Equality should work if authMethod is null
+    UserGroupInformation realugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation proxyUgi3 = UserGroupInformation.createProxyUser(
+        "proxyAnother", realugi);
+    UserGroupInformation proxyUgi4 = UserGroupInformation.createProxyUser(
+        "proxyAnother", realugi);
+    Assert.assertEquals(proxyUgi3, proxyUgi4);
+  }
+  
+  @Test
+  public void testLoginObjectInSubject() throws Exception {
+    UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
+    UserGroupInformation anotherUgi = new UserGroupInformation(loginUgi
+        .getSubject());
+    LoginContext login1 = loginUgi.getSubject().getPrincipals(User.class)
+        .iterator().next().getLogin();
+    LoginContext login2 = anotherUgi.getSubject().getPrincipals(User.class)
+    .iterator().next().getLogin();
+    //login1 and login2 must be same instances
+    Assert.assertTrue(login1 == login2);
+  }
+  
+  @Test
+  public void testLoginModuleCommit() throws Exception {
+    UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
+    User user1 = loginUgi.getSubject().getPrincipals(User.class).iterator()
+        .next();
+    LoginContext login = user1.getLogin();
+    login.logout();
+    login.login();
+    User user2 = loginUgi.getSubject().getPrincipals(User.class).iterator()
+        .next();
+    // user1 and user2 must be same instances.
+    Assert.assertTrue(user1 == user2);
   }
 }

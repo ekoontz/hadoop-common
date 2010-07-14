@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.http;
 
-import static org.junit.Assert.assertEquals;
-
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -32,6 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -46,19 +45,19 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.http.HttpServer.QuotingInputFilter;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestHttpServer {
+public class TestHttpServer extends HttpServerFunctionalTest {
   private static HttpServer server;
   private static URL baseUrl;
+  private static final int MAX_THREADS = 10;
   
   @SuppressWarnings("serial")
   public static class EchoMapServlet extends HttpServlet {
@@ -110,33 +109,49 @@ public class TestHttpServer {
     }    
   }
 
-  private String readOutput(URL url) throws IOException {
-    StringBuilder out = new StringBuilder();
-    InputStream in = url.openConnection().getInputStream();
-    byte[] buffer = new byte[64 * 1024];
-    int len = in.read(buffer);
-    while (len > 0) {
-      out.append(new String(buffer, 0, len));
-      len = in.read(buffer);
-    }
-    return out.toString();
-  }
-  
   @BeforeClass public static void setup() throws Exception {
-    new File(System.getProperty("build.webapps", "build/webapps") + "/test"
-             ).mkdirs();
-    server = new HttpServer("test", "0.0.0.0", 0, true);
+    server = createTestServer();
     server.addServlet("echo", "/echo", EchoServlet.class);
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.start();
-    int port = server.getPort();
-    baseUrl = new URL("http://localhost:" + port + "/");
+    baseUrl = getServerURL(server);
   }
   
   @AfterClass public static void cleanup() throws Exception {
     server.stop();
   }
-
+  
+  /** Test the maximum number of threads cannot be exceeded. */
+  @Test public void testMaxThreads() throws Exception {
+    int clientThreads = MAX_THREADS * 10;
+    Executor executor = Executors.newFixedThreadPool(clientThreads);
+    // Run many clients to make server reach its maximum number of threads
+    final CountDownLatch ready = new CountDownLatch(clientThreads);
+    final CountDownLatch start = new CountDownLatch(1);
+    for (int i = 0; i < clientThreads; i++) {
+      executor.execute(new Runnable() {
+        @Override
+        public void run() {
+          ready.countDown();
+          try {
+            start.await();
+            assertEquals("a:b\nc:d\n",
+                         readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
+            int serverThreads = server.webServer.getThreadPool().getThreads();
+            assertTrue(serverThreads <= MAX_THREADS);
+            System.out.println("Number of threads = " + serverThreads +
+                " which is less or equal than the max = " + MAX_THREADS);
+          } catch (Exception e) {
+            // do nothing
+          }
+        }
+      });
+    }
+    // Start the client threads when they are all ready
+    ready.await();
+    start.countDown();
+  }
+  
   @Test public void testEcho() throws Exception {
     assertEquals("a:b\nc:d\n", 
                  readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
@@ -279,9 +294,6 @@ public class TestHttpServer {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
-    conf.set(
-        CommonConfigurationKeys.HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY,
-        "userA,userB groupC,groupD");
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
         DummyFilterInitializer.class.getName());
 
@@ -295,7 +307,8 @@ public class TestHttpServer {
     MyGroupsProvider.mapping.put("userD", Arrays.asList("groupD"));
     MyGroupsProvider.mapping.put("userE", Arrays.asList("groupE"));
 
-    HttpServer myServer = new HttpServer("test", "0.0.0.0", 0, true, conf);
+    HttpServer myServer = new HttpServer("test", "0.0.0.0", 0, true, conf,
+        new AccessControlList("userA,userB groupC,groupD"));
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.start();
     int port = myServer.getPort();

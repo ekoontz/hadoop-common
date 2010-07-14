@@ -23,8 +23,8 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.TreeMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -38,25 +38,60 @@ import javax.security.sasl.Sasl;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 /**
  * A utility class for dealing with SASL on RPC server
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SaslRpcServer {
   public static final Log LOG = LogFactory.getLog(SaslRpcServer.class);
   public static final String SASL_DEFAULT_REALM = "default";
   public static final Map<String, String> SASL_PROPS = 
       new TreeMap<String, String>();
-  static {
-    // Request authentication plus integrity protection
-    SASL_PROPS.put(Sasl.QOP, "auth-int");
-    // Request mutual authentication
-    SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
-  }
+
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
+  public static enum QualityOfProtection {
+    AUTHENTICATION("auth"),
+    INTEGRITY("auth-int"),
+    PRIVACY("auth-conf");
+    
+    public final String saslQop;
+    
+    private QualityOfProtection(String saslQop) {
+      this.saslQop = saslQop;
+    }
+    
+    public String getSaslQop() {
+      return saslQop;
+    }
+  }
+  
+  public static void init(Configuration conf) {
+    QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
+    String rpcProtection = conf.get("hadoop.rpc.protection",
+        QualityOfProtection.AUTHENTICATION.name().toLowerCase());
+    if (QualityOfProtection.INTEGRITY.name().toLowerCase()
+        .equals(rpcProtection)) {
+      saslQOP = QualityOfProtection.INTEGRITY;
+    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(
+        rpcProtection)) {
+      saslQOP = QualityOfProtection.PRIVACY;
+    }
+    
+    SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
+    SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
+  }
+  
   static String encodeIdentifier(byte[] identifier) {
     return new String(Base64.encodeBase64(identifier));
   }
@@ -65,12 +100,17 @@ public class SaslRpcServer {
     return Base64.decodeBase64(identifier.getBytes());
   }
 
-  public static TokenIdentifier getIdentifier(String id,
-      SecretManager<TokenIdentifier> secretManager) throws IOException {
+  public static <T extends TokenIdentifier> T getIdentifier(String id,
+      SecretManager<T> secretManager) throws InvalidToken {
     byte[] tokenId = decodeIdentifier(id);
-    TokenIdentifier tokenIdentifier = secretManager.createIdentifier();
-    tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
-        tokenId)));
+    T tokenIdentifier = secretManager.createIdentifier();
+    try {
+      tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
+          tokenId)));
+    } catch (IOException e) {
+      throw (InvalidToken) new InvalidToken(
+          "Can't de-serialize tokenIdentifier").initCause(e);
+    }
     return tokenIdentifier;
   }
 
@@ -83,19 +123,34 @@ public class SaslRpcServer {
     return fullName.split("[/@]");
   }
 
+  @InterfaceStability.Evolving
+  public enum SaslStatus {
+    SUCCESS (0),
+    ERROR (1);
+    
+    public final int state;
+    private SaslStatus(int state) {
+      this.state = state;
+    }
+  }
+  
   /** Authentication method */
+  @InterfaceStability.Evolving
   public static enum AuthMethod {
-    SIMPLE((byte) 80, ""), // no authentication
-    KERBEROS((byte) 81, "GSSAPI"), // SASL Kerberos authentication
-    DIGEST((byte) 82, "DIGEST-MD5"); // SASL DIGEST-MD5 authentication
+    SIMPLE((byte) 80, "", AuthenticationMethod.SIMPLE),
+    KERBEROS((byte) 81, "GSSAPI", AuthenticationMethod.KERBEROS),
+    DIGEST((byte) 82, "DIGEST-MD5", AuthenticationMethod.TOKEN);
 
     /** The code for this method. */
     public final byte code;
     public final String mechanismName;
+    public final AuthenticationMethod authenticationMethod;
 
-    private AuthMethod(byte code, String mechanismName) {
+    private AuthMethod(byte code, String mechanismName, 
+                       AuthenticationMethod authMethod) {
       this.code = code;
       this.mechanismName = mechanismName;
+      this.authenticationMethod = authMethod;
     }
 
     private static final int FIRST_CODE = values()[0].code;
@@ -123,21 +178,25 @@ public class SaslRpcServer {
   };
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
+  @InterfaceStability.Evolving
   public static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
-
+    private Server.Connection connection; 
+    
     public SaslDigestCallbackHandler(
-        SecretManager<TokenIdentifier> secretManager) {
+        SecretManager<TokenIdentifier> secretManager,
+        Server.Connection connection) {
       this.secretManager = secretManager;
+      this.connection = connection;
     }
 
-    private char[] getPassword(TokenIdentifier tokenid) throws IOException {
+    private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken {
       return encodePassword(secretManager.retrievePassword(tokenid));
     }
 
     /** {@inheritDoc} */
     @Override
-    public void handle(Callback[] callbacks) throws IOException,
+    public void handle(Callback[] callbacks) throws InvalidToken,
         UnsupportedCallbackException {
       NameCallback nc = null;
       PasswordCallback pc = null;
@@ -159,6 +218,10 @@ public class SaslRpcServer {
       if (pc != null) {
         TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(), secretManager);
         char[] password = getPassword(tokenIdentifier);
+        UserGroupInformation user = null;
+        user = tokenIdentifier.getUser(); // may throw exception
+        connection.attemptingUser = user;
+        
         if (LOG.isDebugEnabled()) {
           LOG.debug("SASL server DIGEST-MD5 callback: setting password "
               + "for client: " + tokenIdentifier.getUser());
@@ -174,11 +237,12 @@ public class SaslRpcServer {
           ac.setAuthorized(false);
         }
         if (ac.isAuthorized()) {
-          String username = getIdentifier(authzid, secretManager).getUser()
-              .getUserName().toString();
-          if (LOG.isDebugEnabled())
+          if (LOG.isDebugEnabled()) {
+            String username = getIdentifier(authzid, secretManager).getUser()
+            .getUserName().toString();
             LOG.debug("SASL server DIGEST-MD5 callback: setting "
                 + "canonicalized client ID: " + username);
+          }
           ac.setAuthorizedID(authzid);
         }
       }
@@ -186,11 +250,12 @@ public class SaslRpcServer {
   }
 
   /** CallbackHandler for SASL GSSAPI Kerberos mechanism */
+  @InterfaceStability.Evolving
   public static class SaslGssCallbackHandler implements CallbackHandler {
 
     /** {@inheritDoc} */
     @Override
-    public void handle(Callback[] callbacks) throws IOException,
+    public void handle(Callback[] callbacks) throws
         UnsupportedCallbackException {
       AuthorizeCallback ac = null;
       for (Callback callback : callbacks) {

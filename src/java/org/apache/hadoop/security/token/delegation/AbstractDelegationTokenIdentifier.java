@@ -19,8 +19,7 @@
 package org.apache.hadoop.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
+import org.apache.hadoop.classification.InterfaceStability;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -31,7 +30,8 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
-@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public abstract class AbstractDelegationTokenIdentifier 
 extends TokenIdentifier {
   private static final byte VERSION = 0;
@@ -49,8 +49,16 @@ extends TokenIdentifier {
   }
   
   public AbstractDelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
-    this.owner = owner;
-    this.renewer = renewer;
+    if (owner == null) {
+      this.owner = new Text();
+    } else {
+      this.owner = owner;
+    }
+    if (renewer == null) {
+      this.renewer = new Text();
+    } else {
+      this.renewer = renewer;
+    }
     if (realUser == null) {
       this.realUser = new Text();
     } else {
@@ -169,5 +177,15 @@ extends TokenIdentifier {
     WritableUtils.writeVLong(out, maxDate);
     WritableUtils.writeVInt(out, sequenceNumber);
     WritableUtils.writeVInt(out, masterKeyId);
+  }
+  
+  public String toString() {
+    StringBuilder buffer = new StringBuilder();
+    buffer
+        .append("owner=" + owner + ", renewer=" + renewer + ", realUser="
+            + realUser + ", issueDate=" + issueDate + ", maxDate=" + maxDate
+            + ", sequenceNumber=" + sequenceNumber + ", masterKeyId="
+            + masterKeyId);
+    return buffer.toString();
   }
 }

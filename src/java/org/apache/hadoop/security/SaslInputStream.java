@@ -23,12 +23,15 @@ import java.io.EOFException;
 import java.io.InputStream;
 import java.io.IOException;
 
+import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A SaslInputStream is composed of an InputStream and a SaslServer (or
@@ -37,10 +40,15 @@ import org.apache.commons.logging.LogFactory;
  * (or SaslClient) object. The SaslServer (or SaslClient) object must be fully
  * initialized before being used by a SaslInputStream.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class SaslInputStream extends InputStream {
   public static final Log LOG = LogFactory.getLog(SaslInputStream.class);
 
   private final DataInputStream inStream;
+  /** Should we wrap the communication channel? */
+  private final boolean useWrap;
+  
   /*
    * data read from the underlying input stream before being processed by SASL
    */
@@ -141,6 +149,8 @@ public class SaslInputStream extends InputStream {
     this.inStream = new DataInputStream(inStream);
     this.saslServer = saslServer;
     this.saslClient = null;
+    String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+    this.useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
   }
 
   /**
@@ -157,6 +167,8 @@ public class SaslInputStream extends InputStream {
     this.inStream = new DataInputStream(inStream);
     this.saslServer = null;
     this.saslClient = saslClient;
+    String qop = (String) saslClient.getNegotiatedProperty(Sasl.QOP);
+    this.useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
   }
 
   /**
@@ -174,6 +186,9 @@ public class SaslInputStream extends InputStream {
    *              if an I/O error occurs.
    */
   public int read() throws IOException {
+    if (!useWrap) {
+      return inStream.read();
+    }
     if (ostart >= ofinish) {
       // we loop for new data as we are blocking
       int i = 0;
@@ -224,6 +239,9 @@ public class SaslInputStream extends InputStream {
    *              if an I/O error occurs.
    */
   public int read(byte[] b, int off, int len) throws IOException {
+    if (!useWrap) {
+      return inStream.read(b, off, len);
+    }
     if (ostart >= ofinish) {
       // we loop for new data as we are blocking
       int i = 0;
@@ -265,6 +283,9 @@ public class SaslInputStream extends InputStream {
    *              if an I/O error occurs.
    */
   public long skip(long n) throws IOException {
+    if (!useWrap) {
+      return inStream.skip(n);
+    }
     int available = ofinish - ostart;
     if (n > available) {
       n = available;
@@ -288,6 +309,9 @@ public class SaslInputStream extends InputStream {
    *              if an I/O error occurs.
    */
   public int available() throws IOException {
+    if (!useWrap) {
+      return inStream.available();
+    }
     return (ofinish - ostart);
   }
 

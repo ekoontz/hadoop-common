@@ -19,10 +19,8 @@
 package org.apache.hadoop.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
-
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -42,7 +40,8 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 
-@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public abstract 
 class AbstractDelegationTokenSecretManager<TokenIdent 
 extends AbstractDelegationTokenIdentifier> 
@@ -179,6 +178,7 @@ extends AbstractDelegationTokenIdentifier>
   
   @Override
   protected synchronized byte[] createPassword(TokenIdent identifier) {
+    LOG.info("Creating password for identifier: "+identifier);
     int sequenceNum;
     long now = System.currentTimeMillis();
     sequenceNum = ++delegationTokenSequenceNumber;
@@ -221,12 +221,13 @@ extends AbstractDelegationTokenIdentifier>
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-
+    LOG.info("Token renewal requested for identifier: "+id);
+    
     if (id.getMaxDate() < now) {
       throw new InvalidToken("User " + renewer + 
                              " tried to renew an expired token");
     }
-    if (id.getRenewer() == null) {
+    if ((id.getRenewer() == null) || ("".equals(id.getRenewer().toString()))) {
       throw new AccessControlException("User " + renewer + 
                                        " tried to renew a token without " +
                                        "a renewer");
@@ -272,13 +273,16 @@ extends AbstractDelegationTokenIdentifier>
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
+    LOG.info("Token cancelation requested for identifier: "+id);
+    
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner");
     }
     String owner = id.getUser().getUserName();
     Text renewer = id.getRenewer();
     if (!canceller.equals(owner)
-        && (renewer == null || !canceller.equals(renewer.toString()))) {
+        && (renewer == null || "".equals(renewer.toString()) || !canceller
+            .equals(renewer.toString()))) {
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token");
     }
@@ -300,6 +304,7 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   /** Class to encapsulate a token's renew date and password. */
+  @InterfaceStability.Evolving
   public static class DelegationTokenInformation {
     long renewDate;
     byte[] password;
@@ -336,6 +341,14 @@ extends AbstractDelegationTokenIdentifier>
     if (tokenRemoverThread != null) {
       tokenRemoverThread.interrupt();
     }
+  }
+  
+  /**
+   * is secretMgr running
+   * @return true if secret mgr is running
+   */
+  public synchronized boolean isRunning() {
+    return running;
   }
   
   private class ExpiredTokenRemover extends Thread {

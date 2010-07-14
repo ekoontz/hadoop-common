@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -37,6 +38,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.CreateOpts;
@@ -66,6 +69,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  * The local implementation is {@link LocalFileSystem} and distributed
  * implementation is DistributedFileSystem.
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class FileSystem extends Configured implements Closeable {
   public static final String FS_DEFAULT_NAME_KEY = 
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
@@ -95,6 +100,31 @@ public abstract class FileSystem extends Configured implements Closeable {
    * or the JVM is exited.
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();
+  
+  /**
+   * Get a filesystem instance based on the uri, the passed
+   * configuration and the user
+   * @param uri
+   * @param conf
+   * @param user
+   * @return the filesystem instance
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static FileSystem get(final URI uri, final Configuration conf,
+        final String user) throws IOException, InterruptedException {
+    UserGroupInformation ugi;
+    if (user == null) {
+      ugi = UserGroupInformation.getCurrentUser();
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(user);
+    }
+    return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return get(uri, conf);
+      }
+    });
+  }
 
   /** Returns the configured filesystem implementation.*/
   public static FileSystem get(Configuration conf) throws IOException {
@@ -136,6 +166,17 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
+  
+  /** @deprecated call #getUri() instead.*/
+  @Deprecated
+  public String getName() { return getUri().toString(); }
+
+  /** @deprecated call #get(URI,Configuration) instead. */
+  @Deprecated
+  public static FileSystem getNamed(String name, Configuration conf)
+    throws IOException {
+    return get(URI.create(fixName(name)), conf);
+  }
   
   /** Update old-format filesystem names, for back-compatibility.  This should
    * eventually be replaced with a checkName() method that throws an exception
@@ -193,6 +234,30 @@ public abstract class FileSystem extends Configured implements Closeable {
     return CACHE.get(uri, conf);
   }
 
+  /**
+   * Returns the FileSystem for this URI's scheme and authority and the 
+   * passed user. Internally invokes {@link #newInstance(URI, Configuration)}
+   * @param uri
+   * @param conf
+   * @param user
+   * @return filesystem instance
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static FileSystem newInstance(final URI uri, final Configuration conf,
+      final String user) throws IOException, InterruptedException {
+    UserGroupInformation ugi;
+    if (user == null) {
+      ugi = UserGroupInformation.getCurrentUser();
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(user);
+    }
+    return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return newInstance(uri,conf); 
+      }
+    });
+  }
   /** Returns the FileSystem for this URI's scheme and authority.  The scheme
    * of the URI determines a configuration property name,
    * <tt>fs.<i>scheme</i>.class</tt> whose value names the FileSystem class.
@@ -542,15 +607,13 @@ public abstract class FileSystem extends Configured implements Closeable {
                                             long blockSize,
                                             Progressable progress
                                             ) throws IOException {
-    return this.create(f, FsPermission.getDefault(), overwrite ? EnumSet
-        .of(CreateFlag.OVERWRITE) : EnumSet.of(CreateFlag.CREATE), bufferSize,
+    return this.create(f, FsPermission.getDefault(), overwrite, bufferSize,
         replication, blockSize, progress);
   }
 
   /**
    * Opens an FSDataOutputStream at the indicated Path with write-progress
    * reporting.
-   * @deprecated Consider using {@link #create(Path, FsPermission, EnumSet, int, short, long, Progressable)} instead.
    * @param f the file name to open
    * @param permission
    * @param overwrite if a file with this name already exists, then if true,
@@ -562,35 +625,14 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    * @see #setPermission(Path, FsPermission)
    */
-  public FSDataOutputStream create(Path f,
+  public abstract FSDataOutputStream create(Path f,
       FsPermission permission,
       boolean overwrite,
       int bufferSize,
       short replication,
       long blockSize,
-      Progressable progress) throws IOException{
-    return create(f, permission, overwrite ? EnumSet.of(CreateFlag.OVERWRITE)
-        : EnumSet.of(CreateFlag.CREATE), bufferSize, replication, blockSize,
-        progress);
-  }
+      Progressable progress) throws IOException;
   
-  /**
-   * Opens an FSDataOutputStream at the indicated Path with write-progress
-   * reporting.
-   * @param f the file name to open.
-   * @param permission - applied against umask
-   * @param flag determines the semantic of this create.
-   * @param bufferSize the size of the buffer to be used.
-   * @param replication required block replication for the file.
-   * @param blockSize
-   * @param progress
-   * @throws IOException
-   * @see #setPermission(Path, FsPermission)
-   * @see CreateFlag
-   */
-  public abstract FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
-      Progressable progress) throws IOException ;
   
   /*.
    * This create has been added to support the FileContext that processes
@@ -609,117 +651,22 @@ public abstract class FileSystem extends Configured implements Closeable {
     // nor does the bytesPerChecksum  hence
     // calling the regular create is good enough.
     // FSs that implement permissions should override this.
+
+    if (exists(f)) {
+      if (flag.contains(CreateFlag.APPEND)) {
+        return append(f, bufferSize, progress);
+      } else if (!flag.contains(CreateFlag.OVERWRITE)) {
+        throw new IOException("File already exists: " + f);
+      }
+    } else {
+      if (flag.contains(CreateFlag.APPEND) && !flag.contains(CreateFlag.CREATE))
+        throw new IOException("File already exists: " + f.toString());
+    }
     
-    return this.create(f, absolutePermission, flag, bufferSize, replication,
+    return this.create(f, absolutePermission, flag.contains(CreateFlag.OVERWRITE), bufferSize, replication,
         blockSize, progress);
   }
   
-  
-  /*.
-   * This create has been added to support the FileContext that passes
-   * an absolute permission with (ie umask was already applied) 
-   * This a temporary method added to support the transition from FileSystem
-   * to FileContext for user applications.
-   */
-  @Deprecated
-  protected FSDataOutputStream primitiveCreate(final Path f,
-      final EnumSet<CreateFlag> createFlag,
-      CreateOpts... opts) throws IOException {
-    checkPath(f);
-    int bufferSize = -1;
-    short replication = -1;
-    long blockSize = -1;
-    int bytesPerChecksum = -1;
-    FsPermission permission = null;
-    Progressable progress = null;
-    Boolean createParent = null;
- 
-    for (CreateOpts iOpt : opts) {
-      if (CreateOpts.BlockSize.class.isInstance(iOpt)) {
-        if (blockSize != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        blockSize = ((CreateOpts.BlockSize) iOpt).getValue();
-      } else if (CreateOpts.BufferSize.class.isInstance(iOpt)) {
-        if (bufferSize != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        bufferSize = ((CreateOpts.BufferSize) iOpt).getValue();
-      } else if (CreateOpts.ReplicationFactor.class.isInstance(iOpt)) {
-        if (replication != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        replication = ((CreateOpts.ReplicationFactor) iOpt).getValue();
-      } else if (CreateOpts.BytesPerChecksum.class.isInstance(iOpt)) {
-        if (bytesPerChecksum != -1) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        bytesPerChecksum = ((CreateOpts.BytesPerChecksum) iOpt).getValue();
-      } else if (CreateOpts.Perms.class.isInstance(iOpt)) {
-        if (permission != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        permission = ((CreateOpts.Perms) iOpt).getValue();
-      } else if (CreateOpts.Progress.class.isInstance(iOpt)) {
-        if (progress != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        progress = ((CreateOpts.Progress) iOpt).getValue();
-      } else if (CreateOpts.CreateParent.class.isInstance(iOpt)) {
-        if (createParent != null) {
-          throw new IllegalArgumentException("multiple varargs of same kind");
-        }
-        createParent = ((CreateOpts.CreateParent) iOpt).getValue();
-      } else {
-        throw new IllegalArgumentException("Unkown CreateOpts of type " +
-            iOpt.getClass().getName());
-      }
-    }
-    if (blockSize % bytesPerChecksum != 0) {
-      throw new IllegalArgumentException(
-          "blockSize should be a multiple of checksumsize");
-    }
-    
-    FsServerDefaults ssDef = getServerDefaults();
-    
-    if (blockSize == -1) {
-      blockSize = ssDef.getBlockSize();
-    }
-    if (bufferSize == -1) {
-      bufferSize = ssDef.getFileBufferSize();
-    }
-    if (replication == -1) {
-      replication = ssDef.getReplication();
-    }
-    if (permission == null) {
-      permission = FsPermission.getDefault();
-    }
-    if (createParent == null) {
-      createParent = false;
-    }
-    
-    // Default impl  assumes that permissions do not matter and 
-    // nor does the bytesPerChecksum  hence
-    // calling the regular create is good enough.
-    // FSs that implement permissions should override this.
-
-    if (!createParent) { // parent must exist.
-      // since this.create makes parent dirs automatically
-      // we must throw exception if parent does not exist.
-      final FileStatus stat = getFileStatus(f.getParent());
-      if (stat == null) {
-        throw new FileNotFoundException("Missing parent:" + f);
-      }
-      if (!stat.isDir()) {
-          throw new ParentNotDirectoryException("parent is not a dir:" + f);
-      }
-      // parent does exist - go ahead with create of file.
-    }
-    return this.create(f, permission, createFlag, bufferSize, replication,
-        blockSize, progress);
-  }
-  
-
   /**
    * This version of the mkdirs method assumes that the permission is absolute.
    * It has been added to support the FileContext that processes the permission
@@ -756,8 +703,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       if (stat == null) {
         throw new FileNotFoundException("Missing parent:" + f);
       }
-      if (!stat.isDir()) {
-          throw new ParentNotDirectoryException("parent is not a dir");
+      if (!stat.isDirectory()) {
+        throw new ParentNotDirectoryException("parent is not a dir");
       }
       // parent does exist - go ahead with mkdir of leaf
     }
@@ -812,6 +759,19 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public abstract FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException;
+
+ /**
+   * Get replication.
+   * 
+   * @deprecated Use getFileStatus() instead
+   * @param src file name
+   * @return file replication
+   * @throws IOException
+   */ 
+  @Deprecated
+  public short getReplication(Path src) throws IOException {
+    return getFileStatus(src).getReplication();
+  }
 
   /**
    * Set replication for an existing file.
@@ -888,7 +848,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       dstStatus = null;
     }
     if (dstStatus != null) {
-      if (srcStatus.isDir() != dstStatus.isDir()) {
+      if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
         throw new IOException("Source " + src + " Destination " + dst
             + " both should be either file or directory");
       }
@@ -897,7 +857,7 @@ public abstract class FileSystem extends Configured implements Closeable {
             + " already exists.");
       }
       // Delete the destination that is a file or an empty directory
-      if (dstStatus.isDir()) {
+      if (dstStatus.isDirectory()) {
         FileStatus[] list = listStatus(dst);
         if (list != null && list.length != 0) {
           throw new IOException(
@@ -912,7 +872,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         throw new FileNotFoundException("rename destination parent " + parent
             + " not found.");
       }
-      if (!parentStatus.isDir()) {
+      if (!parentStatus.isDirectory()) {
         throw new ParentNotDirectoryException("rename destination parent " + parent
             + " is a file.");
       }
@@ -920,6 +880,15 @@ public abstract class FileSystem extends Configured implements Closeable {
     if (!rename(src, dst)) {
       throw new IOException("rename from " + src + " to " + dst + " failed.");
     }
+  }
+  
+  /**
+   * Delete a file 
+   * @deprecated Use {@link #delete(Path, boolean)} instead.
+   */
+  @Deprecated
+  public boolean delete(Path f) throws IOException {
+    return delete(f, true);
   }
   
   /** Delete a file.
@@ -992,7 +961,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public boolean isDirectory(Path f) throws IOException {
     try {
-      return getFileStatus(f).isDir();
+      return getFileStatus(f).isDirectory();
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
@@ -1004,23 +973,30 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public boolean isFile(Path f) throws IOException {
     try {
-      return !getFileStatus(f).isDir();
+      return getFileStatus(f).isFile();
     } catch (FileNotFoundException e) {
       return false;               // f does not exist
     }
+  }
+  
+  /** The number of bytes in a file. */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
+  public long getLength(Path f) throws IOException {
+    return getFileStatus(f).getLen();
   }
     
   /** Return the {@link ContentSummary} of a given {@link Path}. */
   public ContentSummary getContentSummary(Path f) throws IOException {
     FileStatus status = getFileStatus(f);
-    if (!status.isDir()) {
+    if (status.isFile()) {
       // f is a file
       return new ContentSummary(status.getLen(), 1, 0);
     }
     // f is a directory
     long[] summary = {0, 0, 1};
     for(FileStatus s : listStatus(f)) {
-      ContentSummary c = s.isDir() ? getContentSummary(s.getPath()) :
+      ContentSummary c = s.isDirectory() ? getContentSummary(s.getPath()) :
                                      new ContentSummary(s.getLen(), 1, 0);
       summary[0] += c.getLength();
       summary[1] += c.getFileCount();
@@ -1303,127 +1279,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     return globPathsLevel(parents, filePattern, level + 1, hasGlob);
   }
 
-  /* A class that could decide if a string matches the glob or not */
-  private static class GlobFilter implements PathFilter {
-    private PathFilter userFilter = DEFAULT_FILTER;
-    private Pattern regex;
-    private boolean hasPattern = false;
-      
-    /** Default pattern character: Escape any special meaning. */
-    private static final char  PAT_ESCAPE = '\\';
-    /** Default pattern character: Any single character. */
-    private static final char  PAT_ANY = '.';
-    /** Default pattern character: Character set close. */
-    private static final char  PAT_SET_CLOSE = ']';
-      
-    GlobFilter(String filePattern) throws IOException {
-      setRegex(filePattern);
-    }
-      
-    GlobFilter(String filePattern, PathFilter filter) throws IOException {
-      userFilter = filter;
-      setRegex(filePattern);
-    }
-      
-    private boolean isJavaRegexSpecialChar(char pChar) {
-      return pChar == '.' || pChar == '$' || pChar == '(' || pChar == ')' ||
-             pChar == '|' || pChar == '+';
-    }
-    void setRegex(String filePattern) throws IOException {
-      int len;
-      int setOpen;
-      int curlyOpen;
-      boolean setRange;
-
-      StringBuilder fileRegex = new StringBuilder();
-
-      // Validate the pattern
-      len = filePattern.length();
-      if (len == 0)
-        return;
-
-      setOpen = 0;
-      setRange = false;
-      curlyOpen = 0;
-
-      for (int i = 0; i < len; i++) {
-        char pCh;
-          
-        // Examine a single pattern character
-        pCh = filePattern.charAt(i);
-        if (pCh == PAT_ESCAPE) {
-          fileRegex.append(pCh);
-          i++;
-          if (i >= len)
-            error("An escaped character does not present", filePattern, i);
-          pCh = filePattern.charAt(i);
-        } else if (isJavaRegexSpecialChar(pCh)) {
-          fileRegex.append(PAT_ESCAPE);
-        } else if (pCh == '*') {
-          fileRegex.append(PAT_ANY);
-          hasPattern = true;
-        } else if (pCh == '?') {
-          pCh = PAT_ANY;
-          hasPattern = true;
-        } else if (pCh == '{') {
-          fileRegex.append('(');
-          pCh = '(';
-          curlyOpen++;
-          hasPattern = true;
-        } else if (pCh == ',' && curlyOpen > 0) {
-          fileRegex.append(")|");
-          pCh = '(';
-        } else if (pCh == '}' && curlyOpen > 0) {
-          // End of a group
-          curlyOpen--;
-          fileRegex.append(")");
-          pCh = ')';
-        } else if (pCh == '[' && setOpen == 0) {
-          setOpen++;
-          hasPattern = true;
-        } else if (pCh == '^' && setOpen > 0) {
-        } else if (pCh == '-' && setOpen > 0) {
-          // Character set range
-          setRange = true;
-        } else if (pCh == PAT_SET_CLOSE && setRange) {
-          // Incomplete character set range
-          error("Incomplete character set range", filePattern, i);
-        } else if (pCh == PAT_SET_CLOSE && setOpen > 0) {
-          // End of a character set
-          if (setOpen < 2)
-            error("Unexpected end of set", filePattern, i);
-          setOpen = 0;
-        } else if (setOpen > 0) {
-          // Normal character, or the end of a character set range
-          setOpen++;
-          setRange = false;
-        }
-        fileRegex.append(pCh);
-      }
-        
-      // Check for a well-formed pattern
-      if (setOpen > 0 || setRange || curlyOpen > 0) {
-        // Incomplete character set or character range
-        error("Expecting set closure character or end of range, or }", 
-            filePattern, len);
-      }
-      regex = Pattern.compile(fileRegex.toString());
-    }
-      
-    boolean hasPattern() {
-      return hasPattern;
-    }
-      
-    public boolean accept(Path path) {
-      return regex.matcher(path.getName()).matches() && userFilter.accept(path);
-    }
-      
-    private void error(String s, String pattern, int pos) throws IOException {
-      throw new IOException("Illegal file pattern: "
-                            +s+ " for glob "+ pattern + " at " + pos);
-    }
-  }
-    
   /** Return the current user's home directory in this filesystem.
    * The default implementation returns "/user/$USER/".
    */
@@ -1608,6 +1463,17 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     return used;
   }
+  
+  /**
+   * Get the block size for a particular file.
+   * @param f the filename
+   * @return the number of bytes in a block
+   */
+  /** @deprecated Use getFileStatus() instead */
+  @Deprecated
+  public long getBlockSize(Path f) throws IOException {
+    return getFileStatus(f).getBlockSize();
+  }
 
   /** Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time. */
@@ -1758,32 +1624,45 @@ public abstract class FileSystem extends Configured implements Closeable {
     /** A variable that makes all objects in the cache unique */
     private static AtomicLong unique = new AtomicLong(1);
 
-    synchronized FileSystem get(URI uri, Configuration conf) throws IOException{
+    FileSystem get(URI uri, Configuration conf) throws IOException{
       Key key = new Key(uri, conf);
       return getInternal(uri, conf, key);
     }
 
     /** The objects inserted into the cache using this method are all unique */
-    synchronized FileSystem getUnique(URI uri, Configuration conf) throws IOException{
+    FileSystem getUnique(URI uri, Configuration conf) throws IOException{
       Key key = new Key(uri, conf, unique.getAndIncrement());
       return getInternal(uri, conf, key);
     }
 
     private FileSystem getInternal(URI uri, Configuration conf, Key key) throws IOException{
-      FileSystem fs = map.get(key);
-      if (fs == null) {
-        fs = createFileSystem(uri, conf);
+      FileSystem fs;
+      synchronized (this) {
+        fs = map.get(key);
+      }
+      if (fs != null) {
+        return fs;
+      }
+
+      fs = createFileSystem(uri, conf);
+      synchronized (this) { // refetch the lock again
+        FileSystem oldfs = map.get(key);
+        if (oldfs != null) { // a file system is created while lock is releasing
+          fs.close(); // close the new file system
+          return oldfs;  // return the old file system
+        }
+        
+        // now insert the new file system into the map
         if (map.isEmpty() && !clientFinalizer.isAlive()) {
           Runtime.getRuntime().addShutdownHook(clientFinalizer);
         }
         fs.key = key;
         map.put(key, fs);
-
         if (conf.getBoolean("fs.automatic.close", true)) {
           toAutoClose.add(key);
         }
+        return fs;
       }
-      return fs;
     }
 
     synchronized void remove(Key key, FileSystem fs) {

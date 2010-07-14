@@ -21,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,8 +28,9 @@ import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -46,6 +46,8 @@ import org.apache.hadoop.util.Progressable;
  * href="http://commons.apache.org/net/">Apache Commons Net</a>.
  * </p>
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FTPFileSystem extends FileSystem {
 
   public static final Log LOG = LogFactory
@@ -164,7 +166,7 @@ public class FTPFileSystem extends FileSystem {
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
     FileStatus fileStat = getFileStatus(client, absolute);
-    if (fileStat.isDir()) {
+    if (fileStat.isDirectory()) {
       disconnect(client);
       throw new IOException("Path " + file + " is a directory.");
     }
@@ -196,28 +198,18 @@ public class FTPFileSystem extends FileSystem {
    */
   @Override
   public FSDataOutputStream create(Path file, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     final FTPClient client = connect();
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
-    
-    boolean overwrite = flag.contains(CreateFlag.OVERWRITE);
-    boolean create = flag.contains(CreateFlag.CREATE);
-    boolean append= flag.contains(CreateFlag.APPEND);
-    
     if (exists(client, file)) {
       if (overwrite) {
         delete(client, file);
-      } else if(append){
-        return append(file, bufferSize, progress);
       } else {
         disconnect(client);
         throw new IOException("File already exists: " + file);
       }
-    } else {
-      if(append && !create)
-        throw new FileNotFoundException("File does not exist: "+ file);
     }
     
     Path parent = absolute.getParent();
@@ -307,7 +299,7 @@ public class FTPFileSystem extends FileSystem {
     Path absolute = makeAbsolute(workDir, file);
     String pathName = absolute.toUri().getPath();
     FileStatus fileStat = getFileStatus(client, absolute);
-    if (!fileStat.isDir()) {
+    if (fileStat.isFile()) {
       return client.deleteFile(pathName);
     }
     FileStatus[] dirEntries = listStatus(client, absolute);
@@ -370,7 +362,7 @@ public class FTPFileSystem extends FileSystem {
     Path workDir = new Path(client.printWorkingDirectory());
     Path absolute = makeAbsolute(workDir, file);
     FileStatus fileStat = getFileStatus(client, absolute);
-    if (!fileStat.isDir()) {
+    if (fileStat.isFile()) {
       return new FileStatus[] { fileStat };
     }
     FTPFile[] ftpFiles = client.listFiles(absolute.toUri().getPath());
@@ -500,7 +492,7 @@ public class FTPFileSystem extends FileSystem {
    */
   private boolean isFile(FTPClient client, Path file) {
     try {
-      return !getFileStatus(client, file).isDir();
+      return getFileStatus(client, file).isFile();
     } catch (FileNotFoundException e) {
       return false; // file does not exist
     } catch (IOException ioe) {

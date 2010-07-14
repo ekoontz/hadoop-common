@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 
 /** 
@@ -37,6 +39,8 @@ import org.apache.hadoop.conf.Configuration;
  * <code>df</code>. It also offers facilities to gate commands by 
  * time-intervals.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Unstable
 abstract public class Shell {
   
   public static final Log LOG = LogFactory.getLog(Shell.class);
@@ -44,11 +48,11 @@ abstract public class Shell {
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
   /** a Unix command to get the current user's groups list */
-  public static String[] getGROUPS_COMMAND() {
+  public static String[] getGroupsCommand() {
     return new String[]{"bash", "-c", "groups"};
   }
   /** a Unix command to get a given user's groups list */
-  public static String[] getGROUPS_FOR_USER_COMMAND(final String user) {
+  public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
     return new String [] {"bash", "-c", "id -Gn " + user};
   }

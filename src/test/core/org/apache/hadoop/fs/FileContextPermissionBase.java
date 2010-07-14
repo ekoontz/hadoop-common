@@ -77,10 +77,10 @@ public abstract class FileContextPermissionBase {
     fc.delete(getTestRootPath(fc), true);
   }
   
-  private void cleanupFile(FileContext theFc, Path name) throws IOException {
-    Assert.assertTrue(theFc.exists(name));
-    theFc.delete(name, true);
-    Assert.assertTrue(!theFc.exists(name));
+  private void cleanupFile(FileContext fc, Path name) throws IOException {
+    Assert.assertTrue(exists(fc, name));
+    fc.delete(name, true);
+    Assert.assertTrue(!exists(fc, name));
   }
 
   @Test
@@ -165,7 +165,7 @@ public abstract class FileContextPermissionBase {
 
   static List<String> getGroups() throws IOException {
     List<String> a = new ArrayList<String>();
-    String s = Shell.execCommand(Shell.getGROUPS_COMMAND());
+    String s = Shell.execCommand(Shell.getGroupsCommand());
     for(StringTokenizer t = new StringTokenizer(s); t.hasMoreTokens(); ) {
       a.add(t.nextToken());
     }

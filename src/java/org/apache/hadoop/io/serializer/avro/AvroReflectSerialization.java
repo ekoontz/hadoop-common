@@ -19,7 +19,6 @@
 package org.apache.hadoop.io.serializer.avro;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.avro.Schema;
@@ -28,16 +27,19 @@ import org.apache.avro.io.DatumWriter;
 import org.apache.avro.reflect.ReflectData;
 import org.apache.avro.reflect.ReflectDatumReader;
 import org.apache.avro.reflect.ReflectDatumWriter;
-import org.apache.avro.specific.SpecificRecord;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Serialization for Avro Reflect classes. For a class to be accepted by this 
  * serialization, it must either be in the package list configured via 
- * {@link AvroReflectSerialization#AVRO_REFLECT_PACKAGES} or implement 
+ * <code>avro.reflect.pkgs</code> or implement 
  * {@link AvroReflectSerializable} interface.
  *
  */
 @SuppressWarnings("unchecked")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class AvroReflectSerialization extends AvroSerialization<Object>{
 
   /**
@@ -45,21 +47,16 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
    * deserialized using this class. Multiple packages can be specified using 
    * comma-separated list.
    */
+  @InterfaceAudience.Private
   public static final String AVRO_REFLECT_PACKAGES = "avro.reflect.pkgs";
 
   private Set<String> packages; 
 
+  @InterfaceAudience.Private
   @Override
-  public synchronized boolean accept(Map<String, String> metadata) {
+  public synchronized boolean accept(Class<?> c) {
     if (packages == null) {
       getPackages();
-    }
-    if (!checkSerializationKey(metadata)) {
-      return false;
-    }
-    Class<?> c = getClassFromMetadata(metadata);
-    if (c == null) {
-      return false;
     }
     return AvroReflectSerializable.class.isAssignableFrom(c) || 
       packages.contains(c.getPackage().getName());
@@ -75,23 +72,25 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
     }
   }
 
+  @InterfaceAudience.Private
   @Override
-  public DatumReader getReader(Map<String, String> metadata) {
+  public DatumReader getReader(Class<Object> clazz) {
     try {
-      return new ReflectDatumReader(getClassFromMetadata(metadata));
+      return new ReflectDatumReader(clazz);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
+  @InterfaceAudience.Private
   @Override
-  public Schema getSchema(Map<String, String> metadata) {
-    Class<?> c = getClassFromMetadata(metadata);
-    return ReflectData.get().getSchema(c);
+  public Schema getSchema(Object t) {
+    return ReflectData.get().getSchema(t.getClass());
   }
 
+  @InterfaceAudience.Private
   @Override
-  public DatumWriter getWriter(Map<String, String> metadata) {
+  public DatumWriter getWriter(Class<Object> clazz) {
     return new ReflectDatumWriter();
   }
 

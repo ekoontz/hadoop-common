@@ -21,12 +21,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
 /** Interface that represents the client side information for a file.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FileStatus implements Writable, Comparable {
 
   private Path path;
@@ -92,11 +96,40 @@ public class FileStatus implements Writable, Comparable {
   }
 
   /**
+   * Is this a file?
+   * @return true if this is a file
+   */
+  public boolean isFile() {
+    return !isdir && !isSymlink();
+  }
+
+  /**
    * Is this a directory?
    * @return true if this is a directory
    */
+  public boolean isDirectory() {
+    return isdir;
+  }
+  
+  /**
+   * Old interface, instead use the explicit {@link FileStatus#isFile()}, 
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * @return true if this is a directory.
+   * @deprecated Use {@link FileStatus#isFile()},  
+   * {@link FileStatus#isDirectory()}, and {@link FileStatus#isSymlink()} 
+   * instead.
+   */
+  @Deprecated
   public boolean isDir() {
     return isdir;
+  }
+  
+  /**
+   * Is this a symbolic link?
+   * @return true if this is a symbolic link
+   */
+  public boolean isSymlink() {
+    return symlink != null;
   }
 
   /**
@@ -196,14 +229,6 @@ public class FileStatus implements Writable, Comparable {
    */  
   protected void setGroup(String group) {
     this.group = (group == null) ? "" :  group;
-  }
-
-  /**
-   * Is this a symbolic link?
-   * @return true if this is a symbolic link
-   */
-  public boolean isSymlink() {
-    return symlink != null;
   }
 
   /**

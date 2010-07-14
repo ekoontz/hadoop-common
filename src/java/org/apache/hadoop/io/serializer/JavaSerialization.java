@@ -26,6 +26,8 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.RawComparator;
 
 /**
@@ -34,10 +36,12 @@ import org.apache.hadoop.io.RawComparator;
  * </p>
  * @see JavaSerializationComparator
  */
-public class JavaSerialization extends SerializationBase<Serializable> {
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public class JavaSerialization implements Serialization<Serializable> {
 
   static class JavaSerializationDeserializer<T extends Serializable>
-    extends DeserializerBase<T> {
+    implements Deserializer<T> {
 
     private ObjectInputStream ois;
 
@@ -65,15 +69,10 @@ public class JavaSerialization extends SerializationBase<Serializable> {
 
   }
 
-  static class JavaSerializationSerializer<T extends Serializable>
-      extends SerializerBase<T> {
+  static class JavaSerializationSerializer
+    implements Serializer<Serializable> {
 
     private ObjectOutputStream oos;
-    private Map<String, String> metadata;
-
-    public JavaSerializationSerializer(Map<String, String> metadata) {
-      this.metadata = metadata;
-    }
 
     public void open(OutputStream out) throws IOException {
       oos = new ObjectOutputStream(out) {
@@ -83,7 +82,7 @@ public class JavaSerialization extends SerializationBase<Serializable> {
       };
     }
 
-    public void serialize(T object) throws IOException {
+    public void serialize(Serializable object) throws IOException {
       oos.reset(); // clear (class) back-references
       oos.writeObject(object);
     }
@@ -92,53 +91,21 @@ public class JavaSerialization extends SerializationBase<Serializable> {
       oos.close();
     }
 
-    @Override
-    public Map<String, String> getMetadata() throws IOException {
-      return metadata;
-    }
   }
 
-  public boolean accept(Map<String, String> metadata) {
-    if (!checkSerializationKey(metadata)) {
-      return false;
-    }
-
-    Class<?> c = getClassFromMetadata(metadata);
+  @InterfaceAudience.Private
+  public boolean accept(Class<?> c) {
     return Serializable.class.isAssignableFrom(c);
   }
 
-  public DeserializerBase<Serializable> getDeserializer(
-      Map<String, String> metadata) {
+  @InterfaceAudience.Private
+  public Deserializer<Serializable> getDeserializer(Class<Serializable> c) {
     return new JavaSerializationDeserializer<Serializable>();
   }
 
-  public SerializerBase<Serializable> getSerializer(
-      Map<String, String> metadata) {
-    return new JavaSerializationSerializer<Serializable>(metadata);
+  @InterfaceAudience.Private
+  public Serializer<Serializable> getSerializer(Class<Serializable> c) {
+    return new JavaSerializationSerializer();
   }
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public RawComparator<Serializable> getRawComparator(
-      Map<String, String> metadata) {
-    Class<?> klazz = getClassFromMetadata(metadata);
-    if (null == klazz) {
-      throw new IllegalArgumentException(
-          "Cannot get comparator without " + SerializationBase.CLASS_KEY
-          + " set in metadata");
-    }
-
-    if (Serializable.class.isAssignableFrom(klazz)) {
-      try {
-        return (RawComparator<Serializable>) new JavaSerializationComparator();
-      } catch (IOException ioe) {
-        throw new IllegalArgumentException(
-            "Could not instantiate JavaSerializationComparator for type "
-            + klazz.getName(), ioe);
-      }
-    } else {
-      throw new IllegalArgumentException("Class " + klazz.getName()
-          + " is incompatible with JavaSerialization");
-    }
-  }
 }

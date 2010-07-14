@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * Helper class for unit tests.
@@ -115,5 +120,48 @@ public final class FileContextTestHelper {
   public static void createFileNonRecursive(FileContext fc, Path path)
       throws IOException {
     createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.donotCreateParent());
-  } 
+  }
+
+  public static boolean exists(FileContext fc, Path p) throws IOException {
+    return fc.util().exists(p);
+  }
+  
+  public static boolean isFile(FileContext fc, Path p) throws IOException {
+    try {
+      return fc.getFileStatus(p).isFile();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
+
+  public static boolean isDir(FileContext fc, Path p) throws IOException {
+    try {
+      return fc.getFileStatus(p).isDirectory();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
+  
+  public static boolean isSymlink(FileContext fc, Path p) throws IOException {
+    try {
+      return fc.getFileLinkStatus(p).isSymlink();
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
+  
+  public static void writeFile(FileContext fc, Path path,byte b[]) throws Exception {
+    FSDataOutputStream out = 
+      fc.create(path,EnumSet.of(CreateFlag.CREATE), CreateOpts.createParent());
+    out.write(b);
+    out.close();
+  }
+  
+  public static byte[] readFile(FileContext fc, Path path, int len ) throws Exception {
+    DataInputStream dis = fc.open(path);
+    byte[] buffer = new byte[len];
+    IOUtils.readFully(dis, buffer, 0, len);
+    dis.close();
+    return buffer;
+  }
 }

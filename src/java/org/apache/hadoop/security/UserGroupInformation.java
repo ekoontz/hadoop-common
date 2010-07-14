@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.security;
 
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 
 import java.io.IOException;
@@ -50,7 +48,9 @@ import javax.security.auth.spi.LoginModule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -64,6 +64,8 @@ import com.sun.security.auth.module.Krb5LoginModule;
  * user's username and groups. It supports both the Windows, Unix and Kerberos 
  * login modules.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class UserGroupInformation {
   private static final Log LOG =  LogFactory.getLog(UserGroupInformation.class);
   
@@ -89,6 +91,10 @@ public class UserGroupInformation {
 
     @Override
     public boolean commit() throws LoginException {
+      // if we already have a user, we are done.
+      if (!subject.getPrincipals(User.class).isEmpty()) {
+        return true;
+      }
       Principal user = null;
       // if we are using kerberos, try it out
       if (useKerberos) {
@@ -130,8 +136,6 @@ public class UserGroupInformation {
   private static boolean useKerberos;
   /** Server-side groups fetching service */
   private static Groups groups;
-  /** The last authentication time */
-  private static long lastUnsuccessfulAuthenticationAttemptTime;
   
   public static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
   
@@ -139,6 +143,9 @@ public class UserGroupInformation {
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
     "HADOOP_TOKEN_FILE_LOCATION";
   
+  /** The last relogin attempt */
+  private long lastReloginTime = 0;
+
   /** 
    * A method to initialize the fields that depend on a configuration.
    * Must be called before useKerberos or groups is used.
@@ -173,6 +180,14 @@ public class UserGroupInformation {
     // circular dependence.
     javax.security.auth.login.Configuration.setConfiguration
         (new HadoopConfiguration());
+    
+    // give the configuration on how to translate Kerberos names
+    try {
+      KerberosName.setConfiguration(conf);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
+          "configuration", ioe);
+    }
     isInitialized = true;
   }
 
@@ -205,8 +220,6 @@ public class UserGroupInformation {
   private static String keytabFile = null;
 
   private final Subject subject;
-  
-  private static LoginContext login;
   
   private static final String OS_LOGIN_MODULE_NAME;
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -330,6 +343,19 @@ public class UserGroupInformation {
       return null;
     }
   }
+  
+  private LoginContext getLogin() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getLogin();
+    }
+    return null;
+  }
+  
+  private void setLogin(LoginContext login) {
+    for (User p: subject.getPrincipals(User.class)) {
+      p.setLogin(login);
+    }
+  }
 
   /**
    * Create a UserGroupInformation for the given subject.
@@ -360,12 +386,18 @@ public class UserGroupInformation {
   static UserGroupInformation getLoginUser() throws IOException {
     if (loginUser == null) {
       try {
+        Subject subject = new Subject();
+        loginUser = new UserGroupInformation(subject);
+        LoginContext login;
         if (isSecurityEnabled()) {
-          login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME);
+          login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
+              subject);
         } else {
-          login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME);
+          login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
+              subject);
         }
         login.login();
+        loginUser.setLogin(login);
         loginUser = new UserGroupInformation(login.getSubject());
         String tokenFile = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (tokenFile != null && isSecurityEnabled()) {
@@ -394,11 +426,14 @@ public class UserGroupInformation {
 
     keytabFile = path;
     keytabPrincipal = user;
+    Subject subject = new Subject();
+    LoginContext login; 
     try {
       login = 
-        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME);
+        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
       login.login();
-      loginUser = new UserGroupInformation(login.getSubject());
+      loginUser = new UserGroupInformation(subject);
+      loginUser.setLogin(login);
     } catch (LoginException le) {
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
@@ -418,16 +453,19 @@ public class UserGroupInformation {
   throws IOException {
     if (!isSecurityEnabled())
       return;
+    LoginContext login = getLogin();
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
-    if (System.currentTimeMillis() -lastUnsuccessfulAuthenticationAttemptTime <
-          MIN_TIME_BEFORE_RELOGIN) {
+    long now = System.currentTimeMillis();
+    if (now - lastReloginTime < MIN_TIME_BEFORE_RELOGIN ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
           " before.");
       return;
     }
+    // register most recent relogin
+    lastReloginTime = System.currentTimeMillis();
     try {
       LOG.info("Initiating logout for " + getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
@@ -441,17 +479,14 @@ public class UserGroupInformation {
             getSubject());
       LOG.info("Initiating re-login for " + keytabPrincipal);
       login.login();
+      setLogin(login);
     } catch (LoginException le) {
       throw new IOException("Login failure for " + keytabPrincipal + 
           " from keytab " + keytabFile, le);
     } 
   }
 
-  public synchronized static void 
-    setLastUnsuccessfulAuthenticationAttemptTime(long time) {
-    lastUnsuccessfulAuthenticationAttemptTime = time;
-  }
-  
+
   public synchronized static boolean isLoginKeytabBased() {
     return keytabFile != null;
   }
@@ -468,6 +503,16 @@ public class UserGroupInformation {
     Subject subject = new Subject();
     subject.getPrincipals().add(new User(user));
     return new UserGroupInformation(subject);
+  }
+
+  @InterfaceStability.Evolving
+  public static enum AuthenticationMethod {
+    SIMPLE,
+    KERBEROS,
+    TOKEN,
+    CERTIFICATE,
+    KERBEROS_SSL,
+    PROXY;
   }
 
   /* Create a proxy user using username of the effective user and the ugi of the
@@ -532,7 +577,7 @@ public class UserGroupInformation {
    * @param userGroups the names of the groups that the user belongs to
    * @return a fake user for running unit tests
    */
-  @InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
   public static UserGroupInformation createUserForTesting(String user, 
                                                           String[] userGroups) {
     ensureInitialized();
@@ -558,7 +603,7 @@ public class UserGroupInformation {
    *          the names of the groups that the user belongs to
    * @return a fake user for running unit tests
    */
-  @InterfaceAudience.LimitedPrivate( { HDFS, MAPREDUCE })
+  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public static UserGroupInformation createProxyUserForTesting(String user,
       UserGroupInformation realUser, String[] userGroups) {
     ensureInitialized();
@@ -594,6 +639,28 @@ public class UserGroupInformation {
     return null;
   }
 
+  /**
+   * Add a TokenIdentifier to this UGI. The TokenIdentifier has typically been
+   * authenticated by the RPC layer as belonging to the user represented by this
+   * UGI.
+   * 
+   * @param tokenId
+   *          tokenIdentifier to be added
+   * @return true on successful add of new tokenIdentifier
+   */
+  public synchronized boolean addTokenIdentifier(TokenIdentifier tokenId) {
+    return subject.getPublicCredentials().add(tokenId);
+  }
+
+  /**
+   * Get the set of TokenIdentifiers belonging to this UGI
+   * 
+   * @return the set of TokenIdentifiers belonging to this UGI
+   */
+  public synchronized Set<TokenIdentifier> getTokenIdentifiers() {
+    return subject.getPublicCredentials(TokenIdentifier.class);
+  }
+  
   /**
    * Add a token to this UGI
    * 
@@ -647,6 +714,46 @@ public class UserGroupInformation {
     } else {
       return getUserName();
     }
+  }
+
+  /**
+   * Sets the authentication method in the subject
+   * 
+   * @param authMethod
+   */
+  public synchronized 
+  void setAuthenticationMethod(AuthenticationMethod authMethod) {
+    for (User p : subject.getPrincipals(User.class)) {
+      p.setAuthenticationMethod(authMethod);
+    }
+  }
+
+  /**
+   * Get the authentication method from the subject
+   * 
+   * @return AuthenticationMethod in the subject, null if not present.
+   */
+  public synchronized AuthenticationMethod getAuthenticationMethod() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getAuthenticationMethod();
+    }
+    return null;
+  }
+  
+  /**
+   * Returns the authentication method of a ugi. If the authentication method is
+   * PROXY, returns the authentication method of the real user.
+   * 
+   * @param ugi
+   * @return AuthenticationMethod
+   */
+  public static AuthenticationMethod getRealAuthenticationMethod(
+      UserGroupInformation ugi) {
+    AuthenticationMethod authMethod = ugi.getAuthenticationMethod();
+    if (authMethod == AuthenticationMethod.PROXY) {
+      authMethod = ugi.getRealUser().getAuthenticationMethod();
+    }
+    return authMethod;
   }
 
   /**

@@ -57,10 +57,21 @@ public class TestDoAsEffectiveUser {
       GROUP2_NAME };
   private static final String ADDRESS = "0.0.0.0";
   private TestProtocol proxy;
+  private static Configuration masterConf = new Configuration();
+  
   
   public static final Log LOG = LogFactory
       .getLog(TestDoAsEffectiveUser.class);
   
+  
+  static {
+    masterConf.set("hadoop.security.auth_to_local",
+        "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
+        "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
+        + "DEFAULT");
+    UserGroupInformation.setConfiguration(masterConf);
+  }
+
   private void configureSuperUserIPAddresses(Configuration conf,
       String superUserShortName) throws IOException {
     ArrayList<String> ipList = new ArrayList<String>();
@@ -137,6 +148,7 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
         0, 5, true, conf, null);
 
+    refreshConf(conf);
     try {
       server.start();
 
@@ -177,6 +189,7 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
     try {
       server.start();
 
@@ -222,6 +235,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 
@@ -339,6 +354,7 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    
     try {
       server.start();
 
@@ -377,7 +393,7 @@ public class TestDoAsEffectiveUser {
    */
   @Test
   public void testProxyWithToken() throws Exception {
-    final Configuration conf = new Configuration();
+    final Configuration conf = new Configuration(masterConf);
     TestTokenSecretManager sm = new TestTokenSecretManager();
     conf
         .set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
@@ -388,7 +404,8 @@ public class TestDoAsEffectiveUser {
     server.start();
 
     final UserGroupInformation current = UserGroupInformation
-        .createRemoteUser(REAL_USER_NAME);
+        .createRemoteUser(REAL_USER_NAME);    
+    
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
         .getUserName()), new Text("SomeSuperUser"));
@@ -400,6 +417,9 @@ public class TestDoAsEffectiveUser {
     UserGroupInformation proxyUserUgi = UserGroupInformation
         .createProxyUserForTesting(PROXY_USER_NAME, current, GROUP_NAMES);
     proxyUserUgi.addToken(token);
+    
+    refreshConf(conf);
+    
     String retVal = proxyUserUgi.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
@@ -430,7 +450,7 @@ public class TestDoAsEffectiveUser {
   @Test
   public void testTokenBySuperUser() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    final Configuration newConf = new Configuration();
+    final Configuration newConf = new Configuration(masterConf);
     newConf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(newConf);
@@ -441,6 +461,9 @@ public class TestDoAsEffectiveUser {
 
     final UserGroupInformation current = UserGroupInformation
         .createUserForTesting(REAL_USER_NAME, GROUP_NAMES);
+    
+    refreshConf(newConf);
+    
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
         .getUserName()), new Text("SomeSuperUser"));
@@ -469,6 +492,12 @@ public class TestDoAsEffectiveUser {
         }
       }
     });
-    Assert.assertEquals(REAL_USER_NAME + " via SomeSuperUser", retVal);
+    String expected = REAL_USER_NAME + " via SomeSuperUser";
+    Assert.assertEquals(retVal + "!=" + expected, expected, retVal);
+  }
+  
+  //
+  private void refreshConf(Configuration conf) throws IOException {
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
 }

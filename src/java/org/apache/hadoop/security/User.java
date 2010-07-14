@@ -17,29 +17,41 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import java.security.Principal;
+
+import javax.security.auth.login.LoginContext;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 /**
  * Save the full and short name of the user as a principal. This allows us to
  * have a single type that we always look for when picking up user names.
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 class User implements Principal {
   private final String fullName;
   private final String shortName;
+  private AuthenticationMethod authMethod = null;
+  private LoginContext login = null;
 
   public User(String name) {
-    fullName = name;
-    int atIdx = name.indexOf('@');
-    if (atIdx == -1) {
-      shortName = name;
-    } else {
-      int slashIdx = name.indexOf('/');
-      if (slashIdx == -1 || atIdx < slashIdx) {
-        shortName = name.substring(0, atIdx);
-      } else {
-        shortName = name.substring(0, slashIdx);
-      }
+    this(name, null, null);
+  }
+  
+  public User(String name, AuthenticationMethod authMethod, LoginContext login) {
+    try {
+      shortName = new KerberosName(name).getShortName();
+    } catch (IOException ioe) {
+      throw new IllegalArgumentException("Illegal principal name " + name, ioe);
     }
+    fullName = name;
+
+    this.authMethod = authMethod;
+    this.login = login;
   }
 
   /**
@@ -65,7 +77,7 @@ class User implements Principal {
     } else if (o == null || getClass() != o.getClass()) {
       return false;
     } else {
-      return fullName.equals(((User) o).fullName);
+      return ((fullName.equals(((User) o).fullName)) && (authMethod == ((User) o).authMethod));
     }
   }
   
@@ -77,5 +89,29 @@ class User implements Principal {
   @Override
   public String toString() {
     return fullName;
+  }
+
+  public void setAuthenticationMethod(AuthenticationMethod authMethod) {
+    this.authMethod = authMethod;
+  }
+
+  public AuthenticationMethod getAuthenticationMethod() {
+    return authMethod;
+  }
+  
+  /**
+   * Returns login object
+   * @return login
+   */
+  public LoginContext getLogin() {
+    return login;
+  }
+  
+  /**
+   * Set the login object
+   * @param login
+   */
+  public void setLogin(LoginContext login) {
+    this.login = login;
   }
 }

@@ -253,8 +253,13 @@ public class Client {
         }
         KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
         if (krbInfo != null) {
-          String serverKey = krbInfo.value();
+          String serverKey = krbInfo.serverPrincipal();
           if (serverKey != null) {
+            if(LOG.isDebugEnabled()) {
+              LOG.info("server principal key for protocol="
+                  + protocol.getCanonicalName() + " is " + serverKey + 
+                  " and val =" + conf.get(serverKey));
+            }
             serverPrincipal = conf.get(serverKey);
           }
         }
@@ -372,26 +377,34 @@ public class Client {
             serverPrincipal);
         return saslRpcClient.saslConnect(in2, out2);
       } catch (javax.security.sasl.SaslException je) {
+        UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+        UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+        UserGroupInformation realUser = currentUser.getRealUser();
         if (authMethod == AuthMethod.KERBEROS && 
-            UserGroupInformation.isLoginKeytabBased()) {
-          //try re-login
-          UserGroupInformation.getCurrentUser().reloginFromKeytab();
           //try setting up the connection again
+          UserGroupInformation.isLoginKeytabBased() &&
+          // relogin only in case it is the login user (e.g. JT)
+          // or superuser (like oozie).
+          ((currentUser != null && currentUser.equals(loginUser)) ||
+           (realUser != null && realUser.equals(loginUser)))) {
           try {
+            //try re-login
+            loginUser.reloginFromKeytab();
             disposeSasl();
             saslRpcClient = new SaslRpcClient(authMethod, token,
                 serverPrincipal);
             return saslRpcClient.saslConnect(in2, out2);
           } catch (javax.security.sasl.SaslException jee) {
-            UserGroupInformation.
-            setLastUnsuccessfulAuthenticationAttemptTime
-            (System.currentTimeMillis());
             LOG.warn("Couldn't setup connection for " + 
-                UserGroupInformation.getCurrentUser().getUserName() +
+                loginUser.getUserName() +
                 " to " + serverPrincipal + " even after relogin.");
             throw jee;
+          } catch (IOException ie) {
+            ie.initCause(je);
+            throw ie;
           }
-        } else throw je;
+        } 
+        throw je;
       }
     }
     /** Connect to the server and set up the I/O streams. It then sends
@@ -494,10 +507,12 @@ public class Client {
     private void handleConnectionFailure(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
       // close the current connection
-      try {
-        socket.close();
-      } catch (IOException e) {
-        LOG.warn("Not able to close a socket", e);
+      if (socket != null) {
+        try {
+          socket.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close a socket", e);
+        }
       }
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
@@ -595,8 +610,16 @@ public class Client {
         LOG.debug(getName() + ": starting, having connections " 
             + connections.size());
 
-      while (waitForWork()) {//wait here for work - read or close connection
-        receiveResponse();
+      try {
+        while (waitForWork()) {//wait here for work - read or close connection
+          receiveResponse();
+        }
+      } catch (Throwable t) {
+        // This truly is unexpected, since we catch IOException in receiveResponse
+        // -- this is only to be really sure that we don't leave a client hanging
+        // forever.
+        LOG.warn("Unexpected error reading responses on connection " + this, t);
+        markClosed(new IOException("Error reading responses", t));
       }
       
       close();

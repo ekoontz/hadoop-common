@@ -22,6 +22,9 @@ import java.io.*;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -34,6 +37,8 @@ import org.apache.commons.logging.LogFactory;
 /**
  * A collection of file-processing util methods
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class FileUtil {
 
   private static final Log LOG = LogFactory.getLog(FileUtil.class);
@@ -87,12 +92,14 @@ public class FileUtil {
    * we return false, the directory may be partially-deleted.
    */
   public static boolean fullyDeleteContents(File dir) throws IOException {
+    boolean deletionSucceeded = true;
     File contents[] = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
           if (!contents[i].delete()) {
-            return false;
+            deletionSucceeded = false;
+            continue; // continue deletion of other files/dirs under dir
           }
         } else {
           //try deleting the directory
@@ -106,12 +113,13 @@ public class FileUtil {
           // if not an empty directory or symlink let
           // fullydelete handle it.
           if (!fullyDelete(contents[i])) {
-            return false;
+            deletionSucceeded = false;
+            continue; // continue deletion of other files/dirs under dir
           }
         }
       }
     }
-    return true;
+    return deletionSucceeded;
   }
 
   /**
@@ -166,7 +174,7 @@ public class FileUtil {
                              throws IOException {
     boolean gotException = false;
     boolean returnVal = true;
-    StringBuffer exceptions = new StringBuffer();
+    StringBuilder exceptions = new StringBuilder();
 
     if (srcs.length == 1)
       return copy(srcFS, srcs[0], dstFS, dst, deleteSource, overwrite, conf);
@@ -177,7 +185,7 @@ public class FileUtil {
                             "doest not exist");
     } else {
       FileStatus sdst = dstFS.getFileStatus(dst);
-      if (!sdst.isDir()) 
+      if (!sdst.isDirectory()) 
         throw new IOException("copying multiple files, but last argument `" +
                               dst + "' is not a directory");
     }
@@ -216,7 +224,7 @@ public class FileUtil {
                               Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
-    if (srcStatus.isDir()) {
+    if (srcStatus.isDirectory()) {
       checkDependencies(srcFS, src, dstFS, dst);
       if (!dstFS.mkdirs(dst)) {
         return false;
@@ -255,7 +263,7 @@ public class FileUtil {
                                   Configuration conf, String addString) throws IOException {
     dstFile = checkDest(srcDir.getName(), dstFS, dstFile, false);
 
-    if (!srcFS.getFileStatus(srcDir).isDir())
+    if (srcFS.getFileStatus(srcDir).isDirectory())
       return false;
    
     OutputStream out = dstFS.create(dstFile);
@@ -263,7 +271,7 @@ public class FileUtil {
     try {
       FileStatus contents[] = srcFS.listStatus(srcDir);
       for (int i = 0; i < contents.length; i++) {
-        if (!contents[i].isDir()) {
+        if (contents[i].isFile()) {
           InputStream in = srcFS.open(contents[i].getPath());
           try {
             IOUtils.copyBytes(in, out, conf, false);
@@ -339,7 +347,7 @@ public class FileUtil {
                               File dst, boolean deleteSource,
                               Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
-    if (srcStatus.isDir()) {
+    if (srcStatus.isDirectory()) {
       if (!dst.mkdirs()) {
         return false;
       }
@@ -364,7 +372,7 @@ public class FileUtil {
       boolean overwrite) throws IOException {
     if (dstFS.exists(dst)) {
       FileStatus sdst = dstFS.getFileStatus(dst);
-      if (sdst.isDir()) {
+      if (sdst.isDirectory()) {
         if (null == srcName) {
           throw new IOException("Target " + dst + " is a directory");
         }
@@ -529,7 +537,7 @@ public class FileUtil {
       }
     }
 
-    StringBuffer untarCommand = new StringBuffer();
+    StringBuilder untarCommand = new StringBuilder();
     boolean gzipped = inFile.toString().endsWith("gz");
     if (gzipped) {
       untarCommand.append(" gzip -dc '");
@@ -745,7 +753,7 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException, InterruptedException {
-    StringBuffer cmdBuf = new StringBuffer();
+    StringBuilder cmdBuf = new StringBuilder();
     cmdBuf.append("chmod ");
     if (recursive) {
       cmdBuf.append("-R ");

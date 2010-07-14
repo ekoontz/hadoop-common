@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -36,6 +37,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -44,6 +47,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.StringUtils;
 
 /** Provide command line access to a FileSystem. */
+@InterfaceAudience.Private
 public class FsShell extends Configured implements Tool {
 
   protected FileSystem fs;
@@ -236,7 +240,7 @@ public class FsShell extends Configured implements Tool {
      */
     
     Path src = srcStatus.getPath();
-    if (!srcStatus.isDir()) {
+    if (srcStatus.isFile()) {
       if (dst.exists()) {
         // match the error message in FileUtil.checkDest():
         throw new IOException("Target " + dst + " already exists");
@@ -266,6 +270,8 @@ public class FsShell extends Configured implements Tool {
         FileStatus status = csfs.getFileStatus(csfs.getChecksumFile(src));
         copyToLocal(fs, status, dstcs, false);
       } 
+    } else if (srcStatus.isSymlink()) {
+      throw new AssertionError("Symlinks unsupported");
     } else {
       // once FileUtil.copy() supports tmp file, we don't need to mkdirs().
       if (!dst.mkdirs()) {
@@ -350,9 +356,6 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
-        if (srcFs.getFileStatus(p).isDir()) {
-          throw new IOException("Source must be a file.");
-        }
         printToStdout(srcFs.open(p));
       }
     }.globAndProcess(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
@@ -396,10 +399,23 @@ public class FsShell extends Configured implements Tool {
       }
       return ret;
     }
+
+    public void close() throws IOException {
+      r.close();
+      super.close();
+    }
   }
 
   private InputStream forMagic(Path p, FileSystem srcFs) throws IOException {
     FSDataInputStream i = srcFs.open(p);
+
+    // check codecs
+    CompressionCodecFactory cf = new CompressionCodecFactory(getConf());
+    CompressionCodec codec = cf.getCodec(p);
+    if (codec != null) {
+      return codec.createInputStream(i);
+    }
+
     switch(i.readShort()) {
       case 0x1f8b: // RFC 1952
         i.seek(0);
@@ -529,7 +545,7 @@ public class FsShell extends Configured implements Tool {
                               Path src, boolean recursive,
                               List<Path> waitingList)
     throws IOException {
-    if (!srcFs.getFileStatus(src).isDir()) {
+    if (srcFs.getFileStatus(src).isFile()) {
       setFileReplication(src, srcFs, newRep, waitingList);
       return;
     }
@@ -541,8 +557,10 @@ public class FsShell extends Configured implements Tool {
     }
 
     for (int i = 0; i < items.length; i++) {
-      if (!items[i].isDir()) {
+      if (items[i].isFile()) {
         setFileReplication(items[i].getPath(), srcFs, newRep, waitingList);
+      } else if (items[i].isSymlink()) {
+        throw new AssertionError("Symlinks unsupported");
       } else if (recursive) {
         setReplication(newRep, srcFs, items[i].getPath(), recursive, 
                        waitingList);
@@ -631,10 +649,10 @@ public class FsShell extends Configured implements Tool {
         Path cur = stat.getPath();
         String mdate = dateForm.format(new Date(stat.getModificationTime()));
         
-        System.out.print((stat.isDir() ? "d" : "-") + 
+        System.out.print((stat.isDirectory() ? "d" : "-") + 
           stat.getPermission() + " ");
         System.out.printf("%"+ maxReplication + 
-          "s ", (!stat.isDir() ? stat.getReplication() : "-"));
+          "s ", (stat.isFile() ? stat.getReplication() : "-"));
         if (maxOwner > 0)
           System.out.printf("%-"+ maxOwner + "s ", stat.getOwner());
         if (maxGroup > 0)
@@ -642,7 +660,7 @@ public class FsShell extends Configured implements Tool {
         System.out.printf("%"+ maxLen + "d ", stat.getLen());
         System.out.print(mdate + " ");
         System.out.println(cur.toUri().getPath());
-        if (recursive && stat.isDir()) {
+        if (recursive && stat.isDirectory()) {
           numOfErrors += ls(stat,srcFs, recursive, printHeader);
         }
       }
@@ -727,7 +745,7 @@ public class FsShell extends Configured implements Tool {
 
       for (FileStatus stat : statusToPrint) {
         long length;
-        if (summary || stat.isDir()) {
+        if (summary || stat.isDirectory()) {
           length = srcFs.getContentSummary(stat.getPath()).getLength();
         } else {
           length = stat.getLen();
@@ -782,7 +800,7 @@ public class FsShell extends Configured implements Tool {
     FileStatus fstatus = null;
     try {
       fstatus = srcFs.getFileStatus(f);
-      if (fstatus.isDir()) {
+      if (fstatus.isDirectory()) {
         throw new IOException("cannot create directory " 
             + src + ": File exists");
       }
@@ -808,7 +826,7 @@ public class FsShell extends Configured implements Tool {
     FileStatus st;
     if (srcFs.exists(f)) {
       st = srcFs.getFileStatus(f);
-      if (st.isDir()) {
+      if (st.isDirectory()) {
         // TODO: handle this
         throw new IOException(src + " is a directory");
       } else if (st.getLen() != 0)
@@ -833,7 +851,7 @@ public class FsShell extends Configured implements Tool {
       case 'z':
         return srcFs.getFileStatus(f).getLen() == 0 ? 0 : 1;
       case 'd':
-        return srcFs.getFileStatus(f).isDir() ? 0 : 1;
+        return srcFs.getFileStatus(f).isDirectory() ? 0 : 1;
       default:
         throw new IOException("Unknown flag: " + flag);
     }
@@ -867,7 +885,8 @@ public class FsShell extends Configured implements Tool {
               buf.append(f.getLen());
               break;
             case 'F':
-              buf.append(f.isDir() ? "directory" : "regular file");
+              buf.append(f.isDirectory() ? "directory" 
+                                         : (f.isFile() ? "regular file" : "symlink"));
               break;
             case 'n':
               buf.append(f.getPath().getName());
@@ -934,7 +953,7 @@ public class FsShell extends Configured implements Tool {
         } catch(IOException e) {
         }
         if((srcFstatus!= null) && (dstFstatus!= null)) {
-          if (srcFstatus.isDir()  && !dstFstatus.isDir()) {
+          if (srcFstatus.isDirectory()  && !dstFstatus.isDirectory()) {
             throw new IOException("cannot overwrite non directory "
                 + dst + " with directory " + srcs[i]);
           }
@@ -1126,7 +1145,7 @@ public class FsShell extends Configured implements Tool {
           + src + ": No such file or directory.");
     }
     
-    if (fs.isDir() && !recursive) {
+    if (fs.isDirectory() && !recursive) {
       throw new IOException("Cannot remove directory \"" + src +
                             "\", use -rmr instead");
     }
@@ -1190,7 +1209,7 @@ public class FsShell extends Configured implements Tool {
     path = new Path(src);
     FileSystem srcFs = path.getFileSystem(getConf());
     FileStatus fileStatus = srcFs.getFileStatus(path);
-    if (fileStatus.isDir()) {
+    if (fileStatus.isDirectory()) {
       throw new IOException("Source must be a file.");
     }
 
@@ -1242,9 +1261,9 @@ public class FsShell extends Configured implements Tool {
   
   /** helper returns listStatus() */
   private static FileStatus[] shellListStatus(String cmd, 
-                                                   FileSystem srcFs,
-                                                   FileStatus src) {
-    if (!src.isDir()) {
+                                              FileSystem srcFs,
+                                              FileStatus src) {
+    if (src.isFile()) {
       FileStatus[] files = { src };
       return files;
     }
@@ -1273,7 +1292,7 @@ public class FsShell extends Configured implements Tool {
                                    boolean recursive) throws IOException {
     int errors = 0;
     handler.run(stat, srcFs);
-    if (recursive && stat.isDir() && handler.okToContinue()) {
+    if (recursive && stat.isDirectory() && handler.okToContinue()) {
       FileStatus[] files = shellListStatus(handler.getName(), srcFs, stat);
       if (files == null) {
         return 1;
@@ -1295,6 +1314,12 @@ public class FsShell extends Configured implements Tool {
       Path srcPath = new Path(args[i]);
       FileSystem srcFs = srcPath.getFileSystem(getConf());
       Path[] paths = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
+      // if nothing matches to given glob pattern then increment error count
+      if(paths.length==0) {
+        System.err.println(handler.getName() + 
+            ": could not get status for '" + args[i] + "'");
+        errors++;
+      }
       for(Path path : paths) {
         try {
           FileStatus file = srcFs.getFileStatus(path);
@@ -1310,7 +1335,8 @@ public class FsShell extends Configured implements Tool {
             (e.getCause().getMessage() != null ? 
                 e.getCause().getLocalizedMessage() : "null"));
           System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);        
+                                        + path + "': " + msg.split("\n")[0]);
+          errors++;
         }
       }
     }
@@ -1833,7 +1859,8 @@ public class FsShell extends Configured implements Tool {
                          "... command aborted.");
       return exitCode;
     } catch (IOException e) {
-      System.err.println("Bad connection to FS. command aborted.");
+      System.err.println("Bad connection to FS. Command aborted. Exception: " +
+          e.getLocalizedMessage());
       return exitCode;
     }
 
@@ -1867,7 +1894,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
-        FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
+        exitCode = FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);

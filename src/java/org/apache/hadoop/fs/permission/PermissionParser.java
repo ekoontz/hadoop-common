@@ -20,12 +20,18 @@ package org.apache.hadoop.fs.permission;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Base class for parsing either chmod permissions or umask permissions.
  * Includes common code needed by either operation as implemented in
  * UmaskParser and ChmodParser classes.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 class PermissionParser {
+  protected boolean symbolic = false;
   protected short userMode;
   protected short groupMode;
   protected short othersMode;
@@ -140,6 +146,7 @@ class PermissionParser {
 
       commaSeperated = matcher.group(4).contains(",");
     }
+    symbolic = true;
   }
 
   private void applyOctalPattern(String modeStr, Matcher matcher) {

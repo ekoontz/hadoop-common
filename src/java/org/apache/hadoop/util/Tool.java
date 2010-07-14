@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 
 /**
@@ -48,16 +50,17 @@ import org.apache.hadoop.conf.Configurable;
  *         job.setJobName("my-app");
  *         job.setInputPath(in);
  *         job.setOutputPath(out);
- *         job.setMapperClass(MyApp.MyMapper.class);
- *         job.setReducerClass(MyApp.MyReducer.class);
+ *         job.setMapperClass(MyMapper.class);
+ *         job.setReducerClass(MyReducer.class);
  *
  *         // Submit the job, then poll for progress until the job is complete
  *         JobClient.runJob(job);
+ *         return 0;
  *       }
  *       
  *       public static void main(String[] args) throws Exception {
  *         // Let <code>ToolRunner</code> handle generic command-line options 
- *         int res = ToolRunner.run(new Configuration(), new Sort(), args);
+ *         int res = ToolRunner.run(new Configuration(), new MyApp(), args);
  *         
  *         System.exit(res);
  *       }
@@ -67,6 +70,8 @@ import org.apache.hadoop.conf.Configurable;
  * @see GenericOptionsParser
  * @see ToolRunner
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public interface Tool extends Configurable {
   /**
    * Execute the command with the given arguments.

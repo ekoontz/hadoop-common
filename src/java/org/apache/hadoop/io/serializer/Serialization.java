@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.io.serializer;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * <p>
  * Encapsulates a {@link Serializer}/{@link Deserializer} pair.
  * </p>
  * @param <T>
  */
-@Deprecated
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public interface Serialization<T> {
   
   /**

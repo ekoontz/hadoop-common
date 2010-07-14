@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -37,6 +39,8 @@ import org.apache.commons.logging.LogFactory;
  * a consistent user-to-groups mapping and protects against vagaries of 
  * different mappings on servers and clients in a Hadoop cluster. 
  */
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class Groups {
   private static final Log LOG = LogFactory.getLog(Groups.class);
   
@@ -57,8 +61,9 @@ public class Groups {
     cacheTimeout = 
       conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 5*60) * 1000;
     
-    LOG.info("Group mapping impl=" + impl.getClass().getName() + 
-        "; cacheTimeout=" + cacheTimeout);
+    if(LOG.isDebugEnabled())
+      LOG.debug("Group mapping impl=" + impl.getClass().getName() + 
+          "; cacheTimeout=" + cacheTimeout);
   }
   
   /**
@@ -73,14 +78,14 @@ public class Groups {
     long now = System.currentTimeMillis();
     // if cache has a value and it hasn't expired
     if (groups != null && (groups.getTimestamp() + cacheTimeout > now)) {
-      LOG.info("Returning cached groups for '" + user + "'");
+      LOG.debug("Returning cached groups for '" + user + "'");
       return groups.getGroups();
     }
     
     // Create and cache user's groups
     groups = new CachedGroups(impl.getGroups(user));
     userToGroupsMap.put(user, groups);
-    LOG.info("Returning fetched groups for '" + user + "'");
+    LOG.debug("Returning fetched groups for '" + user + "'");
     return groups.getGroups();
   }
   
@@ -114,6 +119,15 @@ public class Groups {
   
   /**
    * Get the groups being used to map user-to-groups.
+   * @return the groups being used to map user-to-groups.
+   */
+  public static Groups getUserToGroupsMappingService() {
+    return getUserToGroupsMappingService(new Configuration()); 
+  }
+  
+  /**
+   * Get the groups being used to map user-to-groups.
+   * @param Configuration
    * @return the groups being used to map user-to-groups.
    */
   public static Groups getUserToGroupsMappingService(Configuration conf) {

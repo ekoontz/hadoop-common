@@ -19,6 +19,7 @@ package org.apache.hadoop.ipc.metrics;
 
 import javax.management.ObjectName;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
@@ -53,9 +54,9 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
  * Impl details: We use a dynamic mbean that gets the list of the metrics
  * from the metrics registry passed as an argument to the constructor
  */
-
+@InterfaceAudience.Private
 public class RpcActivityMBean extends MetricsDynamicMBeanBase {
-  final private ObjectName mbeanName;
+  private final ObjectName mbeanName;
 
   /**
    * 
@@ -63,9 +64,8 @@ public class RpcActivityMBean extends MetricsDynamicMBeanBase {
    * @param serviceName - the service name for the rpc service 
    * @param port - the rpc port.
    */
-  public RpcActivityMBean(final MetricsRegistry mr, final String serviceName, final String port) {
-
-    
+  public RpcActivityMBean(final MetricsRegistry mr, final String serviceName,
+      final String port) {
     super(mr, "Rpc layer statistics");
     mbeanName = MBeanUtil.registerMBean(serviceName,
           "RpcActivityForPort" + port, this);
@@ -76,5 +76,4 @@ public class RpcActivityMBean extends MetricsDynamicMBeanBase {
     if (mbeanName != null)
       MBeanUtil.unregisterMBean(mbeanName);
   }
-
 }

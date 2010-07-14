@@ -22,6 +22,8 @@ import java.io.*;
 import java.net.URI;
 import java.util.EnumSet;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -41,6 +43,8 @@ import org.apache.hadoop.util.Progressable;
  * and fields.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FilterFileSystem extends FileSystem {
   
   protected FileSystem fs;
@@ -107,10 +111,10 @@ public class FilterFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     return fs.create(f, permission,
-        flag, bufferSize, replication, blockSize, progress);
+        overwrite, bufferSize, replication, blockSize, progress);
   }
 
   /**
@@ -139,6 +143,23 @@ public class FilterFileSystem extends FileSystem {
     return fs.delete(f, recursive);
   }
   
+  /**
+   * Mark a path to be deleted when FileSystem is closed.
+   * When the JVM shuts down,
+   * all FileSystem objects will be closed automatically.
+   * Then,
+   * the marked path will be deleted as a result of closing the FileSystem.
+   *
+   * The path has to exist in the file system.
+   * 
+   * @param f the path to delete.
+   * @return  true if deleteOnExit is successful, otherwise false.
+   * @throws IOException
+   */
+  public boolean deleteOnExit(Path f) throws IOException {
+    return fs.deleteOnExit(f);
+  }    
+
   /** List files in a directory. */
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f);
@@ -195,6 +216,28 @@ public class FilterFileSystem extends FileSystem {
   }
   
   /**
+   * The src files are on the local disk.  Add it to FS at
+   * the given dst name.
+   * delSrc indicates if the source should be removed
+   */
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
+                                Path[] srcs, Path dst)
+    throws IOException {
+    fs.copyFromLocalFile(delSrc, overwrite, srcs, dst);
+  }
+  
+  /**
+   * The src file is on the local disk.  Add it to FS at
+   * the given dst name.
+   * delSrc indicates if the source should be removed
+   */
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite, 
+                                Path src, Path dst)
+    throws IOException {
+    fs.copyFromLocalFile(delSrc, overwrite, src, dst);
+  }
+
+  /**
    * The src file is under FS, and the dst is on the local disk.
    * Copy it from FS control to the local dst name.
    * delSrc indicates if the src will be removed or not.
@@ -226,6 +269,11 @@ public class FilterFileSystem extends FileSystem {
     fs.completeLocalOutput(fsOutputFile, tmpLocalFile);
   }
 
+  /** Return the total size of all files in the filesystem.*/
+  public long getUsed() throws IOException{
+    return fs.getUsed();
+  }
+  
   /** Return the number of bytes that large input files should be optimally
    * be split into to minimize i/o time. */
   public long getDefaultBlockSize() {
@@ -272,6 +320,13 @@ public class FilterFileSystem extends FileSystem {
   public void setOwner(Path p, String username, String groupname
       ) throws IOException {
     fs.setOwner(p, username, groupname);
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public void setTimes(Path p, long mtime, long atime
+      ) throws IOException {
+    fs.setTimes(p, mtime, atime);
   }
 
   /** {@inheritDoc} */

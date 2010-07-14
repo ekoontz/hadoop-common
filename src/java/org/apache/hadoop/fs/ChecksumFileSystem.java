@@ -20,11 +20,12 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.zip.CRC32;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -38,6 +39,8 @@ import org.apache.hadoop.util.StringUtils;
  * It generates & verifies checksums at the client side.
  *
  *****************************************************************/
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class ChecksumFileSystem extends FilterFileSystem {
   private static final byte[] CHECKSUM_VERSION = new byte[] {'c', 'r', 'c', 0};
   private int bytesPerChecksum = 512;
@@ -384,14 +387,14 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   /** {@inheritDoc} */
   @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
-      EnumSet<CreateFlag> flag, int bufferSize, short replication, long blockSize,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     Path parent = f.getParent();
     if (parent != null && !mkdirs(parent)) {
       throw new IOException("Mkdirs failed to create " + parent);
     }
     final FSDataOutputStream out = new FSDataOutputStream(
-        new ChecksumFSOutputSummer(this, f, flag.contains(CreateFlag.OVERWRITE), bufferSize, replication,
+        new ChecksumFSOutputSummer(this, f, overwrite, bufferSize, replication,
             blockSize, progress), null);
     if (permission != null) {
       setPermission(f, permission);
@@ -456,7 +459,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     } catch(FileNotFoundException e) {
       return false;
     }
-    if(fstatus.isDir()) {
+    if (fstatus.isDirectory()) {
       //this works since the crcs are in the same
       //directories and the files. so we just delete
       //everything in the underlying filesystem

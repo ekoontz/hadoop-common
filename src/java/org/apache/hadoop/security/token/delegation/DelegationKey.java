@@ -19,6 +19,8 @@
 package org.apache.hadoop.security.token.delegation;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -27,17 +29,18 @@ import javax.crypto.SecretKey;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
-import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
+import org.apache.avro.reflect.Nullable;
 
 /**
  * Key used for generating and verifying delegation tokens
  */
-@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
 public class DelegationKey implements Writable {
   private int keyId;
   private long expiryDate;
-  private SecretKey key;
+  @Nullable
+  private byte[] keyBytes = null;
 
   public DelegationKey() {
     this(0, 0L, null);
@@ -46,7 +49,9 @@ public class DelegationKey implements Writable {
   public DelegationKey(int keyId, long expiryDate, SecretKey key) {
     this.keyId = keyId;
     this.expiryDate = expiryDate;
-    this.key = key;
+    if (key!=null) {
+      this.keyBytes = key.getEncoded();
+    }
   }
 
   public int getKeyId() {
@@ -58,7 +63,12 @@ public class DelegationKey implements Writable {
   }
 
   public SecretKey getKey() {
-    return key;
+    if (keyBytes == null || keyBytes.length == 0) {
+      return null;
+    } else {
+      SecretKey key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
+      return key;
+    }
   }
 
   public void setExpiryDate(long expiryDate) {
@@ -70,9 +80,12 @@ public class DelegationKey implements Writable {
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, keyId);
     WritableUtils.writeVLong(out, expiryDate);
-    byte[] keyBytes = key.getEncoded();
-    WritableUtils.writeVInt(out, keyBytes.length);
-    out.write(keyBytes);
+    if (keyBytes == null) {
+      WritableUtils.writeVInt(out, -1);
+    } else {
+      WritableUtils.writeVInt(out, keyBytes.length);
+      out.write(keyBytes);
+    }
   }
 
   /**
@@ -81,8 +94,11 @@ public class DelegationKey implements Writable {
     keyId = WritableUtils.readVInt(in);
     expiryDate = WritableUtils.readVLong(in);
     int len = WritableUtils.readVInt(in);
-    byte[] keyBytes = new byte[len];
-    in.readFully(keyBytes);
-    key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
+    if (len == -1) {
+      keyBytes = null;
+    } else {
+      keyBytes = new byte[len];
+      in.readFully(keyBytes);
+    }
   }
 }

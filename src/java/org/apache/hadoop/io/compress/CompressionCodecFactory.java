@@ -21,6 +21,8 @@ import java.util.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -28,6 +30,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * A factory that will find the correct codec for a given filename.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class CompressionCodecFactory {
 
   public static final Log LOG =
@@ -42,14 +46,14 @@ public class CompressionCodecFactory {
   
   private void addCodec(CompressionCodec codec) {
     String suffix = codec.getDefaultExtension();
-    codecs.put(new StringBuffer(suffix).reverse().toString(), codec);
+    codecs.put(new StringBuilder(suffix).reverse().toString(), codec);
   }
   
   /**
    * Print the extension map out as a string.
    */
   public String toString() {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     Iterator<Map.Entry<String, CompressionCodec>> itr = 
       codecs.entrySet().iterator();
     buf.append("{ ");
@@ -112,7 +116,7 @@ public class CompressionCodecFactory {
    */
   public static void setCodecClasses(Configuration conf,
                                      List<Class> classes) {
-    StringBuffer buf = new StringBuffer();
+    StringBuilder buf = new StringBuilder();
     Iterator<Class> itr = classes.iterator();
     if (itr.hasNext()) {
       Class cls = itr.next();
@@ -154,7 +158,7 @@ public class CompressionCodecFactory {
     CompressionCodec result = null;
     if (codecs != null) {
       String filename = file.getName();
-      String reversedFilename = new StringBuffer(filename).reverse().toString();
+      String reversedFilename = new StringBuilder(filename).reverse().toString();
       SortedMap<String, CompressionCodec> subMap = 
         codecs.headMap(reversedFilename);
       if (!subMap.isEmpty()) {

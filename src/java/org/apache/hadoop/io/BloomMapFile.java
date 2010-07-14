@@ -24,6 +24,8 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,6 +44,8 @@ import org.apache.hadoop.util.hash.Hash;
  * {@link Reader#get(WritableComparable, Writable)} operation, especially in
  * case of sparsely populated MapFile-s.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class BloomMapFile {
   private static final Log LOG = LogFactory.getLog(BloomMapFile.class);
   public static final String BLOOM_FILE_NAME = "bloom";
@@ -57,6 +61,16 @@ public class BloomMapFile {
     fs.delete(index, true);
     fs.delete(bloom, true);
     fs.delete(dir, true);
+  }
+
+  private static byte[] byteArrayForBloomKey(DataOutputBuffer buf) {
+    int cleanLength = buf.getLength();
+    byte [] ba = buf.getData();
+    if (cleanLength != ba.length) {
+      ba = new byte[cleanLength];
+      System.arraycopy(buf.getData(), 0, ba, 0, cleanLength);
+    }
+    return ba;
   }
   
   public static class Writer extends MapFile.Writer {
@@ -163,7 +177,7 @@ public class BloomMapFile {
       super.append(key, val);
       buf.reset();
       key.write(buf);
-      bloomKey.set(buf.getData(), 1.0);
+      bloomKey.set(byteArrayForBloomKey(buf), 1.0);
       bloomFilter.add(bloomKey);
     }
 
@@ -228,7 +242,7 @@ public class BloomMapFile {
       }
       buf.reset();
       key.write(buf);
-      bloomKey.set(buf.getData(), 1.0);
+      bloomKey.set(byteArrayForBloomKey(buf), 1.0);
       return bloomFilter.membershipTest(bloomKey);
     }
     

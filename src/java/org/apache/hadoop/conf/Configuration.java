@@ -31,7 +31,6 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.net.URL;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -62,6 +61,8 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -145,6 +146,8 @@ import org.xml.sax.SAXException;
  * <tt>${<i>user.name</i>}</tt> would then ordinarily be resolved to the value
  * of the System property with that name.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class Configuration implements Iterable<Map.Entry<String,String>>,
                                       Writable {
   private static final Log LOG =
@@ -210,9 +213,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       this.customMessage = customMessage;
       accessed = false;
     }
-    DeprecatedKeyInfo(String[] newKeys) {
-      this(newKeys, null);
-    }
 
     /**
      * Method to provide the warning message. It gives the custom message if
@@ -267,12 +267,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     if (!isDeprecated(key)) {
       DeprecatedKeyInfo newKeyInfo;
-      if (customMessage == null) {
-        newKeyInfo = new DeprecatedKeyInfo(newKeys);
-      }
-      else {
-        newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
-      }
+      newKeyInfo = new DeprecatedKeyInfo(newKeys, customMessage);
       deprecatedKeyMap.put(key, newKeyInfo);
     }
   }
@@ -303,20 +298,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return deprecatedKeyMap.containsKey(key);
   }
  
-  /**
-   * Check whether or not the deprecated key has been specified in the
-   * configuration file rather than the new key
-   * 
-   * Returns false if the specified key is not included in the deprecated
-   * key mapping.
-   * 
-   * @param oldKey Old configuration key 
-   * @return If the old configuration key was specified rather than the new one
-   */
-  public boolean deprecatedKeyWasSet(String oldKey) {
-    return isDeprecated(oldKey) && deprecatedKeyMap.get(oldKey).accessed;
-  }
-  
   /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
@@ -934,7 +915,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     
     @Override
     public String toString() {
-      StringBuffer result = new StringBuffer();
+      StringBuilder result = new StringBuilder();
       boolean first = true;
       for(Range r: ranges) {
         if (first) {
@@ -1067,138 +1048,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setStrings(String name, String... values) {
     set(name, StringUtils.arrayToString(values));
-  }
-
-  /**
-   * Instantiates a map view over a subset of the entries in
-   * the Configuration. This is instantiated by getMap(), which
-   * binds a prefix of the namespace to the ConfigItemMap. This
-   * mapping reflects changes to the underlying Configuration.
-   *
-   * This map does not support iteration.
-   */
-  protected class ConfigItemMap extends AbstractMap<String, String>
-      implements Map<String, String> {
-
-    private final String prefix;
-
-    public ConfigItemMap(String prefix) {
-      this.prefix = prefix;
-    }
-
-    @Override
-    public boolean containsKey(Object key) {
-      return lookup(key.toString()) != null;
-    }
-
-    @Override
-    public Set<Map.Entry<String, String>> entrySet() {
-      throw new UnsupportedOperationException("unsupported");
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      return o != null && o instanceof ConfigItemMap
-          && prefix.equals(((ConfigItemMap) o).prefix)
-          && Configuration.this == ((ConfigItemMap) o).getConfiguration();
-    }
-
-    private Configuration getConfiguration() {
-      return Configuration.this;
-    }
-
-    @Override
-    public String get(Object key) {
-      if (null == key) {
-        return null;
-      }
-
-      return lookup(key.toString());
-    }
-
-    @Override
-    public int hashCode() {
-      return prefix.hashCode();
-    }
-
-    @Override
-    public String put(String key, String val) {
-      if (null == key) {
-        return null;
-      }
-
-      String ret = get(key);
-      Configuration.this.set(prefix + key, val);
-      return ret;
-    }
-
-    @Override
-    public void putAll(Map<? extends String, ? extends String> m) {
-      for (Map.Entry<? extends String, ? extends String> entry : m.entrySet()) {
-        put(entry.getKey(), entry.getValue());
-      }
-    }
-
-    private String lookup(String subKey) {
-      String configKey = prefix + subKey;
-      Properties props = Configuration.this.getProps();
-      Object val = props.get(configKey);
-      String str = null;
-      if (null != val) {
-        str = substituteVars(val.toString());
-      }
-
-      return str;
-    }
-  }
-
-  /**
-   * Given a string -&gt; string map as a value, embed this in the
-   * Configuration by prepending 'name' to all the keys in the valueMap,
-   * and storing it inside the current Configuration.
-   *
-   * e.g., setMap("foo", { "bar" -&gt; "a", "baz" -&gt; "b" }) would
-   * insert "foo.bar" -&gt; "a" and "foo.baz" -&gt; "b" in this
-   * Configuration.
-   *
-   * @param name the prefix to attach to all keys in the valueMap. This
-   * should not have a trailing "." character.
-   * @param valueMap the map to embed in the Configuration.
-   */
-  public void setMap(String name, Map<String, String> valueMap) {
-    // Store all elements of the map proper.
-    for (Map.Entry<String, String> entry : valueMap.entrySet()) {
-      set(name + "." + entry.getKey(), entry.getValue());
-    }
-  }
-
-  /**
-   * Returns a map containing a view of all configuration properties
-   * whose names begin with "name.*", with the "name." prefix  removed.
-   * e.g., if "foo.bar" -&gt; "a" and "foo.baz" -&gt; "b" are in the
-   * Configuration, getMap("foo") would return { "bar" -&gt; "a",
-   * "baz" -&gt; "b" }.
-   *
-   * Map name deprecation is handled via "prefix deprecation"; the individual
-   * keys created in a configuration by inserting a map do not need to be
-   * individually deprecated -- it is sufficient to deprecate the 'name'
-   * associated with the map and bind that to a new name. e.g., if "foo"
-   * is deprecated for "newfoo," and the configuration contains entries for
-   * "newfoo.a" and "newfoo.b", getMap("foo") will return a map containing
-   * the keys "a" and "b".
-   *
-   * The returned map does not support iteration; it is a lazy view over
-   * the slice of the configuration whose keys begin with 'name'. Updates
-   * to the underlying configuration are reflected in the returned map,
-   * and updates to the map will modify the underlying configuration.
-   *
-   * @param name The prefix of the key names to extract into the output map.
-   * @return a String-&gt;String map that contains all (k, v) pairs
-   * where 'k' begins with 'name.'; the 'name.' prefix is removed in the output.
-   */
-  public Map<String, String> getMap(String name) {
-    String prefix = handleDeprecation(name) + ".";
-    return new ConfigItemMap(prefix);
   }
 
   /**
@@ -1538,56 +1387,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     for (Object resource : resources) {
       loadResource(properties, resource, quiet);
     }
-    // process for deprecation.
-    processDeprecatedKeys();
-  }
-  /**
-   * Updates the keys that are replacing the deprecated keys and removes the 
-   * deprecated keys from memory.
-   */
-  private void processDeprecatedKeys() {
-    for (Map.Entry<String, DeprecatedKeyInfo> item : 
-      deprecatedKeyMap.entrySet()) {
-      if (!properties.containsKey(item.getKey())) {
-        continue;
-      }
-      String oldKey = item.getKey();
-      deprecatedKeyMap.get(oldKey).accessed = false;
-      setDeprecatedValue(oldKey, properties.getProperty(oldKey),
-          finalParameters.contains(oldKey));
-      properties.remove(oldKey);
-      if (finalParameters.contains(oldKey)) {
-        finalParameters.remove(oldKey);
-      }
-      updatingResource.remove(oldKey);
-    }
-  }
-  
-  /**
-   * Sets the deprecated key's value to the associated mapped keys
-   * @param attr the deprecated key
-   * @param value the value corresponding to the deprecated key
-   * @param finalParameter flag to indicate if <code>attr</code> is
-   *        marked as final
-   */
-  private void setDeprecatedValue(String attr,
-      String value, boolean finalParameter) {
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
-    for (String key:keyInfo.newKeys) {
-      // update replacing keys with deprecated key's value in all cases,
-      // except when the replacing key is already set to final
-      // and finalParameter is false
-      if (finalParameters.contains(key) && !finalParameter) {
-        LOG.warn("An attempt to override final parameter: "+key
-            +";  Ignoring.");
-        continue;
-      }
-      properties.setProperty(key, value);
-      updatingResource.put(key, updatingResource.get(attr));
-      if (finalParameter) {
-        finalParameters.add(key);
-      }
-    }
   }
   
   private void loadResource(Properties properties, Object name, boolean quiet) {
@@ -1695,17 +1494,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         
         // Ignore this parameter if it has already been marked as 'final'
         if (attr != null) {
-          if (value != null) {
-            if (!finalParameters.contains(attr)) {
-              properties.setProperty(attr, value);
-              updatingResource.put(attr, name.toString());
-            } else {
-              LOG.warn(name+":a attempt to override final parameter: "+attr
-                     +";  Ignoring.");
+          if (deprecatedKeyMap.containsKey(attr)) {
+            DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(attr);
+            keyInfo.accessed = false;
+            for (String key:keyInfo.newKeys) {
+              // update new keys with deprecated key's value 
+              loadProperty(properties, name, key, value, finalParameter);
             }
           }
-          if (finalParameter) {
-            finalParameters.add(attr);
+          else {
+            loadProperty(properties, name, attr, value, finalParameter);
           }
         }
       }
@@ -1722,6 +1520,22 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     } catch (ParserConfigurationException e) {
       LOG.fatal("error parsing conf file: " + e);
       throw new RuntimeException(e);
+    }
+  }
+
+  private void loadProperty(Properties properties, Object name, String attr,
+      String value, boolean finalParameter) {
+    if (value != null) {
+      if (!finalParameters.contains(attr)) {
+        properties.setProperty(attr, value);
+        updatingResource.put(attr, name.toString());
+      } else {
+        LOG.warn(name+":an attempt to override final parameter: "+attr
+            +";  Ignoring.");
+      }
+    }
+    if (finalParameter) {
+      finalParameters.add(attr);
     }
   }
 
@@ -1846,7 +1660,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("Configuration: ");
     if(loadDefaults) {
       toString(defaultResources, sb);
@@ -1858,8 +1672,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return sb.toString();
   }
 
-  private void toString(List resources, StringBuffer sb) {
-    ListIterator i = resources.listIterator();
+  private <T> void toString(List<T> resources, StringBuilder sb) {
+    ListIterator<T> i = resources.listIterator();
     while (i.hasNext()) {
       if (i.nextIndex() != 0) {
         sb.append(", ");
@@ -1908,6 +1722,29 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
     }
   }
+  
+  /**
+   * get keys matching the the regex 
+   * @param regex
+   * @return Map<String,String> with matching keys
+   */
+  public Map<String,String> getValByRegex(String regex) {
+    Pattern p = Pattern.compile(regex);
+
+    Map<String,String> result = new HashMap<String,String>();
+    Matcher m;
+
+    for(Map.Entry<Object,Object> item: getProps().entrySet()) {
+      if (item.getKey() instanceof String && 
+          item.getValue() instanceof String) {
+        m = p.matcher((String)item.getKey());
+        if(m.find()) { // match
+          result.put((String) item.getKey(), (String) item.getValue());
+        }
+      }
+    }
+    return result;
+  }
 
   //Load deprecated keys in common
   private static void addDeprecatedKeys() {
@@ -1919,11 +1756,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_CONFIGURED_NODE_MAPPING_KEY});
     Configuration.addDeprecation("topology.node.switch.mapping.impl", 
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY});
-    Configuration.addDeprecation("dfs.umask", 
-               new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY},
-               "dfs.umask is deprecated, use " + 
-               CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY + 
-               " with octal or symbolic specifications.");
     Configuration.addDeprecation("dfs.df.interval", 
                new String[]{CommonConfigurationKeys.FS_DF_INTERVAL_KEY});
     Configuration.addDeprecation("dfs.client.buffer.dir", 
