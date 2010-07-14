@@ -16,6 +16,8 @@ Trunk (unreleased changes)
     HADOOP-6584. Provide Kerberized SSL encryption for webservices.
     (jghoman and Kan Zhang via jghoman)
 
+    HADOOP-6853. Common component of HDFS-1045. (jghoman)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
@@ -56,6 +58,15 @@ Trunk (unreleased changes)
 
     HADOOP-6756. Documentation for common configuration keys.
     (Erik Steffl via shv)
+
+    HADOOP-6835. Add support for concatenated gzip input. (Greg Roelofs via
+    cdouglas)
+
+    HADOOP-6845. Renames the TokenStorage class to Credentials. 
+    (Jitendra Pandey via ddas)
+
+    HADOOP-6826. FileStatus needs unit tests. (Rodrigo Schmidt via Eli
+    Collins)
 
   OPTIMIZATIONS
 
@@ -106,6 +117,12 @@ Trunk (unreleased changes)
 
     HADOOP-6815. refreshSuperUserGroupsConfiguration should use server side 
     configuration for the refresh (boryas)
+
+    HADOOP-6648. Adds a check for null tokens in Credentials.addToken api.
+    (ddas)
+ 
+    HADOOP-6647. balancer fails with "is not authorized for protocol 
+    interface NamenodeProtocol" in secure environment (boryas)
 
 Release 0.21.0 - Unreleased
 
@@ -1014,6 +1031,13 @@ Release 0.21.0 - Unreleased
     (Dmytro Molkov via hairong)
 
   BUG FIXES
+
+    HADOOP-6819. [Herriot] Shell command for getting the new exceptions in
+    the logs returning exitcode 1 after executing successfully. (Vinay Thota
+    via cos)
+
+    HADOOP-6847. Problem staging 0.21.0 artifacts to Apache Nexus Maven
+    Repository (Giridharan Kesavan via cos)
 
     HADOOP-6748. Removes hadoop.cluster.administrators, cluster administrators
     acl is passed as parameter in constructor. (amareshwari) 
