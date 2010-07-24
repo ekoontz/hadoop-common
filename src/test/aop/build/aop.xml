@@ -50,7 +50,7 @@
   <!-- Target -classes-compilation has to be defined in build.xml and
   needs to depend on classes compilation and test classes compilation
   targets. This is a poor man parametrization for targets -->
-  <target name="compile-fault-inject" depends="-classes-compilation" >
+  <target name="-compile-fault-inject" depends="-classes-compilation" >
     <!-- AspectJ task definition -->
     <taskdef
       resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
@@ -63,7 +63,7 @@
     <iajc
       encoding="${build.encoding}" 
       srcdir="${java.src.dir};${build.src};${src.dir.path}" 
-      includes="**/org/apache/hadoop/**/*.java, **/org/apache/hadoop/**/*.aj"
+      includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
       excludes="org/apache/hadoop/classification/tools/**/*, org/apache/hadoop/record/**/*"
       destDir="${dest.dir}"
       debug="${javac.debug}"
@@ -143,7 +143,7 @@
     <attribute name="dest.dir" />
     <attribute name="src.dir" />
     <sequential>
-      <subant buildpath="build.xml" target="compile-fault-inject"
+      <subant buildpath="build.xml" target="-compile-fault-inject"
         output="${compile-inject.output}">
         <property name="build.dir" value="${build-fi.dir}" />
         <property name="src.dir.path" value="@{src.dir}" />
@@ -157,7 +157,7 @@
     <mkdir dir="${build-fi.dir}"/>
     <delete file="${compile-inject.output}"/>
     <weave-injectfault-aspects dest.dir="${system-test-build-dir}/classes"
-                               src.dir="${test.src.dir}/system">
+                               src.dir="${test.src.dir}/system/java;${test.src.dir}/system/aop">
     </weave-injectfault-aspects>
   </target>
 
