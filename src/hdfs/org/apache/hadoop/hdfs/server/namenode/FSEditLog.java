@@ -315,13 +315,10 @@ public class FSEditLog {
     return editStreams == null ? 0 : editStreams.size();
   }
 
-  /**
-   * Return the current edit streams. This is for use from tests only!
-   */
   ArrayList<EditLogOutputStream> getEditStreams() {
     return editStreams;
   }
-  
+
   boolean isOpen() {
     return getNumEditStreams() > 0;
   }

@@ -15,6 +15,9 @@ Release 0.20.3 - Unreleased
     HDFS-909. Wait until edits syncing is finishes before purging edits.
     (Todd Lipcon via shv)
 
+    HDFS-1240. Fix failing TestsDFSShell due to HDFS-909 backport on 
+    branch-20. (Todd Lipcon)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
