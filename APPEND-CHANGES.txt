@@ -1,0 +1,9 @@
+Change Log
+
+Patches from the following Apache Jira issues have been applied
+to this release in the order indicated. This is in addition to
+the patches applied from issues referenced in CHANGES.txt.
+
+
+Release 0.20-append - unreleased
+
