@@ -17,18 +17,24 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.URI;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.util.Set;
 
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.net.NetUtils;
 
 import sun.security.jgss.krb5.Krb5Util;
 import sun.security.krb5.Credentials;
@@ -37,7 +43,8 @@ import sun.security.krb5.PrincipalName;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class SecurityUtil {
-  private static final Log LOG = LogFactory.getLog(SecurityUtil.class);
+  public static final Log LOG = LogFactory.getLog(SecurityUtil.class);
+  public static final String HOSTNAME_PATTERN = "_HOST";
 
   /**
    * Find the original TGT within the current subject's credentials. Cross-realm
@@ -48,25 +55,44 @@ public class SecurityUtil {
    *           if TGT can't be found
    */
   private static KerberosTicket getTgtFromSubject() throws IOException {
-    Set<KerberosTicket> tickets = Subject.getSubject(
-        AccessController.getContext()).getPrivateCredentials(
-        KerberosTicket.class);
+    Subject current = Subject.getSubject(AccessController.getContext());
+    if (current == null) {
+      throw new IOException(
+          "Can't get TGT from current Subject, because it is null");
+    }
+    Set<KerberosTicket> tickets = current
+        .getPrivateCredentials(KerberosTicket.class);
     for (KerberosTicket t : tickets) {
-      if (isOriginalTGT(t.getServer().getName()))
+      if (isOriginalTGT(t))
         return t;
     }
     throw new IOException("Failed to find TGT from current Subject");
   }
   
-  // Original TGT must be of form "krbtgt/FOO@FOO". Verify this
-  protected static boolean isOriginalTGT(String name) {
-    if(name == null) return false;
-    
-    String [] components = name.split("[/@]");
-
-    return components.length == 3 &&
-           "krbtgt".equals(components[0]) &&
-           components[1].equals(components[2]);
+  /**
+   * TGS must have the server principal of the form "krbtgt/FOO@FOO".
+   * @param principal
+   * @return true or false
+   */
+  static boolean 
+  isTGSPrincipal(KerberosPrincipal principal) {
+    if (principal == null)
+      return false;
+    if (principal.getName().equals("krbtgt/" + principal.getRealm() + 
+        "@" + principal.getRealm())) {
+      return true;
+    }
+    return false;
+  }
+  
+  /**
+   * Check whether the server principal is the TGS's principal
+   * @param ticket the original TGT (the ticket that is obtained when a 
+   * kinit is done)
+   * @return true or false
+   */
+  protected static boolean isOriginalTGT(KerberosTicket ticket) {
+    return isTGSPrincipal(ticket.getServer());
   }
 
   /**
@@ -89,7 +115,8 @@ public class SecurityUtil {
       return;
     
     String serviceName = "host/" + remoteHost.getHost();
-    LOG.debug("Fetching service ticket for host at: " + serviceName);
+    if (LOG.isDebugEnabled())
+      LOG.debug("Fetching service ticket for host at: " + serviceName);
     Credentials serviceCred = null;
     try {
       PrincipalName principal = new PrincipalName(serviceName,
@@ -97,7 +124,7 @@ public class SecurityUtil {
       serviceCred = Credentials.acquireServiceCreds(principal
           .toString(), Krb5Util.ticketToCreds(getTgtFromSubject()));
     } catch (Exception e) {
-      throw new IOException("Invalid service principal name: "
+      throw new IOException("Can't get service ticket for: "
           + serviceName, e);
     }
     if (serviceCred == null) {
@@ -105,5 +132,115 @@ public class SecurityUtil {
     }
     Subject.getSubject(AccessController.getContext()).getPrivateCredentials()
         .add(Krb5Util.credsToTicket(serviceCred));
+  }
+  
+  /**
+   * Convert Kerberos principal name conf values to valid Kerberos principal
+   * names. It replaces $host in the conf values with hostname, which should be
+   * fully-qualified domain name. If hostname is null or "0.0.0.0", it uses
+   * dynamically looked-up fqdn of the current host instead.
+   * 
+   * @param principalConfig
+   *          the Kerberos principal name conf value to convert
+   * @param hostname
+   *          the fully-qualified domain name used for substitution
+   * @return converted Kerberos principal name
+   * @throws IOException
+   */
+  public static String getServerPrincipal(String principalConfig,
+      String hostname) throws IOException {
+    if (principalConfig == null)
+      return null;
+    String[] components = principalConfig.split("[/@]");
+    if (components.length != 3) {
+      throw new IOException(
+          "Kerberos service principal name isn't configured properly "
+              + "(should have 3 parts): " + principalConfig);
+    }
+
+    if (components[1].equals(HOSTNAME_PATTERN)) {
+      String fqdn = hostname;
+      if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
+        fqdn = getLocalHostName();
+      }
+      return components[0] + "/" + fqdn + "@" + components[2];
+    } else {
+      return principalConfig;
+    }
+  }
+  
+  static String getLocalHostName() throws UnknownHostException {
+    return InetAddress.getLocalHost().getCanonicalHostName();
+  }
+
+  /**
+   * If a keytab has been provided, login as that user. Substitute $host in
+   * user's Kerberos principal name with a dynamically looked-up fully-qualified
+   * domain name of the current host.
+   * 
+   * @param conf
+   *          conf to use
+   * @param keytabFileKey
+   *          the key to look for keytab file in conf
+   * @param userNameKey
+   *          the key to look for user's Kerberos principal name in conf
+   * @throws IOException
+   */
+  public static void login(final Configuration conf,
+      final String keytabFileKey, final String userNameKey) throws IOException {
+    login(conf, keytabFileKey, userNameKey, getLocalHostName());
+  }
+
+  /**
+   * If a keytab has been provided, login as that user. Substitute $host in
+   * user's Kerberos principal name with hostname.
+   * 
+   * @param conf
+   *          conf to use
+   * @param keytabFileKey
+   *          the key to look for keytab file in conf
+   * @param userNameKey
+   *          the key to look for user's Kerberos principal name in conf
+   * @param hostname
+   *          hostname to use for substitution
+   * @throws IOException
+   */
+  public static void login(final Configuration conf,
+      final String keytabFileKey, final String userNameKey, String hostname)
+      throws IOException {
+    String keytabFilename = conf.get(keytabFileKey);
+    if (keytabFilename == null)
+      return;
+
+    String principalConfig = conf.get(userNameKey, System
+        .getProperty("user.name"));
+    String principalName = SecurityUtil.getServerPrincipal(principalConfig,
+        hostname);
+    UserGroupInformation.loginUserFromKeytab(principalName, keytabFilename);
+  }
+
+  /**
+   * create service name for Delegation token ip:port
+   * @param uri
+   * @param defPort
+   * @return "ip:port"
+   */
+  public static String buildDTServiceName(URI uri, int defPort) {
+    int port = uri.getPort();
+    if(port == -1) 
+      port = defPort;
+
+    // build the service name string "/ip:port"
+    // for whatever reason using NetUtils.createSocketAddr(target).toString()
+    // returns "localhost/ip:port"
+    StringBuffer sb = new StringBuffer();
+    String host = uri.getHost();
+    if (host != null) {
+      host = NetUtils.normalizeHostName(host);
+    } else {
+      host = "";
+    }
+    sb.append(host).append(":").append(port);
+    return sb.toString();
   }
 }

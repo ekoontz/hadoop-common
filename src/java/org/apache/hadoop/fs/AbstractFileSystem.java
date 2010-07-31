@@ -786,6 +786,61 @@ public abstract class AbstractFileSystem {
 
   /**
    * The specification of this method matches that of
+   * {@link FileContext#listLocatedStatus(Path)} except that Path f 
+   * must be for this file system.
+   */
+  protected Iterator<LocatedFileStatus> listLocatedStatus(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      UnresolvedLinkException, IOException {
+    return new Iterator<LocatedFileStatus>() {
+      private Iterator<FileStatus> itor = listStatusIterator(f);
+      
+      /**
+       *  {@inheritDoc}
+       *  @return {@inheritDog} 
+       *  @throws Runtimeexception if any IOException occurs during traversal;
+       *  the IOException is set as the cause of the RuntimeException
+       */
+      @Override
+      public boolean hasNext() {
+        return itor.hasNext();
+      }
+      
+      /**
+       *  {@inheritDoc}
+       *  @return {@inheritDoc} 
+       *  @throws Runtimeexception if any IOException occurs during traversal;
+       *  the IOException is set as the cause of the RuntimeException
+       *  @exception {@inheritDoc}
+       */
+      @Override
+      public LocatedFileStatus next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException("No more entry in " + f);
+        }
+        FileStatus result = itor.next();
+        try {
+          
+          BlockLocation[] locs = null;
+          if (result.isFile()) {
+            locs = getFileBlockLocations(
+              result.getPath(), 0, result.getLen());
+          }
+          return new LocatedFileStatus(result, locs);
+        } catch (IOException ioe) {
+          throw (RuntimeException)new RuntimeException().initCause(ioe);
+        }
+      }
+      
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("Remove is not supported");
+      }
+    };
+  }
+
+  /**
+   * The specification of this method matches that of
    * {@link FileContext.Util#listStatus(Path)} except that Path f must be 
    * for this file system.
    */

@@ -21,6 +21,15 @@ Trunk (unreleased changes)
     HADOOP-6859 - Introduce additional statistics to FileSystem to track 
     file system operations (suresh)
 
+    HADOOP-6870. Add a new API getFiles to FileSystem and FileContext that
+    lists all files under the input path or the subtree rooted at the
+    input path if recursive is true. Block locations are returned together
+    with each file's status. (hairong)
+
+    HADOOP-6888. Add a new FileSystem API closeAllForUGI(..) for closing all
+    file systems associated with a particular UGI.  (Devaraj Das and Kan Zhang
+    via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
@@ -71,6 +80,28 @@ Trunk (unreleased changes)
     HADOOP-6826. FileStatus needs unit tests. (Rodrigo Schmidt via Eli
     Collins)
 
+    HADOOP-6905. add buildDTServiceName method to SecurityUtil 
+    (as part of MAPREDUCE-1718)  (boryas)
+
+    HADOOP-6632. Adds support for using different keytabs for different
+    servers in a Hadoop cluster. In the earier implementation, all servers 
+    of a certain type (like TaskTracker), would have the same keytab and the
+    same principal. Now the principal name is a pattern that has _HOST in it.
+    (Kan Zhang & Jitendra Pandey via ddas)
+
+    HADOOP-6861. Adds new non-static methods in Credentials to read and 
+    write token storage file. (Jitendra Pandey & Owen O'Malley via ddas)
+
+    HADOOP-6877. Common part of HDFS-1178 (NameNode servlets should communicate
+    with NameNode directrly). (Kan Zhang via jghoman)
+    
+    HADOOP-6475. Adding some javadoc to Server.RpcMetrics, UGI. 
+    (Jitendra Pandey and borya via jghoman)
+
+    HADOOP-6656. Adds a thread in the UserGroupInformation to renew TGTs 
+    periodically. (Owen O'Malley and ddas via ddas)
+
+    HADOOP-6890. Improve listFiles API introduced by HADOOP-6870. (hairong)
   OPTIMIZATIONS
 
   BUG FIXES
@@ -126,6 +157,18 @@ Trunk (unreleased changes)
  
     HADOOP-6647. balancer fails with "is not authorized for protocol 
     interface NamenodeProtocol" in secure environment (boryas)
+
+    HADOOP-6834. TFile.append compares initial key against null lastKey
+    (hong tang via mahadev)
+
+    HADOOP-6670. Use the UserGroupInformation's Subject as the criteria for
+    equals and hashCode. (Owen O'Malley and Kan Zhang via ddas)
+
+    HADOOP-6536. Fixes FileUtil.fullyDelete() not to delete the contents of
+    the sym-linked directory. (Ravi Gummadi via amareshwari)
+
+    HADOOP-6873. using delegation token over hftp for long 
+    running clients (boryas)
 
 Release 0.21.0 - Unreleased
 
@@ -409,6 +452,9 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6692. Add FileContext#listStatus that returns an iterator.
     (hairong)
+
+    HADOOP-6869. Functionality to create file or folder on a remote daemon
+    side (Vinay Thota via cos)
 
   IMPROVEMENTS
 
@@ -1034,19 +1080,6 @@ Release 0.21.0 - Unreleased
     (Dmytro Molkov via hairong)
 
   BUG FIXES
-
-    HADOOP-6836. [Herriot]: Generic method for adding/modifying the attributes
-    for new configuration. (Vinay Thota via cos)
-
-    HADOOP-6839. [Herriot] Implement a functionality for getting the user list
-    for creating proxy users. (Vinay Thota via cos)
-
-    HADOOP-6819. [Herriot] Shell command for getting the new exceptions in
-    the logs returning exitcode 1 after executing successfully. (Vinay Thota
-    via cos)
-
-    HADOOP-6847. Problem staging 0.21.0 artifacts to Apache Nexus Maven
-    Repository (Giridharan Kesavan via cos)
 
     HADOOP-6748. Removes hadoop.cluster.administrators, cluster administrators
     acl is passed as parameter in constructor. (amareshwari) 
@@ -1705,6 +1738,28 @@ Release 0.21.0 - Unreleased
 
     HADOOP-6800.  Harmonize JAR library versions.  (tomwhite)
 
+    HADOOP-6847. Problem staging 0.21.0 artifacts to Apache Nexus Maven
+    Repository (Giridharan Kesavan via cos)
+
+    HADOOP-6819. [Herriot] Shell command for getting the new exceptions in
+    the logs returning exitcode 1 after executing successfully. (Vinay Thota
+    via cos)
+
+    HADOOP-6839. [Herriot] Implement a functionality for getting the user list
+    for creating proxy users. (Vinay Thota via cos)
+
+    HADOOP-6836. [Herriot]: Generic method for adding/modifying the attributes
+    for new configuration. (Vinay Thota via cos)
+
+    HADOOP-6860. 'compile-fault-inject' should never be called directly.
+    (Konstantin Boudnik)
+
+    HADOOP-6790. Instrumented (Herriot) build uses too wide mask to include
+    aspect files. (Konstantin Boudnik)
+
+    HADOOP-6875. [Herriot] Cleanup of temp. configurations is needed upon
+    restart of a cluster (Vinay Thota via cos)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES
@@ -1716,6 +1771,11 @@ Release 0.20.3 - Unreleased
     HADOOP-6760. WebServer shouldn't increase port number in case of negative
     port setting caused by Jetty's race (cos)
     
+    HADOOP-6881. Make WritableComparator intialize classes when
+    looking for their raw comparator, as classes often register raw
+    comparators in initializers, which are no longer automatically run
+    in Java 6 when a class is referenced. (cutting via omalley)
+
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES

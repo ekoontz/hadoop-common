@@ -29,9 +29,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -44,9 +47,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -166,6 +170,22 @@ public abstract class FileSystem extends Configured implements Closeable {
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
   public abstract URI getUri();
   
+  /**
+   * Get the default port for this file system.
+   * @return the default port or 0 if there isn't one
+   */
+  protected int getDefaultPort() {
+    return 0;
+  }
+
+  /**
+   * Get a canonical name for this file system.
+   * @return a URI string that uniquely identifies this file system
+   */
+  public String getCanonicalServiceName() {
+    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
+  }
+
   /** @deprecated call #getUri() instead.*/
   @Deprecated
   public String getName() { return getUri().toString(); }
@@ -308,12 +328,33 @@ public abstract class FileSystem extends Configured implements Closeable {
     CACHE.closeAll();
   }
 
+  /**
+   * Close all cached filesystems for a given UGI. Be sure those filesystems 
+   * are not used anymore.
+   * @param ugi
+   * @throws IOException
+   */
+  public static void closeAllForUGI(UserGroupInformation ugi) 
+  throws IOException {
+    CACHE.closeAll(ugi);
+  }
+
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     checkPath(path);
     return path.makeQualified(this.getUri(), this.getWorkingDirectory());
   }
     
+  /**
+   * Get a new delegation token for this file system.
+   * @param renewer the account name that is allowed to renew the token.
+   * @return a new delegation token
+   * @throws IOException
+   */
+  public Token<?> getDelegationToken(String renewer) throws IOException {
+    return null;
+  }
+
   /** create a file with the provided permission
    * The permission of the file is set to be the provided permission as in
    * setPermission, not permission&~umask
@@ -1278,6 +1319,110 @@ public abstract class FileSystem extends Configured implements Closeable {
     return globPathsLevel(parents, filePattern, level + 1, hasGlob);
   }
 
+  /**
+   * List the statuses and block locations of the files in the given path.
+   * 
+   * If the path is a directory, 
+   *   if recursive is false, returns files in the directory;
+   *   if recursive is true, return files in the subtree rooted at the path.
+   * If the path is a file, return the file's status and block locations.
+   * Files across symbolic links are also returned.
+   * 
+   * @param f is the path
+   * @param recursive if the subdirectories need to be traversed recursively
+   *
+   * @return an iterator that traverses statuses of the files
+   * If any IO exception (for example a sub-directory gets deleted while
+   * listing is being executed), next() or hasNext() of the returned iterator
+   * may throw a RuntimeException with the IO exception as the cause.
+   *
+   * @throws FileNotFoundException when the path does not exist;
+   *         IOException see specific implementation
+   */
+  public Iterator<LocatedFileStatus> listFiles(
+      final Path f, final boolean recursive)
+  throws FileNotFoundException, IOException {
+    return new Iterator<LocatedFileStatus>() {
+      private LinkedList<FileStatus> fileStats = new LinkedList<FileStatus>();
+      private Stack<FileStatus> dirStats = new Stack<FileStatus>();
+      
+      { // initializer
+        list(f);
+      }
+      
+      /**
+       *  {@inheritDoc}
+       *  @return {@inheritDog} 
+       *  @throws Runtimeexception if any IOException occurs during traversal;
+       *  the IOException is set as the cause of the RuntimeException
+       */
+      @Override
+      public boolean hasNext() {
+        if (fileStats.isEmpty()) {
+          listDir();
+        }
+        return !fileStats.isEmpty();
+      }
+      
+      /**
+       * list at least one directory until file list is not empty
+       */
+      private void listDir() {
+        while (fileStats.isEmpty() && !dirStats.isEmpty()) {
+          FileStatus dir = dirStats.pop();
+          list(dir.getPath());
+        }
+      }
+
+      /**
+       * List the given path
+       * 
+       * @param dirPath a path
+       */
+      private void list(Path dirPath) {
+        try {
+          FileStatus[] stats = listStatus(dirPath);
+          for (FileStatus stat : stats) {
+            if (stat.isFile()) {
+              fileStats.add(stat);
+            } else if (recursive) { // directory & recursive
+              dirStats.push(stat);
+            }
+          }
+        } catch (IOException ioe) {
+          throw (RuntimeException) new RuntimeException().initCause(ioe);
+        }        
+      }
+      
+      /**
+       *  {@inheritDoc}
+       *  @return {@inheritDoc} 
+       *  @throws Runtimeexception if any IOException occurs during traversal;
+       *  the IOException is set as the cause of the RuntimeException
+       *  @exception {@inheritDoc}
+       */
+      @Override
+      public LocatedFileStatus next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        FileStatus status = fileStats.remove();
+        try {
+          BlockLocation[] locs = getFileBlockLocations(
+              status, 0, status.getLen());
+          return new LocatedFileStatus(status, locs);
+        } catch (IOException ioe) {
+          throw (RuntimeException) new RuntimeException().initCause(ioe);
+        }
+      }
+      
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("Remove is not supported");
+      }
+    };
+  }
+  
   /** Return the current user's home directory in this filesystem.
    * The default implementation returns "/user/$USER/".
    */
@@ -1725,6 +1870,32 @@ public abstract class FileSystem extends Configured implements Closeable {
         } catch (IOException e) {
           LOG.info("FileSystem.Cache.closeAll() threw an exception:\n" + e);
         }
+      }
+    }
+
+    synchronized void closeAll(UserGroupInformation ugi) throws IOException {
+      List<FileSystem> targetFSList = new ArrayList<FileSystem>();
+      //Make a pass over the list and collect the filesystems to close
+      //we cannot close inline since close() removes the entry from the Map
+      for (Map.Entry<Key, FileSystem> entry : map.entrySet()) {
+        final Key key = entry.getKey();
+        final FileSystem fs = entry.getValue();
+        if (ugi.equals(key.ugi) && fs != null) {
+          targetFSList.add(fs);   
+        }
+      }
+      List<IOException> exceptions = new ArrayList<IOException>();
+      //now make a pass over the target list and close each
+      for (FileSystem fs : targetFSList) {
+        try {
+          fs.close();
+        }
+        catch(IOException ioe) {
+          exceptions.add(ioe);
+        }
+      }
+      if (!exceptions.isEmpty()) {
+        throw MultipleIOException.createIOException(exceptions);
       }
     }
 

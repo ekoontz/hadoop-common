@@ -54,6 +54,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -254,13 +255,15 @@ public class Client {
         KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
         if (krbInfo != null) {
           String serverKey = krbInfo.serverPrincipal();
-          if (serverKey != null) {
-            if(LOG.isDebugEnabled()) {
-              LOG.info("server principal key for protocol="
-                  + protocol.getCanonicalName() + " is " + serverKey + 
-                  " and val =" + conf.get(serverKey));
-            }
-            serverPrincipal = conf.get(serverKey);
+          if (serverKey == null) {
+            throw new IOException(
+                "Can't obtain server Kerberos config key from KerberosInfo");
+          }
+          serverPrincipal = SecurityUtil.getServerPrincipal(
+              conf.get(serverKey), server.getAddress().getCanonicalHostName());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("RPC Server Kerberos principal name for protocol="
+                + protocol.getCanonicalName() + " is " + serverPrincipal);
           }
         }
       }
@@ -378,18 +381,22 @@ public class Client {
         return saslRpcClient.saslConnect(in2, out2);
       } catch (javax.security.sasl.SaslException je) {
         UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-        UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+        UserGroupInformation currentUser = 
+          UserGroupInformation.getCurrentUser();
         UserGroupInformation realUser = currentUser.getRealUser();
         if (authMethod == AuthMethod.KERBEROS && 
           //try setting up the connection again
-          UserGroupInformation.isLoginKeytabBased() &&
           // relogin only in case it is the login user (e.g. JT)
           // or superuser (like oozie).
           ((currentUser != null && currentUser.equals(loginUser)) ||
            (realUser != null && realUser.equals(loginUser)))) {
           try {
             //try re-login
-            loginUser.reloginFromKeytab();
+            if (UserGroupInformation.isLoginKeytabBased()) {
+              loginUser.reloginFromKeytab();
+            } else {
+              loginUser.reloginFromTicketCache();
+            }
             disposeSasl();
             saslRpcClient = new SaslRpcClient(authMethod, token,
                 serverPrincipal);
@@ -1074,8 +1081,8 @@ public class Client {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
        return address.equals(id.address) && protocol == id.protocol && 
-              ticket == id.ticket;
-       //Note : ticket is a ref comparision.
+              ((ticket != null && ticket.equals(id.ticket)) ||
+               (ticket == id.ticket));
      }
      return false;
     }
@@ -1083,7 +1090,7 @@ public class Client {
     @Override
     public int hashCode() {
       return (address.hashCode() + PRIME * System.identityHashCode(protocol)) ^ 
-             System.identityHashCode(ticket);
+             (ticket == null ? 0 : ticket.hashCode());
     }
   }  
 }

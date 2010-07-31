@@ -18,15 +18,19 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.EnumSet;
+import java.util.Iterator;
 
 import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 public class TestFilterFileSystem extends TestCase {
@@ -107,6 +111,10 @@ public class TestFilterFileSystem extends TestCase {
     public FileStatus[] globStatus(Path pathPattern, PathFilter filter) {
       return null;
     }
+    public Iterator<LocatedFileStatus> listFiles(
+        final Path path, final boolean isRecursive) {
+      return null;
+    }
     public void copyFromLocalFile(Path src, Path dst) { }
     public void moveFromLocalFile(Path[] srcs, Path dst) { }
     public void moveFromLocalFile(Path src, Path dst) { }
@@ -118,7 +126,13 @@ public class TestFilterFileSystem extends TestCase {
         CreateOpts... opts) { return null; }
     public void primitiveMkdir(Path f, FsPermission absolutePermission, 
                       boolean createParent) { }
-  } 
+    public int getDefaultPort() { return 0; }
+    public String getCanonicalServiceName() { return null; }
+    public Token<?> getDelegationToken(String renewer) throws IOException {
+      return null;
+    }
+    
+  }
   
   public void testFilterFileSystem() throws Exception {
     for (Method m : FileSystem.class.getDeclaredMethods()) {
