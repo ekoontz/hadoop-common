@@ -596,6 +596,7 @@ public class FsShell extends Configured implements Tool {
    * @see org.apache.hadoop.fs.FileSystem#globStatus(Path)
    */
   private int ls(String srcf, boolean recursive) throws IOException {
+    System.out.println("Eugene's FsShell 'ls' command is here!!");
     Path srcPath = new Path(srcf);
     FileSystem srcFs = srcPath.getFileSystem(this.getConf());
     FileStatus[] srcs = srcFs.globStatus(srcPath);
