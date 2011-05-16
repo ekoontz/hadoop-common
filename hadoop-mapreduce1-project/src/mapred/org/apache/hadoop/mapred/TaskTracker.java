@@ -994,12 +994,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.taskTrackerName = "tracker_" + localHostname + ":" + taskReportAddress;
     LOG.info("Starting tracker " + taskTrackerName);
 
-    // Initialize DistributedCache and
-    // clear out temporary files that might be lying around
-    this.distributedCacheManager = 
-        new TrackerDistributedCacheManager(this.fConf, taskController, asyncDiskService);
-    this.distributedCacheManager.purgeCache(); // TODO(todd) purge here?
-
+    // Initialize DistributedCache
+    this.distributedCacheManager = new TrackerDistributedCacheManager(
+        this.fConf, taskController);
+    this.distributedCacheManager.startCleanupThread();
+    
     if (!HAUtil.isHAEnabled(fConf, jobTrackAddr)) {
       this.jobClient = (InterTrackerProtocol) 
       UserGroupInformation.getLoginUser().doAs(
@@ -1014,6 +1013,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       this.jobClient = JobTrackerProxies.createProxy(fConf, 
             jobTrackAddr, InterTrackerProtocol.class).getProxy();
     }
+
     this.justInited = true;
     this.running = true;    
     // start the thread that will fetch map task completion events
@@ -1580,6 +1580,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.mapLauncher.interrupt();
     this.reduceLauncher.interrupt();
 
+    this.distributedCacheManager.stopCleanupThread();
     jvmManager.stop();
     
     // shutdown RPC connections
