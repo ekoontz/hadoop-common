@@ -1889,7 +1889,7 @@ public class ReduceTask extends Task {
                                                   reporter, null);
       if (combinerRunner != null) {
         combineCollector = 
-          new CombineOutputCollector(reduceTask.reduceCombineOutputCounter);
+          new CombineOutputCollector(reduceTask.reduceCombineOutputCounter, reporter, conf);
       }
       
       this.ioSortFactor = conf.getInt("io.sort.factor", 10);

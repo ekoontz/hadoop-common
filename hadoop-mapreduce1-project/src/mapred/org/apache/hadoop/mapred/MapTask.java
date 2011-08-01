@@ -858,7 +858,7 @@ public class MapTask extends Task {
                                              combineInputCounter,
                                              reporter, null);
       if (combinerRunner != null) {
-        combineCollector= new CombineOutputCollector<K,V>(combineOutputCounter);
+        combineCollector= new CombineOutputCollector<K,V>(combineOutputCounter, reporter, job);
       } else {
         combineCollector = null;
       }
