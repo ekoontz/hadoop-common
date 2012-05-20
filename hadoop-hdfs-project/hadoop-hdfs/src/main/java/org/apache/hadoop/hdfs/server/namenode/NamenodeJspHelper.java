@@ -99,7 +99,7 @@ class NamenodeJspHelper {
     long used = (totalMemory * 100) / commitedMemory;
     long usedNonHeap = (totalNonHeap * 100) / commitedNonHeap;
 
-    String str = "<div>" inodes + " files and directories, " + blocks + " blocks = "
+    String str = "<div>" + inodes + " files and directories, " + blocks + " blocks = "
         + (inodes + blocks) + " total";
     if (maxobjects != 0) {
       long pct = ((inodes + blocks) * 100) / maxobjects;
