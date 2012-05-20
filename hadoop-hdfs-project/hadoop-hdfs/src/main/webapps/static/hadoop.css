@@ -33,7 +33,7 @@ div.dfstable th {
 	vertical-align : top;
 }
 
-div.dfstable td#col3 { /* apparently not used ever. */
+div.dfstable td#col3 {
 	text-align : right;
 }
 
