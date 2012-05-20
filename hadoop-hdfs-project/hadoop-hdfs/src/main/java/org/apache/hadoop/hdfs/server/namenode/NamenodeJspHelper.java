@@ -357,7 +357,7 @@ class NamenodeJspHelper {
           + "</table></div><br>\n");
 
       if (live.isEmpty() && dead.isEmpty()) {
-        out.print("There are no datanodes in the cluster");
+        out.print("There are no datanodes in the cluster.");
       }
     }
   }
