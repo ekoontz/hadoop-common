@@ -137,7 +137,7 @@ class NamenodeJspHelper {
         + "\n  <tr><td class='col1'>Started:</td><td>" + fsn.getStartTime()
         + "</td></tr>\n" + "\n  <tr><td class='col1'>Version:</td><td>"
         + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
-        + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate()
+        + "</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate()
         + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
         + "</td></tr>\n  <tr><td class='col1'>Upgrades:</td><td>"
         + getUpgradeStatusText(fsn)
@@ -155,14 +155,15 @@ class NamenodeJspHelper {
     if (missingBlocks > 0) {
       StringBuilder result = new StringBuilder();
 
-      // Warning class is typically displayed in RED
-      result.append("<div><a class=\"warning\" href=\"/corrupt_files.jsp\" title=\"List corrupt files\">\n");
+      // Warning class is typically displayed in RED.
+      result.append("<div>"); // opening tag of outer <div>.
+      result.append("<a class=\"warning\" href=\"/corrupt_files.jsp\" title=\"List corrupt files\">\n");
       result.append("<b>WARNING : There are " + missingBlocks
           + " missing blocks. Please check the logs or run fsck in order to identify the missing blocks.</b>");
       result.append("</a>");
 
       result.append("<div class=\"small\">See the Hadoop FAQ for common causes and potential solutions.</div>");
-      result.append("</div>\n");
+      result.append("</div>\n"); // closing tag of outer <div>.
 
       return result.toString();
     }
