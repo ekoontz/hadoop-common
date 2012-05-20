@@ -203,7 +203,7 @@ class NamenodeJspHelper {
 
       // FS Image storage configuration
       out.print("<h3> " + nn.getRole() + " Storage: </h3>");
-      out.print("<div class=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"
+      out.print("<div class=\"dfstable\"> <table class=\"storage\" title=\"NameNode Storage\">\n"
               + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
 
       StorageDirectory st = null;
@@ -631,7 +631,7 @@ class NamenodeJspHelper {
         if (whatNodes.equals("LIVE")) {
           out.print("<a name=\"LiveNodes\" id=\"title\">" + "Live Datanodes : "
               + live.size() + "</a>"
-              + "<br><br>\n<table border=1 cellspacing=0>\n");
+              + "<br><br>\n<table class=\"nodes\">\n");
 
           counterReset();
 
