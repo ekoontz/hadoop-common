@@ -147,3 +147,11 @@ line.taskgraphline {
 #quicklinks ul a {
 	text-decoration: underline;
 }
+
+span.failed {
+    color:red;
+}
+
+div.security {
+    width:100%;
+}
