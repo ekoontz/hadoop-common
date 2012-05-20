@@ -133,17 +133,17 @@ class NamenodeJspHelper {
 
   /** Return a table containing version information. */
   static String getVersionTable(FSNamesystem fsn) {
-    return "<div id='dfstable'><table>"
-        + "\n  <tr><td id='col1'>Started:</td><td>" + fsn.getStartTime()
-        + "</td></tr>\n" + "\n  <tr><td id='col1'>Version:</td><td>"
+    return "<div class='dfstable'><table>"
+        + "\n  <tr><td class='col1'>Started:</td><td>" + fsn.getStartTime()
+        + "</td></tr>\n" + "\n  <tr><td class='col1'>Version:</td><td>"
         + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
-        + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate()
+        + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate()
         + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "\n  <tr><td id='col1'>Upgrades:</td><td>"
+        + "\n  <tr><td class='col1'>Upgrades:</td><td>"
         + getUpgradeStatusText(fsn) 
-        + "\n  <tr><td id='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
+        + "\n  <tr><td class='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
         + "</td></tr>\n" 
-        + "\n  <tr><td id='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
+        + "\n  <tr><td class='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
         + "</td></tr>\n" 
         + "\n</table></div>";
   }
@@ -205,7 +205,7 @@ class NamenodeJspHelper {
 
       // FS Image storage configuration
       out.print("<h3> " + nn.getRole() + " Storage: </h3>");
-      out.print("<div id=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"
+      out.print("<div class=\"dfstable\"> <table border=1 cellpadding=10 cellspacing=0 title=\"NameNode Storage\">\n"
               + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
 
       StorageDirectory st = null;
@@ -320,7 +320,7 @@ class NamenodeJspHelper {
               + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
               + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks(); 
       }
-      out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
+      out.print("<div class=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
           + "Configured Capacity" + colTxt() + ":" + colTxt()
           + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
           + colTxt() + ":" + colTxt() + StringUtils.byteDesc(used) + rowTxt()
