@@ -440,8 +440,8 @@ public class JspHelper {
   public static String getVersionTable() {
     return "<div class='dfstable'><table>"       
         + "\n  <tr><td class='col1'>Version:</td><td>" + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
-        + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "\n</table></div>";
+        + "</td></tr>\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate() + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
+        + "</td></tr>\n</table></div>";
   }
 
   /**

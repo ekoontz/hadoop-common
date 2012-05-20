@@ -139,13 +139,11 @@ class NamenodeJspHelper {
         + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
         + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate()
         + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "\n  <tr><td class='col1'>Upgrades:</td><td>"
+        + "</td></tr>\n  <tr><td class='col1'>Upgrades:</td><td>"
         + getUpgradeStatusText(fsn) 
-        + "\n  <tr><td class='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
-        + "</td></tr>\n" 
-        + "\n  <tr><td class='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
-        + "</td></tr>\n" 
-        + "\n</table></div>";
+        + "</td></tr>\n  <tr><td class='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
+        + "</td></tr>\n  <tr><td class='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
+        + "</td></tr>\n</table></div>";
   }
 
   /**
