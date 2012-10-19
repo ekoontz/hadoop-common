@@ -102,8 +102,7 @@ public class TestDFSIO implements Tool {
                     " [-compression codecClassName]" +
                     " [-nrFiles N]" +
                     " [-size Size[B|KB|MB|GB|TB]]" +
-                    " [-resFile resultFileName] [-bufferSize Bytes]" +
-                    " [-rootDir]";
+                    " [-resFile resultFileName] [-bufferSize Bytes]";
 
   private Configuration config;
 
