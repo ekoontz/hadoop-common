@@ -372,9 +372,11 @@ public class EditLogFileInputStream extends EditLogInputStream {
           new PrivilegedExceptionAction<InputStream>() {
             @Override
             public InputStream run() throws IOException {
+              LOG.debug("CREATING CONNECTION TO URL: " + url);
               HttpURLConnection connection = (HttpURLConnection)
                   SecurityUtil.openSecureHttpConnection(url);
-              
+              LOG.debug("CREATED CONNECTION: " + connection);
+
               if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 throw new HttpGetFailedException(
                     "Fetch of " + url +
@@ -402,8 +404,9 @@ public class EditLogFileInputStream extends EditLogInputStream {
 
     @Override
     public long length() {
-      Preconditions.checkState(advertisedSize != -1,
-          "must get input stream before length is available");
+      LOG.debug("THE ADVERTISED SIZE IS: " + advertisedSize);
+      if (false) {Preconditions.checkState(advertisedSize != -1,
+          "must get input stream before length is available");}
       return advertisedSize;
     }
 
