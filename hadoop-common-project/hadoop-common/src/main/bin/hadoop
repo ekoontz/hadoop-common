@@ -76,7 +76,7 @@ case $COMMAND in
     ;;
 
   #mapred commands for backwards compatibility
-  pipes|job|queue|mrgroups|mradmin|jobtracker|tasktracker)
+  pipes|job|queue|mrgroups|mradmin|jobtracker|tasktracker|mrhaadmin|mrzkfc|jobtrackerha)
     echo "DEPRECATED: Use of this script to execute mapred command is deprecated." 1>&2
     echo "Instead use the mapred command for it." 1>&2
     echo "" 1>&2
