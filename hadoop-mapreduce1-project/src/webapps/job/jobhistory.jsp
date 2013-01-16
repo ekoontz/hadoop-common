@@ -124,9 +124,23 @@ window.location.href = url;
         //  - jobname contains the keyword
         return "".equals(uqJobname) || fileName.split("_")[FILENAME_JOBNAME_PART].toLowerCase().contains(uqJobname);
       }
+      
+      private boolean isHistoryFile(String fileName) {      	
+        String[] tokens = null;
+        try {
+          String dp = JobHistory.JobInfo.decodeJobHistoryFileName(fileName);
+          tokens = dp.split("_");
+        } catch (IOException ioe) {
+        }
+
+        return tokens != null && !fileName.endsWith(".xml") && tokens.length > 3
+            && tokens[1].matches("\\d+")  && tokens[2].matches("\\d+")
+            && tokens[3].matches("\\d+");
+      }
+
 
       public boolean accept(Path path) {
-        return !(path.getName().endsWith(".xml")) && matchUser(path.getName()) && matchJobName(path.getName());
+        return isHistoryFile(path.getName()) && matchUser(path.getName()) && matchJobName(path.getName());
       }
     };
     
