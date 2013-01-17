@@ -56,6 +56,7 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
   private HAServiceState haState = HAServiceState.STANDBY;
   private FileSystem fs;
   private JobTracker jt;
+  private volatile boolean jtClosing;
   private Path currentSysDir;
   private Thread jtThread;
   private ScheduledExecutorService sysDirMonitorExecutor;
@@ -99,7 +100,11 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       try {
         jt.offerService();
       } catch (Throwable t) {
-        doImmediateShutdown(t);
+        if (jtClosing) {
+          LOG.info("Exception while closing jobtracker", t);
+        } else {
+          doImmediateShutdown(t);
+        }
       }
     }
   }
@@ -155,6 +160,7 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       currentSysDir = rollSystemDirectory(jtConf);
       // Update the conf for the JT so the address is resolved
       HAUtil.setJtRpcAddress(jtConf);
+      jtClosing = false;
       jt = JobTracker.startTracker(jtConf);
     } catch (Throwable t) {
       doImmediateShutdown(t);
@@ -251,6 +257,7 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
         sysDirMonitorExecutor.shutdownNow();
       }
       if (jt != null) {
+        jtClosing = true;
         jt.close();
       }
       if (jtThread != null) {
@@ -263,6 +270,7 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
     sysDirMonitorExecutor = null;
     currentSysDir = null;
     jt = null;
+    jtClosing = false;
     jtThread = null;
     haState = HAServiceState.STANDBY;
     LOG.info("Transitioned to standby");
@@ -275,6 +283,7 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
         sysDirMonitorExecutor.shutdownNow();
       }
       if (jt != null) {
+        jtClosing = true;
         jt.close();
       }
       if (jtThread != null) {
@@ -287,6 +296,7 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
     sysDirMonitorExecutor = null;
     currentSysDir = null;
     jt = null;
+    jtClosing = false;
     jtThread = null;
     haState = HAServiceState.STANDBY;
     LOG.info("Stopped");
