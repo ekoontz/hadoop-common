@@ -103,13 +103,5 @@ public class TaskAttemptContextImpl extends JobContextImpl
     public Counter getCounter(String group, String name) {
       return new Counters().findCounter(group, name);
     }
-    public float getProgress() {
-      return 0f;
-    }
-  }
-  
-  @Override
-  public float getProgress() {
-    return reporter.getProgress();
   }
 }

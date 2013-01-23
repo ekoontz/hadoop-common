@@ -469,11 +469,6 @@ public class MultipleOutputs<KEYOUT, VALUEOUT> {
     }
 
     @Override
-    public float getProgress() {
-      return context.getProgress();
-    }
-    
-    @Override
     public void setStatus(String status) {
       context.setStatus(status);
     }

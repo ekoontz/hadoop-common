@@ -280,8 +280,8 @@ public class TestStreamingStatus {
       finalPhaseInTask = "reduce";
     }
     assertEquals(1, reports.length);
-    assertEquals(expectedStatus + " > "
-        + (finalPhaseInTask == null ? "sort" : finalPhaseInTask),
+    assertEquals(expectedStatus +
+        (finalPhaseInTask == null ? "" : " > " + finalPhaseInTask),
         reports[0].getState());
   }
 
@@ -307,7 +307,7 @@ public class TestStreamingStatus {
 
     // trim() is called on expectedStderr here because the method
     // MapReduceTestUtil.readTaskLog() returns trimmed String.
-    assertTrue(log.contains(expectedStderr.trim()));
+    assertTrue(log.equals(expectedStderr.trim()));
   }
 
   // Validate if user counter is incremented properly

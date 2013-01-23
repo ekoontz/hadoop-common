@@ -306,10 +306,5 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     public Credentials getCredentials() {
       return mapContext.getCredentials();
     }
-    
-    @Override
-    public float getProgress() {
-      return mapContext.getProgress();
-    }
   }
 }

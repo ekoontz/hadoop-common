@@ -87,12 +87,8 @@ class MapTask extends Task {
 
   private static final Log LOG = LogFactory.getLog(MapTask.class.getName());
 
-  private Progress mapPhase;
-  private Progress sortPhase;
-
   {   // set phase for this task
     setPhase(TaskStatus.Phase.MAP); 
-    getProgress().setStatus("map");
   }
 
   public MapTask() {
@@ -304,17 +300,6 @@ class MapTask extends Task {
     throws IOException, ClassNotFoundException, InterruptedException {
     this.umbilical = umbilical;
 
-    // If there are no reducers then there won't be any sort. Hence the map 
-    // phase will govern the entire attempt's progress.
-    if (conf.getNumReduceTasks() == 0) {
-      mapPhase = getProgress().addPhase("map", 1.0f);
-    } else {
-      // If there are reducers then the entire attempt's progress will be 
-      // split between the map phase (67%) and the sort phase (33%).
-      mapPhase = getProgress().addPhase("map", 0.667f);
-      sortPhase  = getProgress().addPhase("sort", 0.333f);
-    }
-
     // start thread that will handle communication with parent
     TaskReporter reporter = new TaskReporter(getProgress(), umbilical,
         jvmContext);
@@ -406,12 +391,6 @@ class MapTask extends Task {
 
     try {
       runner.run(in, new OldOutputCollector(collector, conf), reporter);
-      mapPhase.complete();
-      // start the sort phase only if there are reducers
-      if (numReduceTasks > 0) {
-        setPhase(TaskStatus.Phase.SORT);
-      }
-      statusUpdate(umbilical);
       collector.flush();
     } finally {
       //close

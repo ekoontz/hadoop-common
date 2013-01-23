@@ -18,15 +18,9 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 
 class MapTaskStatus extends TaskStatus {
 
-  private long mapFinishTime;
-  
   public MapTaskStatus() {}
 
   public MapTaskStatus(TaskAttemptID taskid, float progress, int numSlots,
@@ -41,19 +35,6 @@ class MapTaskStatus extends TaskStatus {
     return true;
   }
 
-  /**
-   * Sets finishTime. 
-   * @param finishTime finish time of task.
-   */
-  @Override
-  void setFinishTime(long finishTime) {
-    super.setFinishTime(finishTime);
-    // set mapFinishTime if it hasn't been set before
-    if (getMapFinishTime() == 0) {
-      setMapFinishTime(finishTime);
-    }
-  }
-  
   @Override
   public long getShuffleFinishTime() {
     throw new UnsupportedOperationException("getShuffleFinishTime() not supported for MapTask");
@@ -65,40 +46,12 @@ class MapTaskStatus extends TaskStatus {
   }
 
   @Override
-  public long getMapFinishTime() {
-    return mapFinishTime;
-  }
-  
-  @Override
-  void setMapFinishTime(long mapFinishTime) {
-    this.mapFinishTime = mapFinishTime;
-  }
-  
-  @Override
-  synchronized void statusUpdate(TaskStatus status) {
-    super.statusUpdate(status);
-    
-    if (status.getMapFinishTime() != 0) {
-      this.mapFinishTime = status.getMapFinishTime();
-    }
-  }
-  
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    mapFinishTime = in.readLong();
-  }
-  
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeLong(mapFinishTime);
+  public long getSortFinishTime() {
+    throw new UnsupportedOperationException("getSortFinishTime() not supported for MapTask");
   }
 
   @Override
-  public void addFetchFailedMap(TaskAttemptID mapTaskId) {
-    throw new UnsupportedOperationException
-                ("addFetchFailedMap() not supported for MapTask");
+  void setSortFinishTime(long sortFinishTime) {
+    throw new UnsupportedOperationException("setSortFinishTime() not supported for MapTask");
   }
-
 }

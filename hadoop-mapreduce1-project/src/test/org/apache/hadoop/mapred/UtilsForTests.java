@@ -619,16 +619,6 @@ public class UtilsForTests {
   public static RunningJob runJob(JobConf conf, Path inDir, Path outDir, 
                                   int numMaps, int numReds) throws IOException {
 
-    String input = "The quick brown fox\n" + "has many silly\n"
-                   + "red fox sox\n";
-    
-    // submit the job and wait for it to complete
-    return runJob(conf, inDir, outDir, numMaps, numReds, input);
-  }
-  
-  // Start a job with the specified input and return its RunningJob object
-  static RunningJob runJob(JobConf conf, Path inDir, Path outDir, int numMaps, 
-                           int numReds, String input) throws IOException {
     FileSystem fs = FileSystem.get(conf);
     if (fs.exists(outDir)) {
       fs.delete(outDir, true);
@@ -636,7 +626,8 @@ public class UtilsForTests {
     if (!fs.exists(inDir)) {
       fs.mkdirs(inDir);
     }
-    
+    String input = "The quick brown fox\n" + "has many silly\n"
+        + "red fox sox\n";
     for (int i = 0; i < numMaps; ++i) {
       DataOutputStream file = fs.create(new Path(inDir, "part-" + i));
       file.writeBytes(input);
