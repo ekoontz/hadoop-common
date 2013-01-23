@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -32,8 +34,10 @@ import org.apache.hadoop.fs.Path;
  * these methods are from child space and see mapreduce.cluster.local.dir as 
  * taskTracker/jobCache/jobId/attemptId
  * This class should not be used from TaskTracker space.
- */ 
-class MapOutputFile {
+ */
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Unstable
+public class MapOutputFile {
 
   private JobConf conf;
 

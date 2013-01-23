@@ -1101,6 +1101,10 @@ abstract public class Task implements Writable, Configurable {
     return this.conf;
   }
 
+  public MapOutputFile getMapOutputFile() {
+    return mapOutputFile;
+  }
+
   /**
    * OutputCollector for the combiner.
    */

@@ -38,6 +38,8 @@ public interface JobContext {
   public static final String INPUT_FORMAT_CLASS_ATTR = 
     "mapreduce.inputformat.class";
   public static final String MAP_CLASS_ATTR = "mapreduce.map.class";
+  public static final String MAP_OUTPUT_COLLECTOR_CLASS_ATTR = 
+    "mapreduce.job.map.output.collector.class";
   public static final String COMBINE_CLASS_ATTR = "mapreduce.combine.class";
   public static final String REDUCE_CLASS_ATTR = "mapreduce.reduce.class";
   public static final String OUTPUT_FORMAT_CLASS_ATTR = 

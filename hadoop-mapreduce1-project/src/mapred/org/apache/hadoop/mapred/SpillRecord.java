@@ -26,6 +26,9 @@ import java.util.zip.CheckedInputStream;
 import java.util.zip.CheckedOutputStream;
 import java.util.zip.Checksum;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,7 +40,9 @@ import org.apache.hadoop.util.PureJavaCrc32;
 
 import static org.apache.hadoop.mapred.MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH;
 
-class SpillRecord {
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Unstable
+public class SpillRecord {
 
   /** Backing store */
   private final ByteBuffer buf;
@@ -142,18 +147,4 @@ class SpillRecord {
     }
   }
 
-}
-
-class IndexRecord {
-  long startOffset;
-  long rawLength;
-  long partLength;
-
-  public IndexRecord() { }
-
-  public IndexRecord(long startOffset, long rawLength, long partLength) {
-    this.startOffset = startOffset;
-    this.rawLength = rawLength;
-    this.partLength = partLength;
-  }
 }
