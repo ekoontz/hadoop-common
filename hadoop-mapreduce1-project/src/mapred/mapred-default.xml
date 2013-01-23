@@ -1326,4 +1326,12 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.reduce.shuffle.consumer.plugin.class</name>
+  <value>org.apache.hadoop.mapred.ReduceTask$ReduceCopier</value>
+  <description>
+    It defines the ShuffleConsumerPlugin implementation to use.
+  </description>
+</property>
+  
 </configuration>

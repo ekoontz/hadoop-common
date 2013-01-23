@@ -18,13 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.*;
-
 import java.io.IOException;
 import org.apache.hadoop.mapred.Task.TaskReporter;
-import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.ReduceTask;
 import org.junit.Test;
 import static org.mockito.Mockito.*;
 
@@ -38,11 +33,13 @@ public class TestReduceTaskFetchFail {
     }
     public String getJobFile() { return "/foo"; }
 
-    public class TestReduceCopier extends ReduceCopier {
-      public TestReduceCopier(TaskUmbilicalProtocol umbilical, JobConf conf,
-                        TaskReporter reporter
-                        )throws ClassNotFoundException, IOException {
-        super(umbilical, conf, reporter);
+    public class TestShuffleConsumer extends ReduceCopier {
+      public TestShuffleConsumer() {
+      }
+
+      public void init(ShuffleConsumerPlugin.Context context)
+        throws ClassNotFoundException, IOException {
+        super.init(context);
       }
 
       public void checkAndInformJobTracker(int failures, TaskAttemptID mapId, boolean readError) {
@@ -70,7 +67,11 @@ public class TestReduceTaskFetchFail {
     TestReduceTask rTask = new TestReduceTask();
     rTask.setConf(conf);
 
-    ReduceTask.ReduceCopier reduceCopier = rTask.new TestReduceCopier(mockUmbilical, conf, mockTaskReporter);
+    ShuffleConsumerPlugin.Context context
+     = new ShuffleConsumerPlugin.Context(mockUmbilical, conf, mockTaskReporter,
+                                      rTask);
+    ReduceTask.ReduceCopier reduceCopier = rTask.new TestShuffleConsumer();
+    reduceCopier.init(context);
     reduceCopier.checkAndInformJobTracker(1, tid, false);
 
     verify(mockTaskReporter, never()).progress();
@@ -82,7 +83,10 @@ public class TestReduceTaskFetchFail {
     conf.setInt("mapreduce.reduce.shuffle.maxfetchfailures", 3);
 
     rTask.setConf(conf);
-    reduceCopier = rTask.new TestReduceCopier(mockUmbilical, conf, mockTaskReporter);
+    context = new ShuffleConsumerPlugin.Context(mockUmbilical, conf,
+                                             mockTaskReporter, rTask);
+    reduceCopier = rTask.new TestShuffleConsumer();
+    reduceCopier.init(context);
 
     reduceCopier.checkAndInformJobTracker(1, tid, false);
     verify(mockTaskReporter, times(1)).progress();
@@ -103,7 +107,10 @@ public class TestReduceTaskFetchFail {
     conf.setBoolean("mapreduce.reduce.shuffle.notify.readerror", false);
 
     rTask.setConf(conf);
-    reduceCopier = rTask.new TestReduceCopier(mockUmbilical, conf, mockTaskReporter);
+    context = new ShuffleConsumerPlugin.Context(mockUmbilical, conf,
+                                             mockTaskReporter, rTask);
+    reduceCopier = rTask.new TestShuffleConsumer();
+    reduceCopier.init(context);
 
     reduceCopier.checkAndInformJobTracker(7, tid, true);
     verify(mockTaskReporter, times(4)).progress();
