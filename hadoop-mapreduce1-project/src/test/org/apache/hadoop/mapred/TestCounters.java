@@ -155,7 +155,7 @@ public class TestCounters {
     assertEquals("New name and method", 1, counters.findCounter("file",
         FileSystemCounter.BYTES_READ).getValue());
     assertEquals("Legacy name", 1, counters.findCounter(
-        "FileSystemCounter",
+"FileSystemCounters",
         "FILE_BYTES_READ").getValue());
   }
   
