@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
@@ -34,9 +35,13 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.WritableRpcEngine;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
 
 public class JobTrackerHADaemon {
   
@@ -49,6 +54,7 @@ public class JobTrackerHADaemon {
     LogFactory.getLog(JobTrackerHADaemon.class);
   
   private Configuration conf;
+  private JobTrackerRunner jtRunner;
   private JobTrackerHAServiceProtocol proto;
   private RPC.Server rpcServer;
   
@@ -61,13 +67,26 @@ public class JobTrackerHADaemon {
   }
 
   public void start() throws IOException {
-    
+
+    //Using a thread outside of all login context to start/stop the JT
+    //otherwise the credentials of the UGI making the RPC call to activate
+    //get in the way breaking things.
+    jtRunner = new JobTrackerRunner();
+    jtRunner.start();
+
     Configuration jtConf = new Configuration(conf);
     String logicalName = HAUtil.getLogicalName(jtConf);
     String jtId = HAUtil.getJobTrackerId(jtConf);
     HAUtil.setGenericConf(jtConf, logicalName, jtId, HAUtil.JOB_TRACKER_SPECIFIC_KEYS);
+
+    // Login HA daemon, if auth is not kerberos login() is a NOP
+    InetSocketAddress addr = HAUtil.getJtHaRpcAddress(conf, jtId);
+    String localMachine = addr.getHostName();
+    UserGroupInformation.setConfiguration(conf);
+    SecurityUtil.login(conf, JobTracker.JT_KEYTAB_FILE, JobTracker.JT_USER_NAME, localMachine);
+        
     
-    this.proto = new JobTrackerHAServiceProtocol(jtConf);
+    this.proto = new JobTrackerHAServiceProtocol(jtConf, jtRunner);
     
     RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -97,7 +116,7 @@ public class JobTrackerHADaemon {
   }
   
   public JobTracker getJobTracker() {
-    return proto.getJobTracker();
+    return jtRunner.jt;
   }
   
   public JobTrackerHAServiceProtocol getJobTrackerHAServiceProtocol() {
@@ -141,4 +160,109 @@ public class JobTrackerHADaemon {
     }
   }
   
+  public static class JobTrackerRunner extends Thread {
+    private JobTracker jt;
+    private JobConf conf;
+    private volatile CountDownLatch startLatch;
+    private volatile CountDownLatch startedLatch;
+    private volatile boolean jtClosing;
+    private Thread jtThread;
+    
+    public JobTrackerRunner() {
+      super(JobTrackerRunner.class.getSimpleName());
+      setDaemon(true);
+      startLatch = new CountDownLatch(1);
+      startedLatch = new CountDownLatch(1);
+    }
+
+    public void run() {
+      while (true) {
+        try {
+          startLatch.await();
+          jt = JobTracker.startTracker(conf);
+          jtThread = new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                try {
+                  jt.offerService();
+                } catch (Throwable t) {
+                  if (jtClosing) {
+                    LOG.info("Exception while closing jobtracker", t);
+                  } else {
+                    doImmediateShutdown(t);
+                  }
+                }
+              }
+            }, JobTrackerRunner.class.getSimpleName() + "-JT");
+          jtThread.start();
+          startedLatch.countDown();
+          jtThread.join();
+        } catch (Throwable t) {
+          doImmediateShutdown(t);
+        } finally {
+          startedLatch.countDown();
+          startLatch = new CountDownLatch(1);
+          startedLatch = new CountDownLatch(1);
+        }
+      }
+    }
+
+    /**
+     * Shutdown the JT immediately in an ungraceful way. Used when it would be
+     * unsafe for the JT to continue operating, e.g. during a failed HA state
+     * transition.
+     *
+     * @param t exception which warrants the shutdown. Printed to the JT log
+     *          before exit.
+     * @throws org.apache.hadoop.util.ExitUtil.ExitException thrown only for testing.
+     */
+    private synchronized void doImmediateShutdown(Throwable t)
+      throws ExitUtil.ExitException {
+      String message = "Error encountered requiring JT shutdown. " +
+        "Shutting down immediately.";
+      try {
+        LOG.fatal(message, t);
+      } catch (Throwable ignored) {
+        // This is unlikely to happen, but there's nothing we can do if it does.
+      }
+      terminate(1, t);
+    }
+
+    public void startJobTracker(JobConf conf) throws InterruptedException {
+      if (jt == null) {
+        this.conf = conf;
+        startLatch.countDown();
+        startedLatch.await();
+      }
+    }
+    
+    public void stopJobTracker() {
+      try {
+        if (jt != null) {
+          jtClosing = true;
+          jt.close();
+        }
+        if (jtThread != null) {
+          jtThread.join();
+        }
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
+      }
+      jt = null;
+      jtClosing = false;
+      jtThread = null;
+    }
+
+    public boolean jtThreadIsNotAlive() {
+      return jtThread == null || !jtThread.isAlive();
+    }
+
+    @VisibleForTesting
+    Thread getJobTrackerThread() {
+      return jtThread;
+    }
+
+
+  }
 }

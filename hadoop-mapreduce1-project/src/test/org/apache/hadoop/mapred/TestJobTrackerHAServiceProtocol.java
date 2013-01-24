@@ -49,7 +49,7 @@ public class TestJobTrackerHAServiceProtocol {
 
   @Test
   public void testRollSystemDirectory() throws IOException {
-    JobTrackerHAServiceProtocol jt = new JobTrackerHAServiceProtocol(conf);
+    JobTrackerHAServiceProtocol jt = new JobTrackerHAServiceProtocol(conf, null);
 
     JobConf jobConf = new JobConf(conf);
     Path sysDir = jt.rollSystemDirectory(jobConf);

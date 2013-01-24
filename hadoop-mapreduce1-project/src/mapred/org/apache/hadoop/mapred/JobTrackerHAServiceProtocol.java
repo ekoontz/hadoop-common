@@ -53,17 +53,16 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
   public static final String SYSTEM_DIR_SEQUENCE_PREFIX = "seq-";
   
   private Configuration conf;
+  private JobTrackerHADaemon.JobTrackerRunner jtRunner;
   private HAServiceState haState = HAServiceState.STANDBY;
   private FileSystem fs;
-  private JobTracker jt;
-  private volatile boolean jtClosing;
   private Path currentSysDir;
-  private Thread jtThread;
   private ScheduledExecutorService sysDirMonitorExecutor;
   private JobTrackerHAHttpRedirector httpRedirector;
   
-  public JobTrackerHAServiceProtocol(Configuration conf) {
+  public JobTrackerHAServiceProtocol(Configuration conf, JobTrackerHADaemon.JobTrackerRunner jtRunner) {
     this.conf = conf;
+    this.jtRunner = jtRunner;
     this.httpRedirector = new JobTrackerHAHttpRedirector(conf);
     try {
       this.fs = createFileSystem(conf);
@@ -84,31 +83,12 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       }
     );
   }
-  
-  public JobTracker getJobTracker() {
-    return jt;
-  }
-  
+
   @VisibleForTesting
   Thread getJobTrackerThread() {
-    return jtThread;
+    return jtRunner.getJobTrackerThread();
   }
-  
-  private class JobTrackerRunner implements Runnable {
-    @Override
-    public void run() {
-      try {
-        jt.offerService();
-      } catch (Throwable t) {
-        if (jtClosing) {
-          LOG.info("Exception while closing jobtracker", t);
-        } else {
-          doImmediateShutdown(t);
-        }
-      }
-    }
-  }
-  
+
   private class SystemDirectoryMonitor implements Runnable {
     @Override
     public void run() {
@@ -137,13 +117,9 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
 
   @Override
   public void monitorHealth() throws HealthCheckFailedException {
-    if (haState == HAServiceState.ACTIVE && jtThreadIsNotAlive()) {
+    if (haState == HAServiceState.ACTIVE && jtRunner.jtThreadIsNotAlive()) {
       throw new HealthCheckFailedException("The JobTracker thread is not running");
     }
-  }
-
-  private boolean jtThreadIsNotAlive() {
-    return jtThread == null || !jtThread.isAlive();
   }
 
   @Override
@@ -160,14 +136,11 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       currentSysDir = rollSystemDirectory(jtConf);
       // Update the conf for the JT so the address is resolved
       HAUtil.setJtRpcAddress(jtConf);
-      jtClosing = false;
-      jt = JobTracker.startTracker(jtConf);
+      
+      jtRunner.startJobTracker(jtConf);
     } catch (Throwable t) {
       doImmediateShutdown(t);
     }
-    jtThread = new Thread(new JobTrackerRunner(),
-        JobTrackerRunner.class.getSimpleName());
-    jtThread.start();
     long activeCheckMillis = conf.getLong(HAUtil.MR_HA_ACTIVE_CHECK_MILLIS,
         HAUtil.MR_HA_ACTIVE_CHECK_MILLIS_DEFAULT);
     sysDirMonitorExecutor = Executors.newSingleThreadScheduledExecutor();
@@ -256,22 +229,13 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       if (sysDirMonitorExecutor != null) {
         sysDirMonitorExecutor.shutdownNow();
       }
-      if (jt != null) {
-        jtClosing = true;
-        jt.close();
-      }
-      if (jtThread != null) {
-        jtThread.join();
-      }
+      jtRunner.stopJobTracker();
       httpRedirector.start();
     } catch (Throwable t) {
       doImmediateShutdown(t);
     }
     sysDirMonitorExecutor = null;
     currentSysDir = null;
-    jt = null;
-    jtClosing = false;
-    jtThread = null;
     haState = HAServiceState.STANDBY;
     LOG.info("Transitioned to standby");
   }
@@ -282,22 +246,13 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       if (sysDirMonitorExecutor != null) {
         sysDirMonitorExecutor.shutdownNow();
       }
-      if (jt != null) {
-        jtClosing = true;
-        jt.close();
-      }
-      if (jtThread != null) {
-        jtThread.join();
-      }
+      jtRunner.stopJobTracker();
       httpRedirector.stop();
     } catch (Throwable t) {
       doImmediateShutdown(t);
     }
     sysDirMonitorExecutor = null;
     currentSysDir = null;
-    jt = null;
-    jtClosing = false;
-    jtThread = null;
     haState = HAServiceState.STANDBY;
     LOG.info("Stopped");
   }
