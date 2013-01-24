@@ -123,10 +123,6 @@
       <artifactId>hsqldb</artifactId>
     </dependency>
     <dependency>
-      <groupId>oro</groupId>
-      <artifactId>oro</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.eclipse.jdt</groupId>
       <artifactId>core</artifactId>
     </dependency>
