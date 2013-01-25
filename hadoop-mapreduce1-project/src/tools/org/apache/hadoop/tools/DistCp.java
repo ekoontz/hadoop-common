@@ -982,6 +982,15 @@ public class DistCp implements Tool {
 
     jobconf.setMapperClass(CopyFilesMapper.class);
     jobconf.setNumReduceTasks(0);
+
+    //propagate token file, if present and if running within Oozie distcp action
+    if (System.getProperty("oozie.launcher.job.id") != null) {
+      // propagate delegation related props from launcher job to MR job
+      if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
+        jobconf.set("mapreduce.job.credentials.binary", System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
+      }
+    }
+    
     return jobconf;
   }
 
