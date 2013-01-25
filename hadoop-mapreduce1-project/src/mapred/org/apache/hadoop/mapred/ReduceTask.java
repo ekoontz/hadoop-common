@@ -148,8 +148,8 @@ class ReduceTask extends Task {
   };
   
   // A sorted set for keeping a set of map output files on disk
-  private final SortedSet<FileStatus> mapOutputFilesOnDisk = 
-    new TreeSet<FileStatus>(mapOutputFileComparator);
+  private final SortedSet<CompressAwareFileStatus> mapOutputFilesOnDisk = 
+    new TreeSet<CompressAwareFileStatus>(mapOutputFileComparator);
 
   private static boolean sslShuffle;
   private static SSLFactory sslFactory;
@@ -619,7 +619,7 @@ class ReduceTask extends Task {
     private TaskUmbilicalProtocol umbilical;
     private JobConf conf;
     private TaskReporter reporter;
-    private SortedSet<FileStatus> mapOutputFilesOnDisk;
+    private SortedSet<CompressAwareFileStatus> mapOutputFilesOnDisk;
 
     /** Reference to the task object */
     
@@ -1000,6 +1000,7 @@ class ReduceTask extends Task {
       byte[] data;
       final boolean inMemory;
       long compressedSize;
+      long decompressedSize;
       
       public MapOutput(TaskID mapId, TaskAttemptID mapAttemptId, 
                        Configuration conf, Path file, long size) {
@@ -1401,7 +1402,10 @@ class ReduceTask extends Task {
             }
 
             synchronized (mapOutputFilesOnDisk) {        
-              addToMapOutputFilesOnDisk(localFileSys.getFileStatus(filename));
+              FileStatus fileStatus = localFileSys.getFileStatus(filename);
+              CompressAwareFileStatus compressedFileStatus = new CompressAwareFileStatus(
+                  fileStatus, mapOutput.decompressedSize);
+              addToMapOutputFilesOnDisk(compressedFileStatus);
             }
           }
 
@@ -2366,6 +2370,7 @@ class ReduceTask extends Task {
         mapOutput = copier.shuffleToDisk(mapOutputLoc, input, filename, 
                                   compressedLength);
       }
+      mapOutput.decompressedSize = decompressedLength;    
       return mapOutput;
     }
 
@@ -2463,9 +2468,13 @@ class ReduceTask extends Task {
               keyClass, valueClass, reduceTask.codec, null);
           try {
             Merger.writeFile(rIter, writer, reporter, conf);
+            long decompressedBytesWritten = writer.decompressedBytesWritten;
             writer.close();
             writer = null;
-            addToMapOutputFilesOnDisk(fs.getFileStatus(outputPath));
+            FileStatus fileStatus = fs.getFileStatus(outputPath);
+            CompressAwareFileStatus compressedFileStatus = new CompressAwareFileStatus(
+                fileStatus, decompressedBytesWritten);
+            addToMapOutputFilesOnDisk(compressedFileStatus);
           } catch (Exception e) {
             if (null != outputPath) {
               fs.delete(outputPath, true);
@@ -2491,12 +2500,17 @@ class ReduceTask extends Task {
       // segments on disk
       List<Segment<K,V>> diskSegments = new ArrayList<Segment<K,V>>();
       long onDiskBytes = inMemToDiskBytes;
-      Path[] onDisk = reduceTask.getMapFiles(fs, false);
-      for (Path file : onDisk) {
-        onDiskBytes += fs.getFileStatus(file).getLen();
-        diskSegments.add(new Segment<K, V>(conf, fs, file, reduceTask.codec, keepInputs));
+      long totalDecompressedBytes = inMemToDiskBytes;
+
+      for (CompressAwareFileStatus filestatus : mapOutputFilesOnDisk) {
+        long len = filestatus.getLen();
+        onDiskBytes += len;
+        diskSegments.add(new Segment<K, V>(conf, fs, filestatus.getPath(),
+            reduceTask.codec, keepInputs, filestatus.getDecompressedSize()));
+        totalDecompressedBytes += (filestatus.getDecompressedSize() > 0) ? filestatus
+            .getDecompressedSize() : len;
       }
-      LOG.info("Merging " + onDisk.length + " files, " +
+      LOG.info("Merging " + mapOutputFilesOnDisk.size() + " files, " +
                onDiskBytes + " bytes from disk");
       Collections.sort(diskSegments, new Comparator<Segment<K,V>>() {
         public int compare(Segment<K, V> o1, Segment<K, V> o2) {
@@ -2525,7 +2539,7 @@ class ReduceTask extends Task {
           return diskMerge;
         }
         finalSegments.add(new Segment<K,V>(
-              new RawKVIteratorReader(diskMerge, onDiskBytes), true));
+              new RawKVIteratorReader(diskMerge, onDiskBytes), true, totalDecompressedBytes));
       }
       return Merger.merge(conf, fs, keyClass, valueClass,
                    finalSegments, finalSegments.size(), tmpDir,
@@ -2609,7 +2623,7 @@ class ReduceTask extends Task {
       }    
     }
     
-    private void addToMapOutputFilesOnDisk(FileStatus status) {
+    private void addToMapOutputFilesOnDisk(CompressAwareFileStatus status) {
       synchronized (mapOutputFilesOnDisk) {
         mapOutputFilesOnDisk.add(status);
         mapOutputFilesOnDisk.notify();
@@ -2687,6 +2701,7 @@ class ReduceTask extends Task {
                          reduceTask.codec, null);
             RawKeyValueIterator iter  = null;
             Path tmpDir = new Path(reduceTask.getTaskID().toString());
+            long decompressedBytesWritten;
             try {
               iter = Merger.merge(conf, rfs,
                                   conf.getMapOutputKeyClass(),
@@ -2697,6 +2712,7 @@ class ReduceTask extends Task {
                                   reduceTask.spilledRecordsCounter, null);
               
               Merger.writeFile(iter, writer, reporter, conf);
+              decompressedBytesWritten = writer.decompressedBytesWritten;
               writer.close();
             } catch (Exception e) {
               localFileSys.delete(outputPath, true);
@@ -2704,7 +2720,10 @@ class ReduceTask extends Task {
             }
             
             synchronized (mapOutputFilesOnDisk) {
-              addToMapOutputFilesOnDisk(localFileSys.getFileStatus(outputPath));
+              FileStatus fileStatus = localFileSys.getFileStatus(outputPath);
+              CompressAwareFileStatus compressedFileStatus = new CompressAwareFileStatus(
+                  fileStatus, decompressedBytesWritten);
+              addToMapOutputFilesOnDisk(compressedFileStatus);
             }
             
             LOG.info(reduceTask.getTaskID() +
@@ -2788,6 +2807,7 @@ class ReduceTask extends Task {
                      conf.getMapOutputValueClass(),
                      reduceTask.codec, null);
 
+        long decompressedBytesWritten;
         RawKeyValueIterator rIter = null;
         try {
           LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
@@ -2807,6 +2827,7 @@ class ReduceTask extends Task {
             combineCollector.setWriter(writer);
             combinerRunner.combine(rIter, combineCollector);
           }
+          decompressedBytesWritten = writer.decompressedBytesWritten;
           writer.close();
 
           LOG.info(reduceTask.getTaskID() + 
@@ -2824,8 +2845,10 @@ class ReduceTask extends Task {
 
         // Note the output of the merge
         FileStatus status = localFileSys.getFileStatus(outputPath);
+        CompressAwareFileStatus compressedFileStatus = new CompressAwareFileStatus(
+            status, decompressedBytesWritten);
         synchronized (mapOutputFilesOnDisk) {
-          addToMapOutputFilesOnDisk(status);
+          addToMapOutputFilesOnDisk(compressedFileStatus);
         }
       }
     }
@@ -2992,5 +3015,19 @@ class ReduceTask extends Task {
     final int hob = Integer.highestOneBit(value);
     return Integer.numberOfTrailingZeros(hob) +
       (((hob >>> 1) & value) == 0 ? 0 : 1);
+  }
+  static class CompressAwareFileStatus extends FileStatus {
+	private long decompressedSize;
+	CompressAwareFileStatus(FileStatus fileStatus, long decompressedSize) {
+	  super(fileStatus.getLen(), fileStatus.isDir(), fileStatus.getReplication(),
+				  fileStatus.getBlockSize(), fileStatus.getModificationTime(),
+				  fileStatus.getAccessTime(), fileStatus.getPermission(),
+				  fileStatus.getOwner(), fileStatus.getGroup(), fileStatus.getPath());
+	  this.decompressedSize = decompressedSize;
+	}
+
+	public long getDecompressedSize() {
+	  return decompressedSize;
+	}
   }
 }
