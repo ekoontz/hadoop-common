@@ -28,6 +28,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
@@ -102,7 +103,13 @@ public class JobTrackerHADaemon {
 
     this.rpcServer = RPC.getServer(HAServiceProtocolPB.class, haPbService,
         rpcAddr.getHostName(), rpcAddr.getPort(), conf);
-    
+
+    // set service-level authorization security policy
+    if (conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      rpcServer.refreshServiceAcl(conf, new MapReducePolicyProvider());
+    }
+
     this.rpcServer.start();
     
     // set port in config
