@@ -53,6 +53,8 @@ import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSError;
@@ -92,7 +94,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 
 /** A Reduce task. */
-class ReduceTask extends Task {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class ReduceTask extends Task {
 
   static {                                        // register a ctor
     WritableFactories.setFactory
