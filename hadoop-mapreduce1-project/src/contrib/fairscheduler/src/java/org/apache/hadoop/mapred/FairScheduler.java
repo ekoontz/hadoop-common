@@ -257,8 +257,10 @@ public class FairScheduler extends TaskScheduler {
     running = false;
     if (jobListener != null)
       taskTrackerManager.removeJobInProgressListener(jobListener);
-    if (eagerInitListener != null)
+    if (eagerInitListener != null) {
       taskTrackerManager.removeJobInProgressListener(eagerInitListener);
+      eagerInitListener.terminate();
+    }
     if (eventLog != null)
       eventLog.shutdown();
     if (metricsUpdater != null) {
