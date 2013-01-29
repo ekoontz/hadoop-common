@@ -18,13 +18,9 @@
 package org.apache.hadoop.mapred;
 
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.InputStreamReader;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.net.BindException;
@@ -70,7 +66,6 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.JobSubmissionProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.http.HttpServer;
@@ -81,7 +76,6 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.mapred.AuditLogger.Constants;
 import org.apache.hadoop.mapred.JobHistory.Keys;
-import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
@@ -1729,6 +1723,9 @@ public class JobTracker implements MRConstants, JTProtocols, JobTrackerMXBean {
 
   private QueueManager queueManager;
 
+  // To avoid the JT from doing a new login() as re-login seems to be destructive
+  static volatile boolean loggedIn = false;
+    
   /**
    * Start the JobTracker process, listen on the indicated port
    */
@@ -1757,11 +1754,15 @@ public class JobTracker implements MRConstants, JTProtocols, JobTrackerMXBean {
     InetSocketAddress addr = getAddress(conf);
     this.localMachine = addr.getHostName();
     this.port = addr.getPort();
-    // find the owner of the process
-    // get the desired principal to load
-    UserGroupInformation.setConfiguration(conf);
-    SecurityUtil.login(conf, JT_KEYTAB_FILE, JT_USER_NAME, localMachine);
 
+
+    if (!loggedIn) { // skip if already logged in
+      // find the owner of the process
+      // get the desired principal to load
+      UserGroupInformation.setConfiguration(conf);
+      SecurityUtil.login(conf, JT_KEYTAB_FILE, JT_USER_NAME, localMachine);
+    }
+    
     long secretKeyInterval = 
     conf.getLong(DELEGATION_KEY_UPDATE_INTERVAL_KEY, 
                    DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);

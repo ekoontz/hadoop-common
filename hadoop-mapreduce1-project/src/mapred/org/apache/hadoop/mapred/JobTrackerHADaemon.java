@@ -69,12 +69,6 @@ public class JobTrackerHADaemon {
 
   public void start() throws IOException {
 
-    //Using a thread outside of all login context to start/stop the JT
-    //otherwise the credentials of the UGI making the RPC call to activate
-    //get in the way breaking things.
-    jtRunner = new JobTrackerRunner();
-    jtRunner.start();
-
     Configuration jtConf = new Configuration(conf);
     String logicalName = HAUtil.getLogicalName(jtConf);
     String jtId = HAUtil.getJobTrackerId(jtConf);
@@ -85,8 +79,16 @@ public class JobTrackerHADaemon {
     String localMachine = addr.getHostName();
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, JobTracker.JT_KEYTAB_FILE, JobTracker.JT_USER_NAME, localMachine);
-        
     
+    // To avoid the JT from doing a new login() as re-login seems to be destructive
+    JobTracker.loggedIn = true;
+    
+    //Using a thread outside of all login context to start/stop the JT
+    //otherwise the credentials of the UGI making the RPC call to activate
+    //get in the way breaking things.
+    jtRunner = new JobTrackerRunner();
+    jtRunner.start();
+            
     this.proto = new JobTrackerHAServiceProtocol(jtConf, jtRunner);
     
     RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
