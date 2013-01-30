@@ -36,6 +36,7 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.WritableRpcEngine;
+import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -205,6 +206,7 @@ public class JobTrackerHADaemon {
               }
             }, JobTrackerRunner.class.getSimpleName() + "-JT");
           jtThread.start();
+          waitForRunningState();
           startedLatch.countDown();
           jtThread.join();
         } catch (Throwable t) {
@@ -213,6 +215,18 @@ public class JobTrackerHADaemon {
           startedLatch.countDown();
           startLatch = new CountDownLatch(1);
           startedLatch = new CountDownLatch(1);
+        }
+      }
+    }
+
+    private void waitForRunningState() {
+      while (jt != null && jt.getClusterStatus(false).getJobTrackerStatus()
+          != Cluster.JobTrackerStatus.RUNNING) {
+        LOG.info("Waiting for jobtracker RUNNING state");
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException e) {
+          Thread.interrupted();
         }
       }
     }
