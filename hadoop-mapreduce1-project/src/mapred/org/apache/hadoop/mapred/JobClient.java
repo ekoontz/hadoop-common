@@ -252,6 +252,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      */
     synchronized void updateStatus() throws IOException {
       this.status = jobSubmitClient.getJobStatus(profile.getJobID());
+      if(this.status == null) {
+        throw new IOException("The job appears to have been removed.");
+      }
       this.statustime = System.currentTimeMillis();
     }
 
