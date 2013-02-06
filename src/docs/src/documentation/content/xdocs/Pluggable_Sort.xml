@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+    "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title>
+      Hadoop Pluggable Sort
+    </title>
+  </header>
+
+  <body>
+    <section>
+      <title>Introduction</title>
+      <p>
+        The pluggable sort capability allows replacing the built in sort logic with 
+        alternate implementations. Example use cases for this are replacing the sort 
+        logic with custom algorithms that enable Hash aggregation and Limit-N query.
+      </p>
+      <p>
+        <strong>IMPORTANT:</strong> The pluggable sort capability is experimental 
+        and unstable. This means the provided APIs may change and break compatibility 
+        in future versions of Hadoop.
+      </p>
+    </section>
+
+    <section>
+      <title>Implementing a Custom Sort</title>
+      <p>
+        A custom sort implementation requires a <strong>org.apache.hadoop.mapred.MapOutputCollector</strong>
+        implementation class running in the Mapper tasks and (optionally, depending
+        on the sort implementation) a <strong>org.apache.hadoop.mapred.ShuffleConsumerPlugin</strong>
+        implementation class running in the Reducer tasks.
+      </p>
+      <p>
+        The default implementations provided by Hadoop can be used as references:
+      </p>
+      <ul>
+        <li><strong>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</strong></li>
+        <li><strong>org.apache.hadoop.mapreduce.task.reduce.Shuffle</strong></li>
+      </ul>
+    </section>
+
+    <section>
+      <title>Configuration</title>
+
+      <p>
+        All the pluggable components run in the job tasks. This means, they can be 
+        configured on per job basis.        
+      </p>
+      <p>
+        <strong>Job Configuration Properties</strong>
+      </p>
+
+      <ul>
+        <li>
+            <strong>mapreduce.job.reduce.shuffle.consumer.plugin.class</strong>. 
+            Default:<strong>org.apache.hadoop.mapreduce.task.reduce.Shuffle</strong>.
+            The <strong>ShuffleConsumerPlugin</strong> implementation to use
+        </li>
+        <li>
+          <strong>mapreduce.job.map.output.collector.class</strong>.
+          Default:<strong>org.apache.hadoop.mapred.MapTask$MapOutputBuffer</strong>.
+          The <strong>MapOutputCollector</strong> implementation to use
+        </li>
+      </ul>
+
+      <p>
+        These properties can also be set in the <strong>mapred-site.xml</strong> to 
+        change the default values for all jobs.        
+      </p>
+    </section>
+
+  </body>
+</document>

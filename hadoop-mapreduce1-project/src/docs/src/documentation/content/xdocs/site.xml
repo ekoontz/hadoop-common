@@ -73,6 +73,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
   <docs label="Miscellaneous"> 
     <sec_impersonation label="Secure Impersonation" href="Secure_Impersonation.html"/>
     <encrypted_shuffle label="Encrypted Shuffle" href="Encrypted_Shuffle.html"/>
+    <pluggable_sort label="Pluggable Sort" href="Pluggable_Sort.html"/>
     <api         label="API Docs"           href="ext:api/index" />
     <jdiff       label="API Changes"      href="ext:jdiff/changes" />
     <wiki        label="Wiki"                 href="ext:wiki" />
