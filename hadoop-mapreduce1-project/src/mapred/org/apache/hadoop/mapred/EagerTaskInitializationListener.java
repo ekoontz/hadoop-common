@@ -63,7 +63,7 @@ class EagerTaskInitializationListener extends JobInProgressListener {
         } 
       }
       LOG.info("Shutting down thread pool");
-      threadPool.shutdownNow();
+      threadPool.shutdown();
     }
   }
   
