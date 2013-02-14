@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,6 +39,7 @@ import org.apache.hadoop.util.StringUtils;
 class EagerTaskInitializationListener extends JobInProgressListener {
   
   private static final int DEFAULT_NUM_THREADS = 4;
+  private static final int DEFAULT_SHUTDOWN_TIMEOUT = 15000;
   private static final Log LOG = LogFactory.getLog(
       EagerTaskInitializationListener.class.getName());
   
@@ -64,6 +66,15 @@ class EagerTaskInitializationListener extends JobInProgressListener {
       }
       LOG.info("Shutting down thread pool");
       threadPool.shutdown();
+      try {
+        boolean completed = threadPool.awaitTermination(shutdownTimeout,
+            TimeUnit.MILLISECONDS);
+        if (!completed) {
+          threadPool.shutdownNow();
+        }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt(); // restore interrupted flag
+      }
     }
   }
   
@@ -85,10 +96,13 @@ class EagerTaskInitializationListener extends JobInProgressListener {
   private List<JobInProgress> jobInitQueue = new ArrayList<JobInProgress>();
   private ExecutorService threadPool;
   private int numThreads;
+  private long shutdownTimeout;
   private TaskTrackerManager ttm;
   
   public EagerTaskInitializationListener(Configuration conf) {
     numThreads = conf.getInt("mapred.jobinit.threads", DEFAULT_NUM_THREADS);
+    shutdownTimeout = conf.getInt("mapred.jobinit.shutdown.timeout.millis",
+        DEFAULT_SHUTDOWN_TIMEOUT);
     threadPool = Executors.newFixedThreadPool(numThreads);
   }
   
