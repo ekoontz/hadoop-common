@@ -439,13 +439,7 @@ public class TestJobHistory extends TestCase {
     // jobtracker-hostname_jobtracker-identifier_
     String parts[] = path.getName().split("_");
     Path parent = path.getParent();
-    Path ancestor = parent;
-    for (int i = 0; i < 4; ++i) { // serial #, 3 laysers of date
-      ancestor = ancestor.getParent();
-    }
-    String jobtrackerID = ancestor.getName();
-    String id = parts[0] + "_" + parts[1] + "_" + parts[2];
-    String jobUniqueString = jobtrackerID +  id;
+    String jobUniqueString = parts[0] + "_" + parts[1] + "_" + parts[2];
     return new Path(parent, jobUniqueString + "_conf.xml");
   }
 

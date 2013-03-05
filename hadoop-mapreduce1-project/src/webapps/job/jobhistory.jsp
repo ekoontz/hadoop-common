@@ -70,7 +70,7 @@ window.location.href = url;
     final int FILES_PER_SCAN = 1000;
 
     // XXXXX debug -- this should be 100.
-    final int DEFAULT_PAGE_SIZE = 10;
+    final int DEFAULT_PAGE_SIZE = 100;
 
     final String DEFAULT_DATE_GLOB_COMPONENT = "*/*/*";
 

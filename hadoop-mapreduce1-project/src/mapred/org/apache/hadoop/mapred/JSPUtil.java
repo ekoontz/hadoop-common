@@ -552,7 +552,7 @@ class JSPUtil {
 
   static String getJobID(String historyFileName) {
     String[] jobDetails = historyFileName.split("_");
-    return jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
+    return jobDetails[2];
   }
 
   static String getUserName(String historyFileName) {

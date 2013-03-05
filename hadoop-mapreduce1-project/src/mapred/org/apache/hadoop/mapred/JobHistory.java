@@ -1493,7 +1493,7 @@ public class JobHistory {
     throws IOException {
       FileSystem fs = null;
       String userLogDir = null;
-      String jobUniqueString = JOBTRACKER_UNIQUE_STRING + jobId;
+      String jobUniqueString = jobId.toString();
 
       // Get the username and job name to be used in the actual log filename;
       // sanity check them too        
@@ -1510,10 +1510,7 @@ public class JobHistory {
                                      (jobConf, jobId, submitTime));
         } else {
           String parts[] = logFileName.split("_");
-          //TODO this is a hack :(
-          // jobtracker-hostname_jobtracker-identifier_
-          String jtUniqueString = parts[0] + "_" + parts[1] + "_";
-          jobUniqueString = jtUniqueString + jobId.toString();
+          jobUniqueString = jobId.toString();
         }
       } else {
         logFileName = 
