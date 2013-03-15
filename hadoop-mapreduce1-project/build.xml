@@ -373,11 +373,26 @@
     </sequential>
   </macrodef>
 
+  <target name="jvm-check">
+    <property name="javaVersion" value="1.6"/>
+
+    <property name="requiredJavaVersion" value="xx${javaVersion}"/>
+    <property name="currentJavaVersion" value="xx${java.version}"/>
+    <condition property="jvm.fail">
+      <not>
+        <contains string="${currentJavaVersion}" substring="${requiredJavaVersion}"/>                
+      </not>
+    </condition>
+    <fail if="jvm.fail">
+      Incorrect JVM, current = ${java.version}, required ${javaVersion}.
+    </fail>
+  </target>
+
 
   <!-- ====================================================== -->
   <!-- Stuff needed by all targets                            -->
   <!-- ====================================================== -->
-  <target name="init" depends="ivy-retrieve-common">
+  <target name="init" depends="jvm-check,ivy-retrieve-common">
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.tools}"/>
@@ -1456,7 +1471,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-sign" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="jvm-check,clean-contrib, clean-sign" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}" followSymlinks="false"/>
     <delete dir="${docs.src}/build"/>
     <delete file="${basedir}/build.properties" />
