@@ -47,7 +47,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.BeforeClass;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -65,6 +65,12 @@ public class TestDelegationTokenRenewal {
     private static Token<?> lastRenewed = null;
     private static Token<?> tokenToRenewIn2Sec = null;
 
+    private static void reset() {
+      counter = 0;
+      lastRenewed = null;
+      tokenToRenewIn2Sec = null;
+    }
+    
     @Override
     public boolean handleKind(Text kind) {
       return KIND.equals(kind);
@@ -107,8 +113,9 @@ public class TestDelegationTokenRenewal {
   private static Configuration conf;
   private static String trackerService = "localhost:0";
  
-  @BeforeClass
-  public static void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
+    Renewer.reset();
     conf = new Configuration();
     conf.set("mapred.job.tracker", trackerService);
     
