@@ -134,7 +134,8 @@ public class ReduceContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     buffer.reset(currentRawKey.getBytes(), 0, currentRawKey.getLength());
     key = keyDeserializer.deserialize(key);
     DataInputBuffer nextVal = input.getValue();
-    buffer.reset(nextVal.getData(), nextVal.getPosition(), nextVal.getLength());
+    buffer.reset(nextVal.getData(), nextVal.getPosition(),
+        nextVal.getLength() - nextVal.getPosition());
     value = valueDeserializer.deserialize(value);
 
     currentKeyLength = nextKey.getLength() - nextKey.getPosition();
