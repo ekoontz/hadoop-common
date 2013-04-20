@@ -530,7 +530,9 @@ public class ConfigUtil {
       new DeprecationDelta(JTConfig.JT_MAX_JOB_SPLIT_METAINFO_SIZE,
         MRJobConfig.SPLIT_METAINFO_MAXSIZE),
       new DeprecationDelta("mapred.input.dir.recursive",
-        FileInputFormat.INPUT_DIR_RECURSIVE)
+        FileInputFormat.INPUT_DIR_RECURSIVE),
+      new DeprecationDelta(MRJobConfig.MAPREDUCE_TASK_CLASSPATH_PRECEDENCE,
+          MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST)
     });
   }
 

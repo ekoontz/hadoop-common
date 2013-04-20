@@ -1634,6 +1634,25 @@ public class JobConf extends Configuration {
   }
 
   /**
+   * Set the boolean property for specifying which classpath takes precedence -
+   * the user's one or the system one, when the tasks are launched
+   * @param value pass true if user's classes should take precedence
+   */
+  public void setUserClassesTakesPrecedence(boolean value) {
+    setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, value);
+  }
+
+  /**
+   * Get the boolean value for the property that specifies which classpath
+   * takes precedence when tasks are launched. True - user's classes takes
+   * precedence. False - system's classes takes precedence.
+   * @return true if user's classes should take precedence
+   */
+  public boolean userClassesTakesPrecedence() {
+    return getBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
+  }
+
+  /**
    * Get the profiler configuration arguments.
    *
    * The default value for this property is

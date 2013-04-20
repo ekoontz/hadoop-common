@@ -200,6 +200,11 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
+    public boolean userClassesTakesPrecedence() {
+      return mapContext.userClassesTakesPrecedence();
+    }
+
+    @Override
     public boolean getJobSetupCleanupNeeded() {
       return mapContext.getJobSetupCleanupNeeded();
     }

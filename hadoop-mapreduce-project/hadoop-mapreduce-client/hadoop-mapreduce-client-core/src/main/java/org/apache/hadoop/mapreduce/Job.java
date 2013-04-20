@@ -358,7 +358,17 @@ public class Job extends JobContextImpl implements JobContext {
     updateStatus();
     return status.getState();
   }
-  
+
+  /**
+   * Set the boolean property for specifying which classpath takes precedence -
+   * the user's one or the system one, when the tasks are launched
+   * @param value pass true if user's classes should take precedence
+   */
+  public void setUserClassesTakesPrecedence(boolean value) {
+    ensureState(JobState.DEFINE);
+    conf.setUserClassesTakesPrecedence(value);
+  }
+
   /**
    * Get the URL where some job progress information will be displayed.
    * 

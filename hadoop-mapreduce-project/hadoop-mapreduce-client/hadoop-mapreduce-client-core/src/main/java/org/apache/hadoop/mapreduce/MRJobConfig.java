@@ -139,6 +139,7 @@ public interface MRJobConfig {
   public static final String USER_LOG_RETAIN_HOURS = "mapreduce.job.userlog.retain.hours";
 
   public static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
+  public static final String MAPREDUCE_TASK_CLASSPATH_PRECEDENCE = "mapreduce.task.classpath.user.precedence";
 
   public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
 

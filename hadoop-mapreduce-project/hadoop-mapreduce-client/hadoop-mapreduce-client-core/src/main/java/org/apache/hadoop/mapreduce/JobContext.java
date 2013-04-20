@@ -107,6 +107,14 @@ public interface JobContext extends MRJobConfig {
   public String getJobName();
 
   /**
+   * Get the boolean value for the property that specifies which classpath
+   * takes precedence when tasks are launched. True - user's classes takes
+   * precedence. False - system's classes takes precedence.
+   * @return true if user's classes should take precedence
+   */
+  public boolean userClassesTakesPrecedence();
+
+  /**
    * Get the {@link InputFormat} class for the job.
    * 
    * @return the {@link InputFormat} class for the job.

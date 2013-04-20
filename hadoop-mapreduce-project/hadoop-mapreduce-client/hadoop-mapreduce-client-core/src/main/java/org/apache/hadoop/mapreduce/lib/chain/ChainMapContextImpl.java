@@ -198,6 +198,11 @@ class ChainMapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   }
 
   @Override
+  public boolean userClassesTakesPrecedence() {
+    return base.userClassesTakesPrecedence();
+  }
+
+  @Override
   public boolean getJobSetupCleanupNeeded() {
     return base.getJobSetupCleanupNeeded();
   }
