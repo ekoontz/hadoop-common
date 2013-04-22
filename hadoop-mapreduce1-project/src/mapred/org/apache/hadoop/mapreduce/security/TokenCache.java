@@ -125,10 +125,6 @@ public class TokenCache {
     HadoopKerberosName jtKrbName = new HadoopKerberosName(conf.get(JobTracker.JT_USER_NAME, ""));
     String delegTokenRenewer = jtKrbName.getShortName();
 
-    if (delegTokenRenewer == null || delegTokenRenewer.length() == 0) {
-      throw new IOException(
-          "Can't get JT Kerberos principal for use as renewer");
-    }
     mergeBinaryTokens(credentials, conf);
 
     final Token<?> tokens[] = fs.addDelegationTokens(delegTokenRenewer,
