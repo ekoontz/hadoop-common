@@ -1,0 +1,8 @@
+version=org.apache.hadoop:hadoop-core.version
+hadoop.version=org.apache.hadoop:hadoop-core.version
+hadoop-common.version=org.apache.hadoop:hadoop-common.version
+hadoop-hdfs.version=org.apache.hadoop:hadoop-hdfs.version
+hadoop-mapreduce.version=org.apache.hadoop:hadoop-mapreduce.version
+reactor.repo=https://repository.cloudera.com/content/repositories/snapshots
+avro.version=org.apache.avro:avro.version
+zookeeper.version=org.apache.zookeeper:zookeeper.version

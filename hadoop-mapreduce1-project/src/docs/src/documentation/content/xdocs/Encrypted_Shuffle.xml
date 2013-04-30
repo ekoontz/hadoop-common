@@ -1,0 +1,419 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2002-2004 The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
+    "http://forrest.apache.org/dtd/document-v20.dtd">
+
+
+<document>
+
+  <header>
+    <title>
+      Hadoop Encrypted Shuffle
+    </title>
+  </header>
+
+  <body>
+    <section>
+      <title>Introduction</title>
+      <p>
+        The Encrypted Shuffle capability allows encryption of the MapReduce
+        shuffle
+        using HTTPS and with optional client authentication (also known as
+        bi-directional HTTPS, or HTTPS with client certificates). It comprises:
+      </p>
+
+        <ul>
+          <li>A Hadoop configuration setting for toggling the shuffle between
+            HTTP and
+            HTTPS.
+          </li>
+          <li>A Hadoop configuration settings for specifying the keystore and
+            truststore
+            properties (location, type, passwords) used by the shuffle service
+            and the
+            reducers tasks fetching shuffle data.
+          </li>
+          <li>A way to re-load truststores across the cluster (when a node is
+            added or
+            removed).
+          </li>
+        </ul>
+    </section>
+
+    <section>
+      <title>Configuration</title>
+
+      <p>
+        <strong>core-site.xml</strong>
+        Properties
+      </p>
+
+      <p>To enable encrypted shuffle, set the following properties in
+        <strong>core-site.xml</strong>
+        of all nodes in the cluster:
+      </p>
+
+      <ul>
+        <li><strong>hadoop.ssl.require.client.cert</strong>. Default:<strong>false</strong>.
+          Whether client certificates are required
+        </li>
+        <li><strong>hadoop.ssl.hostname.verifier</strong>. Default:<strong>DEFAULT</strong>.
+          The hostname verifier to provide for HttpsURLConnections. Valid
+          values are:<strong>DEFAULT</strong>,<strong>STRICT</strong>,<strong>STRICT_I6</strong>,
+          <strong>DEFAULT_AND_LOCALHOST</strong>
+          and
+          <strong>ALLOW_ALL</strong>
+        </li>
+        <li><strong>hadoop.ssl.keystores.factory.class</strong>. Default:
+          <strong>org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory</strong>
+          .
+          The KeyStoresFactory implementation to use
+        </li>
+        <li><strong>hadoop.ssl.server.conf</strong>. Default:<strong>ss-server.xml</strong>.
+          Resource file from which ssl server keystore information will be
+          extracted. This file is looked up in the classpath, typically it
+          should be in Hadoop conf/ directory
+        </li>
+        <li><strong>hadoop.ssl.client.conf</strong>. Default:<strong>ss-client.xml</strong>.
+          Resource file from which ssl server keystore information will be
+          extracted. This file is looked up in the classpath, typically it
+          should be in Hadoop conf/ directory
+        </li>
+      </ul>
+
+      <p>
+        <strong>IMPORTANT:</strong>
+        Currently requiring client certificates should be set
+        to false. Refer the Client Certificates section for details.
+      </p>
+
+      <p>
+        <strong>IMPORTANT:</strong>
+        All these properties should be marked as final in
+        the cluster configuration files.
+      </p>
+
+      <p>
+        <strong>Example:</strong>
+      </p>
+
+        <source>
+          ...
+          &lt;property&gt;
+            &lt;name&gt;hadoop.ssl.require.client.cert&lt;/name&gt;
+            &lt;value&gt;false&lt;/value&gt;
+            &lt;final&gt;true&lt;/final&gt;
+          &lt;/property&gt;
+
+          &lt;property&gt;
+            &lt;name&gt;hadoop.ssl.hostname.verifier&lt;/name&gt;
+            &lt;value&gt;DEFAULT&lt;/value&gt;
+            &lt;final&gt;true&lt;/final&gt;
+          &lt;/property&gt;
+
+          &lt;property&gt;
+            &lt;name&gt;hadoop.ssl.keystores.factory.class&lt;/name&gt;
+            &lt;value&gt;org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory
+            &lt;/value&gt;
+            &lt;final&gt;true&lt;/final&gt;
+          &lt;/property&gt;
+
+          &lt;property&gt;
+            &lt;name&gt;hadoop.ssl.server.conf&lt;/name&gt;
+            &lt;value&gt;ssl-server.xml&lt;/value&gt;
+            &lt;final&gt;true&lt;/final&gt;
+          &lt;/property&gt;
+
+          &lt;property&gt;
+            &lt;name&gt;hadoop.ssl.client.conf&lt;/name&gt;
+            &lt;value&gt;ssl-client.xml&lt;/value&gt;
+            &lt;final&gt;true&lt;/final&gt;
+          &lt;/property&gt;
+          ...
+        </source>
+
+      <p>
+        <strong>mapred-site.xml</strong>
+        Properties
+      </p>
+
+      <p>To enable encrypted shuffle, set the following property in
+        <strong>mapred-site.xml</strong>
+        of all nodes in the cluster:
+      </p>
+
+      <ul>
+        <li><strong>mapreduce.shuffle.ssl.enabled</strong>. Default:<strong>false</strong>.
+          Whether encrypted shuffle is enabled
+        </li>
+      </ul>
+
+
+      <p>
+        <strong>IMPORTANT:</strong>
+        All these properties should be marked as final in
+        the cluster configuration files.
+      </p>
+
+      <p>
+        <strong>Example:</strong>
+      </p>
+
+        <source>
+          ...
+          &lt;property&gt;
+            &lt;name&gt;mapreduce.shuffle.ssl.enabled&lt;/name&gt;
+            &lt;value&gt;true&lt;/value&gt;
+          &lt;/property&gt;
+          ...
+        </source>
+
+      <p>The Linux container executor should be set to prevent job tasks from
+      reading the server keystore information and gaining access to the shuffle
+      server certificates.
+      </p>
+
+      <p>Refer to Hadoop Kerberos configuration for details on how to do this.
+      </p>
+
+    </section>
+
+    <section>
+      <title>Keystore and Truststore Settings</title>
+
+      <p>Currently <strong>FileBasedKeyStoresFactory</strong> is the only
+        <strong>KeyStoresFactory</strong> implementation. The
+        <strong>FileBasedKeyStoresFactory</strong> implementation uses the following
+        properties, in the <strong>ssl-server.xml</strong> and <strong>ssl-client.xml</strong>
+        files, to configure the keystores and truststores.
+      </p>
+
+      <p><strong>ssl-server.xml</strong> (Shuffle server) Configuration:
+      </p>
+
+      <p>The mapred user should own the <strong>ssl-server.xml</strong> file and have
+      exclusive read access to it.
+      </p>
+
+      <ul>
+        <li><strong>ssl.server.keystore.type</strong>. Default <strong>jks</strong>.
+          Keystore file type</li>
+        <li><strong>ssl.server.keystore.location</strong>. Default <strong>NONE</strong>.
+          Keystore file location. The mapred user should own this file
+          and have exclusive read access to it</li>
+        <li><strong>ssl.server.keystore.password</strong>. Default <strong>NONE</strong>.
+          Keystore file password</li>
+        <li><strong>ssl.server.truststore.type</strong>. Default <strong>jks</strong>.
+          Truststore file type</li>
+        <li><strong>ssl.server.truststore.location</strong>. Default <strong>NONE</strong>.
+          Truststore file location. The mapred user should own this file
+          and have exclusive read access to it</li>
+        <li><strong>ssl.server.truststore.password</strong>. Default <strong>NONE</strong>.
+          Truststore file password</li>
+        <li><strong>ssl.server.truststore.reload.interval</strong>. Default <strong>10</strong>.
+          Truststore reload interval, in milliseconds</li>
+      </ul>
+
+      <p>
+        <strong>Example:</strong>
+      </p>
+
+        <source>
+          &lt;configuration&gt;
+
+            &lt;!-- Server Certificate Store --&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.keystore.type&lt;/name&gt;
+              &lt;value&gt;jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.keystore.location&lt;/name&gt;
+              &lt;value&gt;${user.home}/keystores/server-keystore.jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.keystore.password&lt;/name&gt;
+              &lt;value&gt;serverfoo&lt;/value&gt;
+            &lt;/property&gt;
+
+            &lt;!-- Server Trust Store --&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.truststore.type&lt;/name&gt;
+              &lt;value&gt;jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.truststore.location&lt;/name&gt;
+              &lt;value&gt;${user.home}/keystores/truststore.jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.truststore.password&lt;/name&gt;
+              &lt;value&gt;clientserverbar&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.server.truststore.reload.interval&lt;/name&gt;
+              &lt;value&gt;10000&lt;/value&gt;
+            &lt;/property&gt;
+          &lt;/configuration&gt;
+        </source>
+
+      <p><strong>ssl-client.xml</strong> (Reducer/Fetcher) Configuration:
+      </p>
+
+      <p>The mapred user should own the <strong>ssl-server.xml</strong> file and it should
+        have default permissions.
+      </p>
+
+        <ul>
+          <li><strong>ssl.client.keystore.type</strong>. Default <strong>jks</strong>.
+            Keystore file type</li>
+          <li><strong>ssl.client.keystore.location</strong>. Default <strong>NONE</strong>.
+            Keystore file location. The mapred user should own this file
+            and have exclusive read access to it</li>
+          <li><strong>ssl.client.keystore.password</strong>. Default <strong>NONE</strong>.
+            Keystore file password</li>
+          <li><strong>ssl.client.truststore.type</strong>. Default <strong>jks</strong>.
+            Truststore file type</li>
+          <li><strong>ssl.client.truststore.location</strong>. Default <strong>NONE</strong>.
+            Truststore file location. The mapred user should own this file
+            and have exclusive read access to it</li>
+          <li><strong>ssl.client.truststore.password</strong>. Default <strong>NONE</strong>.
+            Truststore file password</li>
+          <li><strong>ssl.client.truststore.reload.interval</strong>. Default <strong>10</strong>.
+            Truststore reload interval, in milliseconds</li>
+        </ul>
+
+      <p>
+        <strong>Example:</strong>
+      </p>
+
+        <source>
+          &lt;configuration&gt;
+
+            &lt;!-- Clietn Certificate Store --&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.keystore.type&lt;/name&gt;
+              &lt;value&gt;jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.keystore.location&lt;/name&gt;
+              &lt;value&gt;${user.home}/keystores/client-keystore.jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.keystore.password&lt;/name&gt;
+              &lt;value&gt;clientfoo&lt;/value&gt;
+            &lt;/property&gt;
+
+            &lt;!-- Client Trust Store --&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.truststore.type&lt;/name&gt;
+              &lt;value&gt;jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.truststore.location&lt;/name&gt;
+              &lt;value&gt;${user.home}/keystores/truststore.jks&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.truststore.password&lt;/name&gt;
+              &lt;value&gt;clientbar&lt;/value&gt;
+            &lt;/property&gt;
+            &lt;property&gt;
+              &lt;name&gt;ssl.client.truststore.reload.interval&lt;/name&gt;
+              &lt;value&gt;10000&lt;/value&gt;
+            &lt;/property&gt;
+          &lt;/configuration&gt;
+        </source>
+
+    </section>
+
+    <section>
+      <title>Activating Encrypted Shuffle</title>
+
+      <p>When you have made the above configuration changes, activate Encrypted
+      Shuffle by re-starting all TaskTrackers.
+      </p>
+
+      <p><strong>IMPORTANT:</strong> Using encrypted shuffle will incur in a significant
+          performance impact. Users should profile this and potentially reserve
+          1 or more cores for encrypted shuffle.
+      </p>
+    </section>
+
+    <section>
+      <title>Client Certificates</title>
+
+      <p>
+        Using Client Certificates does not fully ensure that the client is a
+        reducer task for the job. Currently, Client Certificates (their private key)
+        keystore files must be readable by all users submitting jobs to the cluster.
+        This means that a rogue job could read such those keystore files and use
+        the client certificates in them to establish a secure connection with a
+        Shuffle server. However, unless the rogue job has a proper JobToken, it won't
+        be able to retrieve shuffle data from the Shuffle server. A job, using its
+        own JobToken, can only retrieve shuffle data that belongs to itself.
+      </p>
+    </section>
+
+    <section>
+      <title>Reloading Truststores</title>
+
+      <p>
+        By default the truststores will reload their configuration every 10 seconds.
+        If a new truststore file is copied over the old one, it will be re-read,
+        and its certificates will replace the old ones. This mechanism is useful for
+        adding or removing nodes from the cluster, or for adding or removing trusted
+        clients. In these cases, the client or TaskTracker certificate is added to
+        (or removed from) all the truststore files in the system, and the new
+        configuration will be picked up without you having to restart the TaskTracker
+      </p>
+    </section>
+
+    <section>
+      <title>Debugging</title>
+
+      <p><strong>NOTE:</strong> Enable debugging only for troubleshooting, and then only for jobs
+      running on small amounts of data. It is very verbose and slows down jobs by
+      several orders of magnitude. (You might need to increase mapred.task.timeout
+      to prevent jobs from failing because tasks run so slowly.)
+      </p>
+
+      <p>To enable SSL debugging in the reducers, set <strong>-Djavax.net.debug=all</strong>
+      in the <strong>mapreduce.reduce.child.java.opts</strong> property; for example:
+      </p>
+
+    <source>
+      &lt;property&gt;
+        &lt;name&gt;mapred.reduce.child.java.opts&lt;/name&gt;
+        &lt;value&gt;-Xmx-200m -Djavax.net.debug=all&lt;/value&gt;
+      &lt;/property&gt;
+    </source>
+
+      <p>You can do this on a per-job basis, or by means of a cluster-wide setting in
+      the <strong>mapred-site.xml</strong> file.
+      </p>
+
+      <p>To set this property in TaskTracker, set it in the <strong>hadoop-env.sh</strong>
+      file:
+      </p>
+
+      <source>
+      HADOOP_OPTS="-Djavax.net.debug=all $HADOOP_OPTS"
+      </source>
+
+    </section>
+
+  </body>
+</document>
