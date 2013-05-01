@@ -3160,13 +3160,13 @@ public class JobInProgress {
         CleanupQueue.getInstance().addToQueue(
             new PathDeletionContext(tempDir, conf));
 
-        // delete the staging area for the job
+        // delete the staging area for the job and cancel delegation token
         String jobTempDir = conf.get("mapreduce.job.dir");
         if (jobTempDir != null && conf.getKeepTaskFilesPattern() == null &&
             !conf.getKeepFailedTaskFiles()) {
           Path jobTempDirPath = new Path(jobTempDir);
           CleanupQueue.getInstance().addToQueue(
-              new PathDeletionContext(jobTempDirPath, conf, userUGI));
+              new PathDeletionContext(jobTempDirPath, conf, userUGI, jobId));
         }
 
       } catch (IOException e) {
@@ -3182,11 +3182,6 @@ public class JobInProgress {
       this.runningReduces = null;
     }
     
-    // remove jobs delegation tokens
-    if(conf.getBoolean(JobContext.JOB_CANCEL_DELEGATION_TOKEN, true)) {
-      DelegationTokenRenewal.removeDelegationTokenRenewalForJob(jobId);
-    } // else don't remove it.May be used by spawned tasks
-
     //close the user's FS
     try {
       FileSystem.closeAllForUGI(userUGI);
