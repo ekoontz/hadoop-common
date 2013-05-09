@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.List;
 
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob.State;
 
@@ -87,32 +88,32 @@ public class JobControl implements Runnable {
   /**
    * @return the jobs in the waiting state
    */
-  public ArrayList<ControlledJob> getWaitingJobList() {
+  public List<ControlledJob> getWaitingJobList() {
     return toArrayList(this.waitingJobs);
   }
 	
   /**
    * @return the jobs in the running state
    */
-  public ArrayList<ControlledJob> getRunningJobList() {
+  public List<ControlledJob> getRunningJobList() {
     return toArrayList(this.runningJobs);
   }
 	
   /**
    * @return the jobs in the ready state
    */
-  public ArrayList<ControlledJob> getReadyJobsList() {
+  public List<ControlledJob> getReadyJobsList() {
     return toArrayList(this.readyJobs);
   }
 	
   /**
    * @return the jobs in the success state
    */
-  public ArrayList<ControlledJob> getSuccessfulJobList() {
+  public List<ControlledJob> getSuccessfulJobList() {
     return toArrayList(this.successfulJobs);
   }
 	
-  public ArrayList<ControlledJob> getFailedJobList() {
+  public List<ControlledJob> getFailedJobList() {
     return toArrayList(this.failedJobs);
   }
 	
