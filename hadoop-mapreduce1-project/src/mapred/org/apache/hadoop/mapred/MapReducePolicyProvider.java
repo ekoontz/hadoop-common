@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.ZKFCProtocol;
@@ -29,6 +30,7 @@ import org.apache.hadoop.mr1tools.GetUserMappingsProtocol;
 /**
  * {@link PolicyProvider} for Map-Reduce protocols.
  */
+@Private
 public class MapReducePolicyProvider extends PolicyProvider {
   private static final Service[] mapReduceServices = 
     new Service[] {
