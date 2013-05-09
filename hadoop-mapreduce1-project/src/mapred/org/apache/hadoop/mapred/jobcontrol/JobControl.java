@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred.jobcontrol;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Collection;
 
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
@@ -39,7 +40,7 @@ public class JobControl extends
     super(groupName);
   }
   
-  static ArrayList<Job> castToJobList(ArrayList<ControlledJob> cjobs) {
+  static ArrayList<Job> castToJobList(List<ControlledJob> cjobs) {
     ArrayList<Job> ret = new ArrayList<Job>();
     for (ControlledJob job : cjobs) {
       ret.add((Job)job);
