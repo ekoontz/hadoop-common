@@ -121,11 +121,6 @@
    <dependency org="org.vafer" name="jdeb" rev="${jdeb.version}" conf="package->master"/>
    <dependency org="org.mortbay.jetty" name="jetty-servlet-tester" rev="${jetty.version}"
                conf="test->default"/>
-   <!-- dependency addition for the fault injection -->
-   <dependency org="org.aspectj" name="aspectjrt" rev="${aspectj.version}"
-               conf="compile->default"/>
-   <dependency org="org.aspectj" name="aspectjtools" rev="${aspectj.version}"
-               conf="compile->default"/>
    <dependency org="org.apache.zookeeper" name="zookeeper" rev="${zookeeper.version}"
                conf="compile->default"/>
    <dependency org="org.apache.zookeeper" name="zookeeper" rev="${zookeeper.version}"
