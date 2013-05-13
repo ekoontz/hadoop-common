@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.AdminOperationsProtocol;
+import org.apache.hadoop.mapred.HAUtil;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.net.NetUtils;
@@ -53,6 +54,15 @@ public class MRAdmin extends Configured implements Tool {
   public MRAdmin(Configuration conf) {
     super(conf);
   }
+
+  public void setConf(Configuration conf) {
+    if (conf != null && HAUtil.isHAEnabled(conf,
+        conf.get(HAUtil.MR_JOBTRACKER_ADDRESS_KEY))) {
+      HAUtil.setJtRpcAddress(conf);
+    }
+    super.setConf(conf);
+  }
+
 
   private static void printHelp(String cmd) {
     String summary = "hadoop mradmin is the command to execute Map-Reduce administrative commands.\n" +
@@ -351,6 +361,7 @@ public class MRAdmin extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
+    JobConf jConf = new JobConf(); // force load mapred-site.xml
     int result = ToolRunner.run(new MRAdmin(), args);
     System.exit(result);
   }
