@@ -92,6 +92,7 @@ import org.apache.hadoop.util.StringUtils;
 public class JobHistory {
   
   static final long VERSION = 1L;
+  static final String UNDERSCORE_ESCAPE = "%5F";
   public static final Log LOG = LogFactory.getLog(JobHistory.class);
   private static final char DELIMITER = ' ';
   static final char LINE_DELIMITER_CHAR = '.';
@@ -958,7 +959,44 @@ public class JobHistory {
 
       throw e;
     }
- 
+
+  // This code will be inefficient if the subject contains dozens of underscores
+  static String escapeUnderscores(String escapee) {
+    return replaceStringInstances(escapee, "_", UNDERSCORE_ESCAPE);
+  }
+
+  static String nonOccursString(String logFileName) {
+    int adHocIndex = 0;
+
+    String unfoundString = "q" + adHocIndex;
+
+    while (logFileName.contains(unfoundString)) {
+      unfoundString = "q" + ++adHocIndex;
+    }
+
+    return unfoundString + "q";
+  }
+
+  // I tolerate this code because I expect a low number of
+  // occurrences in a relatively short string
+  static String replaceStringInstances
+  (String logFileName, String old, String replacement) {
+    int index = logFileName.indexOf(old);
+
+    while (index > 0) {
+      logFileName = (logFileName.substring(0, index)
+              + replacement
+              + replaceStringInstances
+              (logFileName.substring(index + old.length()),
+                      old, replacement));
+
+      index = logFileName.indexOf(old);
+    }
+
+    return logFileName;
+  }
+
+
   /**
    * Helper class for logging or reading back events related to job start, finish or failure. 
    */

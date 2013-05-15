@@ -442,9 +442,13 @@ window.location.href = url;
     Set<String> displayedJobs = new HashSet<String>();
     for (int i = start - 1; i < start + length - 1; ++i) {
       Path jobFile = jobFiles[i];
+      String fname = jobFile.getName();
+      String marker = JobHistory.nonOccursString(fname);
+      String reescapedFname = JobHistory.replaceStringInstances(fname,
+                  JobHistory.UNDERSCORE_ESCAPE, marker);
       
       String decodedJobFileName =
-          JobHistory.JobInfo.decodeJobHistoryFileName(jobFile.getName());
+          JobHistory.JobInfo.decodeJobHistoryFileName(reescapedFname);
 
       String[] jobDetails = decodedJobFileName.split("_");
       String trackerStartTime = jobDetails[1];
@@ -452,9 +456,12 @@ window.location.href = url;
                       + "_" + jobDetails[JOB_ID_START + 1]
                       + "_" + jobDetails[JOB_ID_START + 2]);
       String submitTimestamp = jobDetails[FILENAME_SUBMIT_TIMESTAMP_PART];
-      String userName = jobDetails[FILENAME_USER_PART];
-      String jobName = jobDetails[FILENAME_JOBNAME_PART];
-     
+
+      String userName = JobHistory.replaceStringInstances(jobDetails[FILENAME_USER_PART],
+                  marker, JobHistory.UNDERSCORE_ESCAPE);
+      String jobName = JobHistory.replaceStringInstances(jobDetails[FILENAME_JOBNAME_PART],
+                 marker, JobHistory.UNDERSCORE_ESCAPE);
+
       // Check if the job is already displayed. There can be multiple job 
       // history files for jobs that have restarted
       if (displayedJobs.contains(jobId)) {
