@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -899,7 +900,22 @@ public class JobHistory {
       throws IOException {
     return localGlobber(fs, root, tail, filter, null);
   }
-  
+
+  private static FileStatus[] nullToEmpty(FileStatus[] result) {
+    return result == null ? new FileStatus[0] : result;
+  }
+
+  private static FileStatus[] listFilteredStatus
+      (FileSystem fs, Path root, PathFilter filter)
+      throws IOException {
+    try {
+      return filter == null ? fs.listStatus(root) : fs.listStatus(root,
+          filter);
+    } catch (FileNotFoundException fnfe) {
+      // file doesn't exist
+      return null;
+    }
+  }
 
   // hasMismatches is just used to return a second value if you want
   // one.  I would have used MutableBoxedBoolean if such had been provided.
@@ -907,11 +923,12 @@ public class JobHistory {
     (FileSystem fs, Path root, String tail, PathFilter filter, AtomicBoolean hasFlatFiles)
       throws IOException {
     if (tail.equals("")) {
-      return filter == null ? fs.listStatus(root) : fs.listStatus(root, filter);
+      return nullToEmpty(listFilteredStatus(fs, root, filter));
     }
 
       if (tail.startsWith("/*")) {
-        Path[] subdirs = filteredStat2Paths(fs.listStatus(root), true, hasFlatFiles);
+        Path[] subdirs = filteredStat2Paths(nullToEmpty(listFilteredStatus
+            (fs, root, null)), true, hasFlatFiles);
 
         FileStatus[][] subsubdirs = new FileStatus[subdirs.length][];
 
@@ -944,9 +961,8 @@ public class JobHistory {
         int split = tail.indexOf('/', 1);
 
         if (split < 0) {
-          return (filter == null
-                  ? fs.listStatus(new Path(root, tail.substring(1)))
-                  : fs.listStatus(new Path(root, tail.substring(1)), filter));
+          return nullToEmpty
+              (listFilteredStatus(fs, new Path(root, tail.substring(1)), filter));
         } else {
           String thisSegment = tail.substring(1, split);
           String newTail = tail.substring(split);
