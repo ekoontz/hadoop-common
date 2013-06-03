@@ -84,7 +84,8 @@ window.location.href = url;
 
     final String soughtDate = dateSplit.length > 1 ? dateSplit[1] : "";
 
-    final String parts[] = dateSplit[0].split(":");
+    final String parts[] = dateSplit.length >= 1 ? dateSplit[0].split(":")
+                                                 : new String[0];
 
     final String user = (parts.length >= 1)
                         ? parts[0].toLowerCase()
