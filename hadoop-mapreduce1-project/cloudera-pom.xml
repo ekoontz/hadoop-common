@@ -26,13 +26,13 @@ NOTE - This POM is used for Cloudera's build and packaging process.
   <parent>
     <groupId>com.cloudera.cdh</groupId>
     <artifactId>hadoop-root</artifactId>
-    <version>2.0.0-mr1-cdh4.3.0-SNAPSHOT</version>
+    <version>2.1.0-mr1-cdh5.0.0-SNAPSHOT</version>
     <relativePath>cloudera/maven-packaging/pom.xml</relativePath>
   </parent>
   
   <groupId>com.cloudera.cdh</groupId>
   <artifactId>hadoop-ant</artifactId>
-  <version>2.0.0-mr1-cdh4.3.0-SNAPSHOT</version>
+  <version>2.1.0-mr1-cdh5.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   
   <description>Maven wrapper for Ant Hadoop build</description>
