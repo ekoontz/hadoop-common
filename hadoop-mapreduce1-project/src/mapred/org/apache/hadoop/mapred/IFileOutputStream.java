@@ -45,7 +45,8 @@ class IFileOutputStream extends FilterOutputStream {
    */
   public IFileOutputStream(OutputStream out) {
     super(out);
-    sum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32,
+    sum = DataChecksum.newDataChecksum(
+        DataChecksum.Type.valueOf(DataChecksum.CHECKSUM_CRC32),
         Integer.MAX_VALUE);
     barray = new byte[sum.getChecksumSize()];
   }
