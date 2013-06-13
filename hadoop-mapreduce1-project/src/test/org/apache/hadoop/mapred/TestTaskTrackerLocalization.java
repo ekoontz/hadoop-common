@@ -617,14 +617,8 @@ public class TestTaskTrackerLocalization {
     out.close();
     // no write permission for subDir and subDir/file
     int ret = 0;
-    try {
-      if((ret = FileUtil.chmod(subDir.toUri().getPath(), "a=rx", true)) != 0) {
-        LOG.warn("chmod failed for " + subDir + ";retVal=" + ret);
-      }
-    } catch (InterruptedException ie) {
-      // This exception is never actually thrown, but the signature says
-      // it is, and we can't make the incompatible change within CDH
-      throw new IOException("Interrupted while chmodding", ie);
+    if((ret = FileUtil.chmod(subDir.toUri().getPath(), "a=rx", true)) != 0) {
+      LOG.warn("chmod failed for " + subDir + ";retVal=" + ret);
     }
   }
 

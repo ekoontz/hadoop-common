@@ -320,6 +320,10 @@ abstract class TaskRunner extends Thread {
     t.setJobFile(localTaskFile.toString());
   }
 
+  private static String[] getUlimitMemoryCommand(int memoryLimit) {
+    return new String[] {"ulimit", "-v", String.valueOf(memoryLimit)};
+  }
+
   /**
    * @return
    */
@@ -328,7 +332,7 @@ abstract class TaskRunner extends Thread {
     if (ulimit <= 0) {
       return "";
     }
-    String setup[] = Shell.getUlimitMemoryCommand(ulimit);
+    String setup[] = getUlimitMemoryCommand(ulimit);
     StringBuilder command = new StringBuilder();
     for (String str : setup) {
       command.append('\'');

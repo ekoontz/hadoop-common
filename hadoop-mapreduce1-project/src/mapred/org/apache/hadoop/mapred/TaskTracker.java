@@ -4261,8 +4261,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         
         // drop cache if possible
         if (tracker.manageOsCacheInShuffle && info.partLength > 0) {
-          NativeIO.posixFadviseIfPossible(mapOutputIn.getFD(),
-              info.startOffset, info.partLength, NativeIO.POSIX_FADV_DONTNEED);
+          NativeIO.POSIX.posixFadviseIfPossible(mapOutputIn.getFD(),
+              info.startOffset, info.partLength,
+              NativeIO.POSIX.POSIX_FADV_DONTNEED);
         }
 
         if (LOG.isDebugEnabled()) {

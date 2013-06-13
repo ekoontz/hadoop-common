@@ -432,10 +432,6 @@
       <fileset dir="${contrib.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
-
-    <exec executable="sh">
-       <arg line="src/saveVersion.sh ${version} ${build.dir}"/>
-    </exec>
   </target>
 
   <!-- ====================================================== -->

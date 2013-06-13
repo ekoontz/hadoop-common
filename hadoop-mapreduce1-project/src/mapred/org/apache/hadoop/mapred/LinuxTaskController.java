@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.System;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -76,7 +77,7 @@ class LinuxTaskController extends TaskController {
   public void setConf(Configuration conf) {
     super.setConf(conf);
     File hadoopSbin = new File(System.getenv("HADOOP_HOME"), "sbin");
-    File nativeSbin = new File(hadoopSbin, PlatformName.getPlatformName());
+    File nativeSbin = new File(hadoopSbin, System.getProperty("os.name"));
     String defaultTaskController = 
         new File(nativeSbin, "task-controller").getAbsolutePath();
     taskControllerExe = conf.get(TASK_CONTROLLER_EXEC_KEY, 

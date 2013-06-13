@@ -463,13 +463,7 @@ public class TrackerDistributedCacheManager {
         // else will not do anyhting
         // and copy the file into the dir as it is
       }
-      try {
-        FileUtil.chmod(destDir.toString(), "ugo+rx", true);
-      } catch (InterruptedException ie) {
-        // This exception is never actually thrown, but the signature says
-        // it is, and we can't make the incompatible change within CDH
-        throw new IOException("Interrupted while chmodding", ie);
-      }
+      FileUtil.chmod(destDir.toString(), "ugo+rx", true);
     }
     // promote the output to the final location
     if (!localFs.rename(workDir, finalDir)) {
