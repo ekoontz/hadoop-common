@@ -331,7 +331,7 @@ public class YarnConfiguration extends Configuration {
     RM_PREFIX + "scheduler.class";
  
   public static final String DEFAULT_RM_SCHEDULER = 
-      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler";
+      "org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler";
 
   /** RM set next Heartbeat interval for NM */
   public static final String RM_NM_HEARTBEAT_INTERVAL_MS =
