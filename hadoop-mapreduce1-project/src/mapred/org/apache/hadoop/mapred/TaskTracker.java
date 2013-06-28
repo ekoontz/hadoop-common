@@ -843,7 +843,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     deleteUserDirectories(fConf);
 
-    asyncDiskService = new MRAsyncDiskService(fConf);
+    asyncDiskService =
+        new MRAsyncDiskService(localFs, taskController, fConf.getLocalDirs());
     asyncDiskService.cleanupDirsInAllVolumes(dirsToCleanup);
 
     final FsPermission ttdir = FsPermission.createImmutable((short) 0755);

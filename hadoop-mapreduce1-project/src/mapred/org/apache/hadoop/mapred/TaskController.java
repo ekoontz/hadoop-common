@@ -172,13 +172,14 @@ public abstract class TaskController implements Configurable {
   public abstract void truncateLogsAsUser(String user, List<Task> allAttempts) 
   throws IOException;
   
-  static class DeletionContext extends CleanupQueue.PathDeletionContext {
+  public static class DeletionContext extends CleanupQueue.PathDeletionContext {
     private TaskController controller;
     private boolean isLog;
     private String user;
     private String subDir;
-    DeletionContext(TaskController controller, boolean isLog, String user, 
-                    String subDir) {
+
+    public DeletionContext(TaskController controller, boolean isLog,
+        String user, String subDir) {
       super(null, null);
       this.controller = controller;
       this.isLog = isLog;

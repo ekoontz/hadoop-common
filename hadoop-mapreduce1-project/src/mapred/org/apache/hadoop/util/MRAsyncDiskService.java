@@ -29,8 +29,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.CleanupQueue;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.mapred.TaskLog;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class is a container of multiple thread pools, each for a volume,
@@ -49,8 +53,10 @@ import org.apache.hadoop.mapred.TaskLog;
 public class MRAsyncDiskService {
   
   public static final Log LOG = LogFactory.getLog(MRAsyncDiskService.class);
-  
+  boolean shouldBeSecure = UserGroupInformation.isSecurityEnabled();
   AsyncDiskService asyncDiskService;
+  TaskController taskController;
+  private CleanupQueue cleanupQueue;
   
   public static final String TOBEDELETED = "toBeDeleted";
   
@@ -67,8 +73,10 @@ public class MRAsyncDiskService {
    * ("cwd").
    */
   public MRAsyncDiskService(FileSystem localFileSystem,
+      TaskController taskController,
       String[] nonCanonicalVols) throws IOException {
-    
+    this.taskController = taskController;
+    this.cleanupQueue = CleanupQueue.getInstance();
     this.localFileSystem = localFileSystem;
     this.volumes = new String[nonCanonicalVols.length];
     for (int v = 0; v < nonCanonicalVols.length; v++) {
@@ -106,12 +114,22 @@ public class MRAsyncDiskService {
           String absoluteFilename = files[f].getPath().toUri().getPath();
           String relative = TOBEDELETED + Path.SEPARATOR_CHAR
               + files[f].getPath().getName();
-          DeleteTask task = new DeleteTask(volumes[v], absoluteFilename,
-              relative);
-          execute(volumes[v], task);
+          if (shouldBeSecure) {
+            deletePathsInSecureCluster(absoluteFilename, files[f]);
+          } else {
+            DeleteTask task =
+                new DeleteTask(volumes[v], absoluteFilename, relative,
+                    files[f].getOwner());
+            execute(volumes[v], task);
+          }
         }
       }
     }
+  }
+
+  public MRAsyncDiskService(FileSystem localFileSystem,
+                            String[] nonCanonicalVols) throws IOException {
+    this(localFileSystem, null, nonCanonicalVols);
   }
 
   /**
@@ -185,15 +203,19 @@ public class MRAsyncDiskService {
     String originalPath;
     /** The file name after the move */
     String pathToBeDeleted;
+    String owner;
     
     /**
      * Delete a file/directory (recursively if needed).
-     * @param volume        The volume that the file/dir is in.
-     * @param originalPath  The original name, relative to volume root.
-     * @param pathToBeDeleted  The name after the move, relative to volume root,
-     *                         containing TOBEDELETED.
+     * 
+     * @param volume The volume that the file/dir is in.
+     * @param originalPath The original name, relative to volume root.
+     * @param pathToBeDeleted The name after the move, relative to volume root,
+     *          containing TOBEDELETED.
+     * @param owner The owner of the file
      */
-    DeleteTask(String volume, String originalPath, String pathToBeDeleted) {
+    DeleteTask(String volume, String originalPath, String pathToBeDeleted,
+        String owner) {
       this.volume = volume;
       this.originalPath = originalPath;
       this.pathToBeDeleted = pathToBeDeleted;
@@ -212,7 +234,12 @@ public class MRAsyncDiskService {
       Exception e = null;
       try {
         Path absolutePathToBeDeleted = new Path(volume, pathToBeDeleted);
-        success = localFileSystem.delete(absolutePathToBeDeleted, true);
+        if (taskController != null & owner != null) {
+          taskController
+              .deleteAsUser(owner, absolutePathToBeDeleted.toString());
+        } else {
+          success = localFileSystem.delete(absolutePathToBeDeleted, true);
+        }
       } catch (Exception ex) {
         e = ex;
       }
@@ -280,9 +307,42 @@ public class MRAsyncDiskService {
       return false;
     }
 
-    DeleteTask task = new DeleteTask(volume, pathName, newPathName);
-    execute(volume, task);
+    FileStatus status = localFileSystem.getFileStatus(target);
+
+    if (shouldBeSecure) {
+      deletePathsInSecureCluster(newPathName, status);
+    } else {
+      DeleteTask task =
+          new DeleteTask(volume, pathName, newPathName, status.getOwner());
+      execute(volume, task);
+    }
     return true;
+  }
+
+  private void deletePathsInSecureCluster(String newPathName, FileStatus status)
+      throws FileNotFoundException, IOException {
+    // In a secure tasktracker, the subdirectories belong
+    // to different user
+    PathDeletionContext item = null;
+
+    // iterate and queue subdirectories for cleanup
+    for (FileStatus subDirStatus : localFileSystem.listStatus(status.getPath())) {
+      String owner = subDirStatus.getOwner();
+      String path = subDirStatus.getPath().getName();
+      if (path.equals(owner)) {
+        // add it to the cleanup queue
+
+        item =
+            new TaskController.DeletionContext(taskController, false, owner,
+                newPathName + Path.SEPARATOR_CHAR + path);
+        cleanupQueue.addToQueue(item);
+      }
+    }
+    // queue the parent directory for cleanup
+    item =
+        new TaskController.DeletionContext(taskController, false,
+            status.getOwner(), newPathName);
+    cleanupQueue.addToQueue(item);
   }
 
   /**
