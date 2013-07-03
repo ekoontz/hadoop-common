@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -202,13 +203,13 @@ public class DelegationTokenRenewal {
    */
   private static class RenewalTimerTask extends TimerTask {
     private DelegationTokenToRenew dttr;
-    private boolean cancelled = false;
+    private AtomicBoolean cancelled = new AtomicBoolean(false);
     
     RenewalTimerTask(DelegationTokenToRenew t) {  dttr = t;  }
     
     @Override
-    public synchronized void run() {
-      if (cancelled) {
+    public void run() {
+      if (cancelled.get()) {
         return;
       }
 
@@ -236,8 +237,8 @@ public class DelegationTokenRenewal {
     }
 
     @Override
-    public synchronized boolean cancel() {
-      cancelled = true;
+    public boolean cancel() {
+      cancelled.set(true);
       return super.cancel();
     }
   }
