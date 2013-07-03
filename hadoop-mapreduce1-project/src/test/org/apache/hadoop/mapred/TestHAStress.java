@@ -124,6 +124,7 @@ public class TestHAStress {
     conf.setLong(HAUtil.MR_HA_ACTIVE_CHECK_MILLIS, 1000);
     conf.setBoolean("mapred.job.tracker.persist.jobstatus.active", true);
     conf.setInt("mapred.job.tracker.persist.jobstatus.hours", 1);
+    conf.set("mapred.job.tracker.persist.jobstatus.dir", "/tmp/jobtracker/jobsInfo");
     cluster = new MiniMRHACluster(conf);
     cluster.getJobTrackerHaDaemon(0).makeActive();
     cluster.startTaskTracker(0, 1);
