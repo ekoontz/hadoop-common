@@ -3134,6 +3134,7 @@ public class JobInProgress {
    * from the various tables.
    */
   void garbageCollect() {
+    FileSystem tempDirFs = null;
     synchronized(this) {
       // Cancel task tracker reservation
       cancelReservedSlots();
@@ -3165,6 +3166,7 @@ public class JobInProgress {
         if (jobTempDir != null && conf.getKeepTaskFilesPattern() == null &&
             !conf.getKeepFailedTaskFiles()) {
           Path jobTempDirPath = new Path(jobTempDir);
+          tempDirFs = jobTempDirPath.getFileSystem(conf);
           CleanupQueue.getInstance().addToQueue(
               new PathDeletionContext(jobTempDirPath, conf, userUGI, jobId));
         }
@@ -3181,13 +3183,16 @@ public class JobInProgress {
       this.nonRunningReduces = null;
       this.runningReduces = null;
     }
-    
-    //close the user's FS
-    try {
-      FileSystem.closeAllForUGI(userUGI);
-    } catch (IOException ie) {
-      LOG.warn("Ignoring exception " + StringUtils.stringifyException(ie) + 
-          " while closing FileSystem for " + userUGI);
+
+    // Close the user's FS.  Or don't, in the common case of FS being the same
+    // FS as the temp directory FS, as it will be closed by the CleanupQueue.
+    if (tempDirFs != fs) {
+      try {
+        fs.close();
+      } catch (IOException ie) {
+        LOG.warn("Ignoring exception " + StringUtils.stringifyException(ie) + 
+            " while closing FileSystem for " + userUGI);
+      }
     }
   }
 
