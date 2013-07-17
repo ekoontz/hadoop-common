@@ -488,7 +488,7 @@ public class TestJobHistory extends TestCase {
     JobHistory.JobInfo jobInfo = new JobHistory.JobInfo(jobId);
 
     TestListener l = new TestListener(jobInfo);
-    JobHistory.parseHistoryFromFS(logFile.toString().substring(5), l, fileSys);
+    JobHistory.parseHistoryFromFS(logFile.toString(), l, fileSys);
 
 
     // validate format of job level key, values
@@ -795,7 +795,7 @@ public class TestJobHistory extends TestCase {
 
     DefaultJobHistoryParser.JobTasksParseListener l =
                    new DefaultJobHistoryParser.JobTasksParseListener(jobInfo);
-    JobHistory.parseHistoryFromFS(logFile.toString().substring(5), l, fileSys);
+    JobHistory.parseHistoryFromFS(logFile.toString(), l, fileSys);
 
     // Now the history file contents are available in jobInfo. Let us compare
     // them with the actual values from JT.
