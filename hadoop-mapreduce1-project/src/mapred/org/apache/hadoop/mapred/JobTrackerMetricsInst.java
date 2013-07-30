@@ -24,6 +24,7 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 
 class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater {
+  
   private final MetricsRecord metricsRecord;
 
   private int numMapTasksLaunched = 0;
@@ -165,9 +166,12 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   }
 
   @Override
-  public synchronized void launchMap(TaskAttemptID taskAttemptID) {
+  public synchronized void launchMap(TaskAttemptID taskAttemptID,
+      boolean speculative) {
     ++numMapTasksLaunched;
-    decWaitingMaps(taskAttemptID.getJobID(), 1);
+    if (!speculative) {
+      decWaitingMaps(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
@@ -176,15 +180,21 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   }
 
   @Override
-  public synchronized void failedMap(TaskAttemptID taskAttemptID) {
+  public synchronized void failedMap(TaskAttemptID taskAttemptID,
+      boolean incWaiting) {
     ++numMapTasksFailed;
-    addWaitingMaps(taskAttemptID.getJobID(), 1);
+    if (incWaiting) {
+      addWaitingMaps(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
-  public synchronized void launchReduce(TaskAttemptID taskAttemptID) {
+  public synchronized void launchReduce(TaskAttemptID taskAttemptID,
+      boolean speculative) {
     ++numReduceTasksLaunched;
-    decWaitingReduces(taskAttemptID.getJobID(), 1);
+    if (!speculative) {
+      decWaitingReduces(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
@@ -193,9 +203,12 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   }
 
   @Override
-  public synchronized void failedReduce(TaskAttemptID taskAttemptID) {
+  public synchronized void failedReduce(TaskAttemptID taskAttemptID,
+      boolean incWaiting) {
     ++numReduceTasksFailed;
-    addWaitingReduces(taskAttemptID.getJobID(), 1);
+    if (incWaiting) {
+      addWaitingReduces(taskAttemptID.getJobID(), 1);
+    }
   }
 
   @Override
