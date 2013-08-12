@@ -228,14 +228,14 @@ public class TestIPC {
   }
   
   @Test(timeout=60000)
-  public void testSerial() throws IOException, InterruptedException {
+  public void testSerial() throws Exception {
     internalTestSerial(3, false, 2, 5, 100);
     internalTestSerial(3, true, 2, 5, 10);
   }
 
   public void internalTestSerial(int handlerCount, boolean handlerSleep,
                          int clientCount, int callerCount, int callCount)
-    throws IOException, InterruptedException {
+    throws Exception {
     Server server = new TestServer(handlerCount, handlerSleep);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();
@@ -261,7 +261,7 @@ public class TestIPC {
   }
 	
   @Test(timeout=60000)
-  public void testStandAloneClient() throws IOException {
+  public void testStandAloneClient() throws Exception {
     Client client = new Client(LongWritable.class, conf);
     InetSocketAddress address = new InetSocketAddress("127.0.0.1", 10);
     try {
@@ -361,8 +361,7 @@ public class TestIPC {
       Class<? extends LongWritable> clientParamClass,
       Class<? extends LongWritable> serverParamClass,
       Class<? extends LongWritable> serverResponseClass,
-      Class<? extends LongWritable> clientResponseClass) 
-      throws IOException, InstantiationException, IllegalAccessException {
+      Class<? extends LongWritable> clientResponseClass) throws Exception {
     
     // start server
     Server server = new TestServer(1, false,
@@ -493,7 +492,7 @@ public class TestIPC {
    * to the client.
    */
   @Test(timeout=60000)
-  public void testSocketFactoryException() throws IOException {
+  public void testSocketFactoryException() throws Exception {
     SocketFactory mockFactory = mock(SocketFactory.class);
     doThrow(new IOException("Injected fault")).when(mockFactory).createSocket();
     Client client = new Client(LongWritable.class, conf, mockFactory);
@@ -515,7 +514,7 @@ public class TestIPC {
    * HADOOP-7428.
    */
   @Test(timeout=60000)
-  public void testRTEDuringConnectionSetup() throws IOException {
+  public void testRTEDuringConnectionSetup() throws Exception {
     // Set up a socket factory which returns sockets which
     // throw an RTE when setSoTimeout is called.
     SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(conf));
@@ -556,7 +555,7 @@ public class TestIPC {
   }
   
   @Test(timeout=60000)
-  public void testIpcTimeout() throws IOException {
+  public void testIpcTimeout() throws Exception {
     // start server
     Server server = new TestServer(1, true);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -578,7 +577,7 @@ public class TestIPC {
   }
 
   @Test(timeout=60000)
-  public void testIpcConnectTimeout() throws IOException {
+  public void testIpcConnectTimeout() throws Exception {
     // start server
     Server server = new TestServer(1, true);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -601,7 +600,7 @@ public class TestIPC {
    * Check service class byte in IPC header is correct on wire.
    */
   @Test(timeout=60000)
-  public void testIpcWithServiceClass() throws IOException {
+  public void testIpcWithServiceClass() throws Exception {
     // start server
     Server server = new TestServer(5, false);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -877,7 +876,7 @@ public class TestIPC {
    * Make a call from a client and verify if header info is changed in server side
    */
   private void callAndVerify(Server server, InetSocketAddress addr,
-      int serviceClass, boolean noChanged) throws IOException{
+      int serviceClass, boolean noChanged) throws Exception{
     Client client = new Client(LongWritable.class, conf);
 
     client.call(new LongWritable(RANDOM.nextLong()),
@@ -911,7 +910,7 @@ public class TestIPC {
    * and stopping IPC servers.
    */
   @Test(timeout=60000)
-  public void testSocketLeak() throws IOException {
+  public void testSocketLeak() throws Exception {
     Assume.assumeTrue(FD_DIR.exists()); // only run on Linux
 
     long startFds = countOpenFileDescriptors();
@@ -931,31 +930,31 @@ public class TestIPC {
   }
 
   @Test(timeout=60000)
-  public void testIpcFromHadoop_0_18_13() throws IOException {
+  public void testIpcFromHadoop_0_18_13() throws Exception {
     doIpcVersionTest(NetworkTraces.HADOOP_0_18_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_18_3_RPC);
   }
   
   @Test(timeout=60000)
-  public void testIpcFromHadoop0_20_3() throws IOException {
+  public void testIpcFromHadoop0_20_3() throws Exception {
     doIpcVersionTest(NetworkTraces.HADOOP_0_20_3_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_20_3_RPC);
   }
   
   @Test(timeout=60000)
-  public void testIpcFromHadoop0_21_0() throws IOException {
+  public void testIpcFromHadoop0_21_0() throws Exception {
     doIpcVersionTest(NetworkTraces.HADOOP_0_21_0_RPC_DUMP,
         NetworkTraces.RESPONSE_TO_HADOOP_0_21_0_RPC);
   }
   
   @Test(timeout=60000)
-  public void testHttpGetResponse() throws IOException {
+  public void testHttpGetResponse() throws Exception {
     doIpcVersionTest("GET / HTTP/1.0\r\n\r\n".getBytes(),
         Server.RECEIVED_HTTP_REQ_RESPONSE.getBytes());
   }
   
   @Test(timeout=60000)
-  public void testConnectionRetriesOnSocketTimeoutExceptions() throws IOException {
+  public void testConnectionRetriesOnSocketTimeoutExceptions() throws Exception {
     Configuration conf = new Configuration();
     // set max retries to 0
     conf.setInt(
@@ -981,7 +980,7 @@ public class TestIPC {
    * (2) the rpc client receives the same call id/retry from the rpc server.
    */
   @Test(timeout=60000)
-  public void testCallIdAndRetry() throws IOException {
+  public void testCallIdAndRetry() throws Exception {
     final CallInfo info = new CallInfo();
 
     // Override client to store the call info and check response
@@ -1033,7 +1032,7 @@ public class TestIPC {
    * Test the retry count while used in a retry proxy.
    */
   @Test(timeout=60000)
-  public void testRetryProxy() throws IOException {
+  public void testRetryProxy() throws Exception {
     final Client client = new Client(LongWritable.class, conf);
     
     final TestServer server = new TestServer(1, false);
@@ -1070,7 +1069,7 @@ public class TestIPC {
    * Test if the rpc server gets the default retry count (0) from client.
    */
   @Test(timeout=60000)
-  public void testInitialCallRetryCount() throws IOException {
+  public void testInitialCallRetryCount() throws Exception {
     // Override client to store the call id
     final Client client = new Client(LongWritable.class, conf);
 
@@ -1101,9 +1100,8 @@ public class TestIPC {
    * Test if the rpc server gets the retry count from client.
    */
   @Test(timeout=60000)
-  public void testCallRetryCount() throws IOException {
+  public void testCallRetryCount() throws Exception {
     final int retryCount = 255;
-    // Override client to store the call id
     final Client client = new Client(LongWritable.class, conf);
     Client.setCallIdAndRetryCount(Client.nextCallId(), 255);
 
@@ -1133,11 +1131,9 @@ public class TestIPC {
   /**
    * Tests that client generates a unique sequential call ID for each RPC call,
    * even if multiple threads are using the same client.
- * @throws InterruptedException 
    */
   @Test(timeout=60000)
-  public void testUniqueSequentialCallIds() 
-      throws IOException, InterruptedException {
+  public void testUniqueSequentialCallIds() throws Exception {
     int serverThreads = 10, callerCount = 100, perCallerCallCount = 100;
     TestServer server = new TestServer(serverThreads, false);
 
@@ -1202,7 +1198,7 @@ public class TestIPC {
   
   private void doIpcVersionTest(
       byte[] requestData,
-      byte[] expectedResponse) throws IOException {
+      byte[] expectedResponse) throws Exception {
     Server server = new TestServer(1, true);
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
     server.start();

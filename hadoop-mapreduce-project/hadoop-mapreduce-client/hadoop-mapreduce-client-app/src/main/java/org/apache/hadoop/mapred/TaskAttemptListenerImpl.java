@@ -63,7 +63,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
  * This class HAS to be in this package to access package private 
  * methods/classes.
  */
-@SuppressWarnings({"unchecked"})
+@SuppressWarnings({"unchecked" , "deprecation"})
 public class TaskAttemptListenerImpl extends CompositeService 
     implements TaskUmbilicalProtocol, TaskAttemptListener {
 
@@ -118,14 +118,11 @@ public class TaskAttemptListenerImpl extends CompositeService
   protected void startRpcServer() {
     Configuration conf = getConfig();
     try {
-      server = 
-          new RPC.Builder(conf).setProtocol(TaskUmbilicalProtocol.class)
-            .setInstance(this).setBindAddress("0.0.0.0")
-            .setPort(0).setNumHandlers(
-                conf.getInt(MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT, 
-                    MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT))
-                    .setVerbose(false).setSecretManager(jobTokenSecretManager)
-                    .build();
+      server =
+          RPC.getServer(TaskUmbilicalProtocol.class, this, "0.0.0.0", 0, 
+              conf.getInt(MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT, 
+                  MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT),
+              false, conf, jobTokenSecretManager);
       
       // Enable service authorization?
       if (conf.getBoolean(

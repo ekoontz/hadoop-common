@@ -341,7 +341,7 @@ public class TestRPC {
   }
   
   @Test
-  public void testConfRpc() throws IOException {
+  public void testConfRpc() throws Exception {
     Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(1).setVerbose(false).build();
@@ -368,7 +368,7 @@ public class TestRPC {
   }
 
   @Test
-  public void testProxyAddress() throws IOException {
+  public void testProxyAddress() throws Exception {
     Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0).build();
     TestProtocol proxy = null;
@@ -390,7 +390,7 @@ public class TestRPC {
   }
 
   @Test
-  public void testSlowRpc() throws IOException {
+  public void testSlowRpc() throws Exception {
     System.out.println("Testing Slow RPC");
     // create a server with two handlers
     Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
@@ -436,11 +436,11 @@ public class TestRPC {
   }
   
   @Test
-  public void testCalls() throws IOException {
+  public void testCalls() throws Exception {
     testCallsInternal(conf);
   }
   
-  private void testCallsInternal(Configuration conf) throws IOException {
+  private void testCallsInternal(Configuration conf) throws Exception {
     Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0).build();
     TestProtocol proxy = null;
@@ -560,7 +560,7 @@ public class TestRPC {
     
   }
   
-  private void doRPCs(Configuration conf, boolean expectFailure) throws IOException {
+  private void doRPCs(Configuration conf, boolean expectFailure) throws Exception {
     Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true).build();
@@ -619,7 +619,7 @@ public class TestRPC {
   }
 
   @Test
-  public void testAuthorization() throws IOException {
+  public void testAuthorization() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
@@ -646,7 +646,7 @@ public class TestRPC {
    * Switch off setting socketTimeout values on RPC sockets.
    * Verify that RPC calls still work ok.
    */
-  public void testNoPings() throws IOException {
+  public void testNoPings() throws Exception {
     Configuration conf = new Configuration();
     
     conf.setBoolean("ipc.client.ping", false);
@@ -658,10 +658,10 @@ public class TestRPC {
 
   /**
    * Test stopping a non-registered proxy
-   * @throws IOException
+   * @throws Exception
    */
   @Test(expected=HadoopIllegalArgumentException.class)
-  public void testStopNonRegisteredProxy() throws IOException {
+  public void testStopNonRegisteredProxy() throws Exception {
     RPC.stopProxy(null);
   }
 
@@ -701,7 +701,7 @@ public class TestRPC {
   }
 
   @Test
-  public void testErrorMsgForInsecureClient() throws IOException {
+  public void testErrorMsgForInsecureClient() throws Exception {
     Configuration serverConf = new Configuration(conf);
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS,
                                          serverConf);
@@ -786,7 +786,7 @@ public class TestRPC {
    * Test that server.stop() properly stops all threads
    */
   @Test
-  public void testStopsAllThreads() throws IOException, InterruptedException {
+  public void testStopsAllThreads() throws Exception {
     int threadsBefore = countThreads("Server$Listener$Reader");
     assertEquals("Expect no Reader threads running before test",
       0, threadsBefore);
@@ -817,7 +817,7 @@ public class TestRPC {
   }
   
   @Test
-  public void testRPCBuilder() throws IOException {
+  public void testRPCBuilder() throws Exception {
     // Test mandatory field conf
     try {
       new RPC.Builder(null).setProtocol(TestProtocol.class)
@@ -853,13 +853,11 @@ public class TestRPC {
   }
   
   @Test(timeout=90000)
-  public void testRPCInterruptedSimple() throws IOException {
+  public void testRPCInterruptedSimple() throws Exception {
     final Configuration conf = new Configuration();
-    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
-        .setInstance(new TestImpl()).setBindAddress(ADDRESS)
-        .setPort(0).setNumHandlers(5).setVerbose(true)
-        .setSecretManager(null).build();
-    
+    Server server = RPC.getServer(
+      TestProtocol.class, new TestImpl(), ADDRESS, 0, 5, true, conf, null
+    );
     server.start();
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
 
@@ -886,10 +884,9 @@ public class TestRPC {
   @Test(timeout=30000)
   public void testRPCInterrupted() throws IOException, InterruptedException {
     final Configuration conf = new Configuration();
-    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
-        .setInstance(new TestImpl()).setBindAddress(ADDRESS)
-        .setPort(0).setNumHandlers(5).setVerbose(true)
-        .setSecretManager(null).build();
+    Server server = RPC.getServer(
+      TestProtocol.class, new TestImpl(), ADDRESS, 0, 5, true, conf, null
+    );
 
     server.start();
 
@@ -1009,7 +1006,7 @@ public class TestRPC {
     }
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
     new TestRPC().testCallsInternal(conf);
 
   }
