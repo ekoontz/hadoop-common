@@ -1789,7 +1789,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     String exceptionMsgRegex = conf.get("mapreduce.reduce.shuffle.catch.exception.message.regex");
     server.setAttribute("exceptionStackRegex", exceptionStackRegex);
     server.setAttribute("exceptionMsgRegex", exceptionMsgRegex);
-    server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
+    shuffleProviderPlugin.initialize(this);
     server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
 
     boolean shuffleSsl = conf.getBoolean(JobTracker.SHUFFLE_SSL_ENABLED_KEY,
