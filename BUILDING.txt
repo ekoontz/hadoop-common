@@ -129,7 +129,7 @@ The version of Protocol Buffer compiler, protoc, must match the version of the
 protobuf JAR.
 
 If you have multiple versions of protoc in your system, you can set in your 
-build shell the HADOOP_PROTOC_PATH environment variable to point to the one you 
+build shell the HADOOP_PROTOC_CDH5_PATH environment variable to point to the one you 
 want to use for the Hadoop build. If you don't define this environment variable,
 protoc is looked up in the PATH.
 ----------------------------------------------------------------------------------
