@@ -428,7 +428,7 @@ public class DistributedCache {
    */
   public static void addFileToClassPath(Path file, Configuration conf)
         throws IOException {
-    addFileToClassPath(file, conf, FileSystem.get(conf));
+    addFileToClassPath(file, conf, file.getFileSystem(conf));
   }
 
   /**
@@ -481,7 +481,7 @@ public class DistributedCache {
   public static void addArchiveToClassPath
          (Path archive, Configuration conf)
       throws IOException {
-    addArchiveToClassPath(archive, conf, FileSystem.get(conf));
+    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
   }
 
   /**
