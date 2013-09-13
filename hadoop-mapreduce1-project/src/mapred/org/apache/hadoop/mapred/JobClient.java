@@ -36,6 +36,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -57,6 +58,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
@@ -78,6 +80,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1009,6 +1012,19 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           // because of it if present as the referral will point to a
           // different job.
           TokenCache.cleanUpTokenReferral(jobCopy);
+
+          if (jobCopy.getBoolean(
+              MRJobConfig.JOB_TOKEN_TRACKING_IDS_ENABLED,
+              MRJobConfig.DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED)) {
+            // Add HDFS tracking ids
+            ArrayList<String> trackingIds = new ArrayList<String>();
+            for (Token<? extends TokenIdentifier> t :
+                job.getCredentials().getAllTokens()) {
+              trackingIds.add(t.decodeIdentifier().getTrackingId());
+            }
+            jobCopy.setStrings(MRJobConfig.JOB_TOKEN_TRACKING_IDS,
+                trackingIds.toArray(new String[trackingIds.size()]));
+          }
 
           try {
             jobCopy.writeXml(out);

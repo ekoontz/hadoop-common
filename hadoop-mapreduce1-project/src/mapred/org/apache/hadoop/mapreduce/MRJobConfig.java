@@ -35,4 +35,11 @@ public interface MRJobConfig {
 
   public static final String COUNTER_GROUPS_MAX_KEY = "mapreduce.job.counters.groups.max";
   public static final int COUNTER_GROUPS_MAX_DEFAULT = 50;
+
+  /* Configs for tracking ids of tokens used by a job */
+  public static final String JOB_TOKEN_TRACKING_IDS_ENABLED =
+      "mapreduce.job.token.tracking.ids.enabled";
+  public static final boolean DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED = false;
+  public static final String JOB_TOKEN_TRACKING_IDS =
+      "mapreduce.job.token.tracking.ids";
 }
