@@ -190,6 +190,9 @@
      includes="**/*.java"
      destdir="${build.classes}"
      debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${targetJavaVersion}"
+     source="${javac.version}"
      deprecation="${javac.deprecation}">
      <classpath refid="contrib-classpath"/>
     </javac>
@@ -206,7 +209,11 @@
      srcdir="${src.examples}"
      includes="**/*.java"
      destdir="${build.examples}"
-     debug="${javac.debug}">
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${targetJavaVersion}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
      <classpath refid="contrib-classpath"/>
     </javac>
   </target>
@@ -223,7 +230,11 @@
      includes="**/*.java"
      excludes="system/**/*.java"
      destdir="${build.test}"
-     debug="${javac.debug}">
+     debug="${javac.debug}"
+     optimize="${javac.optimize}"
+     target="${targetJavaVersion}"
+     source="${javac.version}"
+     deprecation="${javac.deprecation}">
     <classpath refid="test.classpath"/>
     </javac>
   </target>
@@ -239,7 +250,11 @@
        srcdir="${src.test.system}"
        includes="**/*.java"
        destdir="${build.system.classes}"
-       debug="${javac.debug}">
+       debug="${javac.debug}"
+       optimize="${javac.optimize}"
+       target="${targetJavaVersion}"
+       source="${javac.version}"
+       deprecation="${javac.deprecation}">
       <classpath refid="test.system.classpath"/>
     </javac>
   </target>

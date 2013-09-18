@@ -28,6 +28,8 @@
   <!-- ====================================================== -->
   <target name="compile">
     <subant target="compile">
+      <property name="javac.version" value="${javac.version}"/>
+      <property name="targetJavaVersion" value="${targetJavaVersion}"/>
       <fileset dir="." includes="*/build.xml" excludes="mrunit/build.xml"/>
     </subant>
   </target>
