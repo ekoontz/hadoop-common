@@ -374,9 +374,8 @@
   </macrodef>
 
   <target name="jvm-check">
-    <property name="javaVersion" value="1.6"/>
-    <property name="targetJavaVersion" value="1.6"/>
-
+    <property name="javaVersion" value="1.7"/>
+    <property name="targetJavaVersion" value="1.7"/>
     <property name="requiredJavaVersion" value="xx${javaVersion}"/>
     <property name="currentJavaVersion" value="xx${java.version}"/>
     <condition property="jvm.fail">
