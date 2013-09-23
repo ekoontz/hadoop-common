@@ -105,7 +105,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
     <javaVersion>1.7</javaVersion>
-    <targetJavaVersion>1.7</targetJavaVersion>
+    <targetJavaVersion>1.6</targetJavaVersion>
   </properties>
 
   <modules>
