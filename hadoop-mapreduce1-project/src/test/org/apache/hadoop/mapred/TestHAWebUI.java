@@ -86,6 +86,7 @@ public class TestHAWebUI {
     cluster.shutdown();
   }
   
+  @Test(timeout=60000)
   public void testRedirect() throws Exception {
 
     // both jobtracker addresses should serve up the jobtracker page

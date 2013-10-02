@@ -214,6 +214,7 @@ public class TestTokenCache {
    * run a distributed job and verify that TokenCache is available
    * @throws IOException
    */
+  @Test
   public void testTokenCache() throws IOException {
     // make sure JT starts
     jConf = mrCluster.createJobConf();

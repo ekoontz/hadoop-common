@@ -368,6 +368,7 @@ public class TestDelegationTokenRenewal {
    * re-used after its been closed
    * @throws Exception
    */
+  @Test
   public void testDTRenewalAfterClose() throws Exception {
       Renewer.counter = 0;
       testDTRenewal();
