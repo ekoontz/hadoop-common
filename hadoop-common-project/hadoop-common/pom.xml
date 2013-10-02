@@ -261,6 +261,7 @@
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
+      <version>${cdh.zookeeper.version}</version>
       <exclusions>
         <exclusion>
           <groupId>jline</groupId>
@@ -288,6 +289,7 @@
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
+      <version>${cdh.zookeeper.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
