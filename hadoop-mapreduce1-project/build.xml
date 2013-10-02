@@ -904,7 +904,7 @@
         <formatter type="${test.junit.output.format}" />
         <batchtest todir="@{test.dir}" if="tests.notestcase">
           <fileset dir="@{fileset.dir}"
-                   excludes="**/${test.exclude}.java aop/** system/**">
+                   excludes="**/${test.exclude}.java aop/** system/** ${tests.exclude}">
             <patternset>
               <includesfile name="@{test.file}"/>
             </patternset>
