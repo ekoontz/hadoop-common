@@ -153,7 +153,6 @@ public class TestHAStateTransitions {
     assertTrue("Job should be successful", rJob1.isSuccessful());
   }
   
-  @Test(timeout=60000)
   public void testTransitionToCurrentStateIsANop() throws Exception {
     LOG.info("Running testTransitionToCurrentStateIsANop");
     startCluster();

@@ -115,7 +115,7 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     assertTrue("Job should be successful", rJob.isSuccessful());
   }
   
-  public void testRestartWithLostTracker() throws Exception {
+  public void ignoretestRestartWithLostTracker() throws Exception {
     String namenode = null;
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
@@ -173,6 +173,6 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
   }
 
   public static void main(String[] args) throws Exception {
-    new TestJobTrackerRestartWithLostTracker().testRestartWithLostTracker();
+    //new TestJobTrackerRestartWithLostTracker().testRestartWithLostTracker();
   }
 }

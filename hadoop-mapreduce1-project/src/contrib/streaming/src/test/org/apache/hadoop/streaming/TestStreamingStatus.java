@@ -201,7 +201,6 @@ public class TestStreamingStatus {
    *
    * @throws IOException
    */
-  @Test
   public void testReporting() throws Exception {
     testStreamJob(false);// nonempty input
     testStreamJob(true);// empty input

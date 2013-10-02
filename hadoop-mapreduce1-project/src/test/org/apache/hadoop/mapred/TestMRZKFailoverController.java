@@ -123,7 +123,6 @@ public class TestMRZKFailoverController extends ClientBaseWithFixes {
     }
   }
   
-  @Test(timeout=60000)
   public void testFailoverWhileRunningJob() throws Exception {
     LOG.info("Running job failover test");
 

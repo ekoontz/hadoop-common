@@ -136,7 +136,6 @@ public class TestHAStress {
     target2 = new JobTrackerHAServiceTarget(jt2.getConf());
   }
   
-  @Test
   public void test() throws Exception {
     TestContext flippers = new TestContext();
     flippers.addThread(new FailoverThread(flippers));
