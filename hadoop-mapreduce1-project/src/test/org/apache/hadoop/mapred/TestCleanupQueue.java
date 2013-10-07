@@ -46,7 +46,7 @@ public class TestCleanupQueue {
     // With UGI, should close FileSystem
     CleanupQueue cleanupQueue = new CleanupQueue();
     PathDeletionContext context = new PathDeletionContext(path, conf,
-        UserGroupInformation.getLoginUser());
+        UserGroupInformation.getLoginUser(), null, null);
     cleanupQueue.addToQueue(context);
     
     while (getFileSystemCacheSize() > 0) {
