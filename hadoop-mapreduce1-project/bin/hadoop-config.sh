@@ -30,16 +30,23 @@ if [ -z "$HADOOP_HOME" ]; then
   export HADOOP_HOME=`dirname "$this"`/..
 fi
 
+if [ -f $HADOOP_HOME/hadoop-core-*.jar ]; then
+  HADOOP_MR1_HOME=$HADOOP_HOME
+else
+  HADOOP_MR1_HOME=$HADOOP_HOME/share/hadoop/mapreduce1
+fi
+
 # double check that our HADOOP_HOME looks reasonable.
 # cding to / here verifies that we have an absolute path, which is
 # necessary for the daemons to function properly
-if [ -z "$(cd / && ls $HADOOP_HOME/hadoop-core-*.jar $HADOOP_HOME/build 2>/dev/null)" ]; then
+if [ -z "$(cd / && ls $HADOOP_MR1_HOME/hadoop-core-*.jar $HADOOP_MR1_HOME/build 2>/dev/null)" ]; then
   cat 1>&2 <<EOF
 +================================================================+
 |      Error: HADOOP_HOME is not set correctly                   |
 +----------------------------------------------------------------+
 | Please set your HADOOP_HOME variable to the absolute path of   |
-| the directory that contains hadoop-core-VERSION.jar            |
+| the directory that contains hadoop-core-VERSION.jar or         |
+| share/hadoop/mapreduce1/hadoop-core-VERSION.jar.               |
 +================================================================+
 EOF
   exit 1
@@ -58,7 +65,11 @@ then
 fi
  
 # Allow alternate conf dir location.
-HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+if [ "$HADOOP_MR1_HOME" = "$HADOOP_HOME" ]; then
+  HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
+else
+  HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/etc/hadoop}"
+fi
 
 if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"

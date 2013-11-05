@@ -117,7 +117,7 @@ case $startStop in
     echo starting $command, logging to $_HADOOP_DAEMON_OUT
     cd "$HADOOP_HOME"
 
-    nice -n $HADOOP_NICENESS "$HADOOP_HOME"/bin/hadoop --config $HADOOP_CONF_DIR $command "$@" < /dev/null
+    nice -n $HADOOP_NICENESS $bin/hadoop --config $HADOOP_CONF_DIR $command "$@" < /dev/null
     ;;
           
   (stop)
