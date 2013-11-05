@@ -50,6 +50,8 @@ class JvmManager {
 
   private JvmManagerForType reduceJvmManager;
   
+  private static final boolean DUMP_STACKS_BEFORE = true;
+  
   public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
       File stdout,File stderr,long logSize, File workDir, 
       JobConf conf) {
@@ -152,20 +154,21 @@ class JvmManager {
     }
   }
 
-  public void taskKilled(TaskRunner tr
-                         ) throws IOException, InterruptedException {
+  public void taskKilled(TaskRunner tr, boolean dumpStacksBefore)
+      throws IOException, InterruptedException {
     if (tr.getTask().isMapTask()) {
-      mapJvmManager.taskKilled(tr);
+      mapJvmManager.taskKilled(tr, dumpStacksBefore);
     } else {
-      reduceJvmManager.taskKilled(tr);
+      reduceJvmManager.taskKilled(tr, dumpStacksBefore);
     }
   }
-
-  public void killJvm(JVMId jvmId) throws IOException, InterruptedException {
+  
+  public void killJvm(JVMId jvmId) throws IOException,
+      InterruptedException {
     if (jvmId.isMap) {
-      mapJvmManager.killJvm(jvmId);
+      mapJvmManager.killJvm(jvmId, !DUMP_STACKS_BEFORE);
     } else {
-      reduceJvmManager.killJvm(jvmId);
+      reduceJvmManager.killJvm(jvmId, !DUMP_STACKS_BEFORE);
     }
   }  
 
@@ -206,6 +209,7 @@ class JvmManager {
     int maxJvms;
     boolean isMap;
     private final long sleeptimeBeforeSigkill;
+    private static final long SLEEPTIME_AFTER_SIGQUIT = 750;
     
     Random rand = new Random(System.currentTimeMillis());
     static final String DELAY_BEFORE_KILL_KEY =
@@ -280,21 +284,20 @@ class JvmManager {
       }
     }
 
-    synchronized public void taskKilled(TaskRunner tr
-                                        ) throws IOException,
-                                                 InterruptedException {
+    synchronized public void taskKilled(TaskRunner tr,
+        boolean dumpStacksBefore) throws IOException, InterruptedException {
       JVMId jvmId = runningTaskToJvm.remove(tr);
       if (jvmId != null) {
         jvmToRunningTask.remove(jvmId);
-        killJvm(jvmId);
+        killJvm(jvmId, dumpStacksBefore);
       }
     }
 
-    synchronized public void killJvm(JVMId jvmId) throws IOException, 
-                                                         InterruptedException {
+    synchronized public void killJvm(JVMId jvmId, boolean dumpStacksBefore)
+        throws IOException, InterruptedException {
       JvmRunner jvmRunner;
       if ((jvmRunner = jvmIdToRunner.get(jvmId)) != null) {
-        killJvmRunner(jvmRunner);
+        killJvmRunner(jvmRunner, dumpStacksBefore);
       }
     }
     
@@ -307,14 +310,13 @@ class JvmManager {
       List <JvmRunner> list = new ArrayList<JvmRunner>();
       list.addAll(jvmIdToRunner.values());
       for (JvmRunner jvm : list) {
-        killJvmRunner(jvm);
+        killJvmRunner(jvm, false);
       }
     }
 
-    private synchronized void killJvmRunner(JvmRunner jvmRunner
-                                            ) throws IOException,
-                                                     InterruptedException {
-      jvmRunner.kill();
+    private synchronized void killJvmRunner(JvmRunner jvmRunner, boolean dumpStacksBefore
+                                            ) throws IOException, InterruptedException {
+      jvmRunner.kill(dumpStacksBefore);
       removeJvm(jvmRunner.jvmId);
     }
 
@@ -378,7 +380,7 @@ class JvmManager {
       if (spawnNewJvm) {
         if (runnerToKill != null) {
           LOG.info("Killing JVM: " + runnerToKill.jvmId);
-          killJvmRunner(runnerToKill);
+          killJvmRunner(runnerToKill, false);
         }
         spawnNewJvm(jobId, env, t);
         return;
@@ -505,7 +507,7 @@ class JvmManager {
         } finally { // handle the exit code
           // although the process has exited before we get here,
           // make sure the entire process group has also been killed.
-          kill();
+          kill(!DUMP_STACKS_BEFORE);
           updateOnJvmExit(jvmId, exitCode);
           LOG.info("JVM : " + jvmId + " exited with exit code " + exitCode
               + ". Number of tasks it ran: " + numTasksRan);
@@ -539,7 +541,7 @@ class JvmManager {
         }
       }
 
-      synchronized void kill() throws IOException, InterruptedException {
+      synchronized void kill(boolean dumpStacksBefore) throws IOException, InterruptedException {
         if (!killed) {
           TaskController controller = tracker.getTaskController();
           // Check inital context before issuing a kill to prevent situations
@@ -548,13 +550,32 @@ class JvmManager {
           if (pidStr != null) {
             String user = env.conf.getUser();
             int pid = Integer.parseInt(pidStr);
-            // start a thread that will kill the process dead
-            if (sleeptimeBeforeSigkill > 0) {
-              new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
-                                       Signal.KILL).start();
-              controller.signalTask(user, pid, Signal.TERM);
+            // Send a signal and then start threads to send additional signals later.
+            // In normal conditions, we send a SIGTERM immediately and a SIGKILL later.
+            // If sleeptimeBeforeSigkill is 0, we don't send the SIGTERM and
+            // instead send the SIGKILL immediately.
+            // If dumpStacksBefore is true, we start with a SIGQUIT (to make the
+            // child process dump its stacks) and then follow up with the
+            // SIGTERM/SIGKILL later.
+            if (dumpStacksBefore) {
+              controller.signalTask(user, pid, Signal.QUIT);
+              if (sleeptimeBeforeSigkill > 0) {
+                new DelayedProcessKiller(user, pid, SLEEPTIME_AFTER_SIGQUIT,
+                    Signal.TERM).start();
+                new DelayedProcessKiller(user, pid, SLEEPTIME_AFTER_SIGQUIT
+                    + sleeptimeBeforeSigkill, Signal.KILL).start();
+              } else {
+                new DelayedProcessKiller(user, pid, SLEEPTIME_AFTER_SIGQUIT,
+                    Signal.KILL).start();
+              }
             } else {
-              controller.signalTask(user, pid, Signal.KILL);
+              if (sleeptimeBeforeSigkill > 0) {
+                controller.signalTask(user, pid, Signal.TERM);
+                new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
+                    Signal.KILL).start();
+              } else {
+                controller.signalTask(user, pid, Signal.KILL);
+              }
             }
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId

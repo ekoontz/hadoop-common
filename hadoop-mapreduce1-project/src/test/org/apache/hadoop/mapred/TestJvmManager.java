@@ -176,7 +176,7 @@ public class TestJvmManager {
     Thread killer = new Thread() {
       public void run() {
         try {
-          jvmRunner.kill();
+          jvmRunner.kill(false);
         } catch (IOException e) {
           e.printStackTrace();
           setThreadCaughtException();
@@ -191,7 +191,7 @@ public class TestJvmManager {
     Thread.sleep(100);
 
     // kill the jvm externally
-    taskRunner.kill();
+    taskRunner.kill(false);
 
     assertTrue(jvmRunner.killed);
 

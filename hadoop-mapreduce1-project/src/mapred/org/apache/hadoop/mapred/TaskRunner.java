@@ -779,12 +779,14 @@ abstract class TaskRunner extends Thread {
 
   /**
    * Kill the child process
+   * @param dumpStacksBefore whether to wait a little before killing the task
    * @throws InterruptedException 
    * @throws IOException 
    */
-  public void kill() throws IOException, InterruptedException {
+  public void kill(boolean dumpStacksBefore) throws IOException,
+      InterruptedException {
     killed = true;
-    jvmManager.taskKilled(this);
+    jvmManager.taskKilled(this, dumpStacksBefore);
     signalDone();
   }
   public void signalDone() {

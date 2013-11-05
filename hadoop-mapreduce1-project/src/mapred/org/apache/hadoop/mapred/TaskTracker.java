@@ -196,6 +196,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
   volatile boolean running = true;
 
+  private final static boolean DUMP_STACKS_BEFORE = true;
+  
   /**
    * Manages TT local storage directories.
    */
@@ -637,7 +639,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       tip = tasks.get(killAction.getTaskID());
     }
     LOG.info("Received KillTaskAction for task: " + killAction.getTaskID());
-    purgeTask(tip, false);
+    purgeTask(tip, false, !DUMP_STACKS_BEFORE);
   }
   
   private void checkJobStatusAndWait(TaskTrackerAction action) 
@@ -1603,7 +1605,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       new TreeMap<TaskAttemptID, TaskInProgress>();
     tasksToClose.putAll(tasks);
     for (TaskInProgress tip : tasksToClose.values()) {
-      tip.jobHasFinished(true, false);
+      tip.jobHasFinished(true, false, false);
     }
     
     this.running = false;
@@ -2399,7 +2401,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           ReflectionUtils.logThreadInfo(LOG, "lost task", 30);
           tip.reportDiagnosticInfo(msg);
           myInstrumentation.timedoutTask(tip.getTask().getTaskID());
-          purgeTask(tip, true);
+          purgeTask(tip, true, DUMP_STACKS_BEFORE);
         }
       }
     }
@@ -2426,7 +2428,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         rjob.distCacheMgr.release();
         // Add this tips of this job to queue of tasks to be purged 
         for (TaskInProgress tip : rjob.tasks) {
-          tip.jobHasFinished(false, false);
+          tip.jobHasFinished(false, false, false);
           Task t = tip.getTask();
           if (t.isMapTask()) {
             indexCache.removeMap(tip.getTask().getTaskID().toString());
@@ -2491,16 +2493,17 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * 
    * @param tip {@link TaskInProgress} to be removed.
    * @param wasFailure did the task fail or was it killed?
+   * @param whether to send quit signal before killing the task
    */
-  private void purgeTask(TaskInProgress tip, boolean wasFailure) 
-  throws IOException {
+  private void purgeTask(TaskInProgress tip, boolean wasFailure,
+      boolean dumpStacksBefore) throws IOException {
     if (tip != null) {
       LOG.info("About to purge task: " + tip.getTask().getTaskID());
         
       // Remove the task from running jobs, 
       // removing the job if it's the last task
       removeTaskFromJob(tip.getTask().getJobID(), tip);
-      tip.jobHasFinished(false, wasFailure);
+      tip.jobHasFinished(false, wasFailure, dumpStacksBefore);
       if (tip.getTask().isMapTask()) {
         indexCache.removeMap(tip.getTask().getTaskID().toString());
       }
@@ -2531,7 +2534,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             " Killing task.";
           LOG.info(killMe.getTask().getTaskID() + ": " + msg);
           killMe.reportDiagnosticInfo(msg);
-          purgeTask(killMe, false);
+          purgeTask(killMe, false, !DUMP_STACKS_BEFORE);
         }
       }
     }
@@ -2793,7 +2796,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       LOG.warn(msg);
       tip.reportDiagnosticInfo(msg);
       try {
-        tip.kill(true);
+        tip.kill(true, false);
         tip.cleanup(false, true);
       } catch (IOException ie2) {
         LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
@@ -3450,9 +3453,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
      * @param ttReInit is the TaskTracker executing re-initialization sequence?
      * @param wasFailure did the task fail, as opposed to was it killed by
      *                   the framework
+     * @param dumpStacksBefore whether the send a quit signal before killing the task
      */
-    public void jobHasFinished(boolean ttReInit, boolean wasFailure) 
-        throws IOException {
+    public void jobHasFinished(boolean ttReInit, boolean wasFailure,
+        boolean dumpStacksBefore) throws IOException {
       // Kill the task if it is still running
       synchronized(this){
         if (getRunState() == TaskStatus.State.RUNNING ||
@@ -3460,7 +3464,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             getRunState() == TaskStatus.State.COMMIT_PENDING ||
             isCleaningup()) {
           try {
-            kill(wasFailure);
+            kill(wasFailure, dumpStacksBefore);
           } catch (InterruptedException e) {
             throw new IOException("Interrupted while killing " +
                 getTask().getTaskID(), e);
@@ -3475,10 +3479,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     /**
      * Something went wrong and the task must be killed.
      * @param wasFailure was it a failure (versus a kill request)?
+     * @param dumpStacksBefore if we should send a SIGQUIT before killing
      * @throws InterruptedException 
      */
-    public synchronized void kill(boolean wasFailure
-                                  ) throws IOException, InterruptedException {
+    public synchronized void kill(boolean wasFailure,
+                                  boolean dumpStacksBefore) throws IOException,
+                                  InterruptedException {
       if (taskStatus.getRunState() == TaskStatus.State.RUNNING ||
           taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING ||
           isCleaningup()) {
@@ -3488,7 +3494,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
         // runner could be null if task-cleanup attempt is not localized yet
         if (runner != null) {
-          runner.kill();
+          runner.kill(dumpStacksBefore);
         }
         setTaskFailState(wasFailure);
       } else if (taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
@@ -3841,7 +3847,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       LOG.fatal("Task: " + taskId + " - Killed due to Shuffle Failure: "
           + message);
       tip.reportDiagnosticInfo("Shuffle Error: " + message);
-      purgeTask(tip, true);
+      purgeTask(tip, true, !DUMP_STACKS_BEFORE);
     } else {
       LOG.warn("Unknown child task shuffleError: " + taskId + ". Ignored.");
     }
@@ -3858,7 +3864,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       validateJVM(tip, jvmContext, taskId);
       LOG.fatal("Task: " + taskId + " - Killed due to FSError: " + message);
       tip.reportDiagnosticInfo("FSError: " + message);
-      purgeTask(tip, true);
+      purgeTask(tip, true, !DUMP_STACKS_BEFORE);
     } else {
       LOG.warn("Unknown child task fsError: "+taskId+". Ignored.");
     }
@@ -3873,7 +3879,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     LOG.fatal("Task: " + taskId + " - Killed due to FSError: " + message);
     TaskInProgress tip = runningTasks.get(taskId);
     tip.reportDiagnosticInfo("FSError: " + message);
-    purgeTask(tip, true);
+    purgeTask(tip, true, !DUMP_STACKS_BEFORE);
   }
 
   /** 
@@ -3887,7 +3893,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       validateJVM(tip, jvmContext, taskId);
       LOG.fatal("Task: " + taskId + " - Killed : " + msg);
       tip.reportDiagnosticInfo("Error: " + msg);
-      purgeTask(tip, true);
+      purgeTask(tip, true, !DUMP_STACKS_BEFORE);
     } else {
       LOG.warn("Unknown child task fatalError: "+taskId+". Ignored.");
     }
@@ -4677,7 +4683,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     if (tip != null) {
       tip.reportDiagnosticInfo(diagnosticMsg);
       try {
-        purgeTask(tip, wasFailure); // Marking it as failed/killed.
+        purgeTask(tip, wasFailure, !DUMP_STACKS_BEFORE); // Marking it as failed/killed.
       } catch (IOException ioe) {
         LOG.warn("Couldn't purge the task of " + tid + ". Error : " + ioe);
       }
