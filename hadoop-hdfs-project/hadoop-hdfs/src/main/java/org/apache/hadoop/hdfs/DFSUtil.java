@@ -535,6 +535,54 @@ public class DFSUtil {
   }
 
   /**
+   * Method to convert host addresses of a set of URIs to IP addresses and
+   * returns the unique ones.
+   *
+   * @param uris a collection of all configured URIs
+   * @return a collection of unique URIs with their host addresses in IP form.
+   */
+  public static Collection<URI> ipizeAndRemoveDuplicates(Collection<URI> uris) {
+    Set<URI> ret = new HashSet<URI>();
+
+    // For each URI, we convert the host to IP address, standardize them and
+    // finally compare them to pick out the unique ones.
+    for (URI uri : uris) {
+      // Get the scheme, host address and port number of each URI.
+      String scheme = uri.getScheme();
+      Integer port = uri.getPort();
+
+      // Resolve hostname into IP address.
+      String address = "";
+      try {
+        address = InetAddress.getByName(uri.getHost()).getHostAddress();
+      } catch (Exception e) {
+        // If we fail to resolve the hostname into IP, we fall back to
+        // use the hostname.
+        address = uri.getHost();
+      }
+
+      // Concatenate the parsed URI into a new one before re-inserting
+      // it into the final set.
+      StringBuilder fullAddrStr = new StringBuilder();
+      if (scheme != null && !scheme.equals(""))
+        fullAddrStr.append(scheme + "://");
+      fullAddrStr.append(address);
+      if (port != -1) fullAddrStr.append(":" + port);
+
+      // Add the parsed full address into the final set.
+      try {
+        ret.add(new URI(fullAddrStr.toString()));
+      } catch (URISyntaxException ue) {
+        // Should not reach here as the input should be well-configured
+        // URIs.
+        throw new IllegalArgumentException(ue);
+       }
+    }
+
+    return ret;
+  }
+
+  /**
    * @return <code>coll</code> if it is non-null and non-empty. Otherwise,
    * returns a list with a single null value.
    */
@@ -944,6 +992,20 @@ public class DFSUtil {
   }
 
   /**
+   * Same as {@link DFSUtil#getNsServiceRpcUris getNsServiceRpcUris} other than
+   * this method only return nameservices which are different in IP or port.
+   *
+   * @param conf configuration
+   * @return a collection of unique and configured NN URIs, preferring service
+   *         addresses
+   */
+  public static Collection<URI> getUniqueNsServiceRpcUris(Configuration conf) {
+    return getUniqueNameServiceUris(conf,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+
+  /**
    * Get a URI for each configured nameservice. If a nameservice is
    * HA-enabled, then the logical URI of the nameservice is returned. If the
    * nameservice is not HA-enabled, then a URI corresponding to the address of
@@ -1021,8 +1083,22 @@ public class DFSUtil {
         !nonPreferredUris.contains(defaultUri)) {
       ret.add(defaultUri);
     }
-    
     return ret;
+  }
+
+  /**
+   * Same as {@link DFSUtil#getNameServiceUris getNameServiceUris} other than
+   * this method only return nameservices which are different in IP or port.
+   *
+   * @param conf configuration
+   * @param keys configuration keys to try in order to get the URI for non-HA
+   *        nameservices
+   * @return a collection of all configured NN URIs are unique based on IP and
+   *         port combination.
+   */
+  public static Collection<URI> getUniqueNameServiceUris(Configuration conf,
+      String... keys) {
+    return ipizeAndRemoveDuplicates(getNameServiceUris(conf, keys));
   }
 
   /**

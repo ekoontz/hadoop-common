@@ -1552,7 +1552,7 @@ public class Balancer {
       try {
         checkReplicationPolicyCompatibility(conf);
 
-        final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+        final Collection<URI> namenodes = DFSUtil.getUniqueNsServiceRpcUris(conf);
         return Balancer.run(namenodes, parse(args), conf);
       } catch (IOException e) {
         System.out.println(e + ".  Exiting ...");

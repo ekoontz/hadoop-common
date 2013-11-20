@@ -41,14 +41,11 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -213,6 +210,34 @@ public class TestDFSUtil {
     assertEquals(2, nameserviceIds.size());
     assertEquals("nn1", it.next().toString());
     assertEquals("nn2", it.next().toString());
+  }
+  
+  /**
+   * Test {@link DFSUtil#ipizeAndRemoveDuplicates(Collection<URI>)}
+  */
+  @Test
+  public void testIpizeAndRemoveDuplicates() throws URISyntaxException {
+    Collection<URI> input = new HashSet<URI>();
+    Collection<URI> output = new HashSet<URI>();
+
+    input.add(new URI("hdfs://localhost:8000"));
+    input.add(new URI("hdfs://localhost:8000/"));
+    input.add(new URI("hdfs://127.0.0.1:8001/"));
+    input.add(new URI("hdfs://127.0.0.1:8020"));
+    output = DFSUtil.ipizeAndRemoveDuplicates(input);
+
+    // Get the localhost to IP mapping.
+    String localhost = "";
+    try {
+      localhost = InetAddress.getByName("localhost").getHostAddress();
+    } catch (Exception e) {
+      localhost = "localhost";
+    }
+
+    assertEquals(true, output.contains(new URI("hdfs://" + localhost + ":8000")));
+    assertEquals(true, output.contains(new URI("hdfs://127.0.0.1:8001")));
+    assertEquals(true, output.contains(new URI("hdfs://127.0.0.1:8020")));
+    assertEquals(3, output.size());
   }
   
   @Test

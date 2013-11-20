@@ -91,7 +91,7 @@ public class S3FileSystem extends FileSystem {
     }
     store.initialize(uri, conf);
     setConf(conf);
-    this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());    
+    this.uri = URI.create(uri.getScheme() + "://" + uri.getRawAuthority());
     this.workingDir =
       new Path("/user", System.getProperty("user.name")).makeQualified(this);
   }  

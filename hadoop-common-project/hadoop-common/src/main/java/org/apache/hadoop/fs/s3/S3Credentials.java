@@ -50,7 +50,7 @@ public class S3Credentials {
       int index = userInfo.indexOf(':');
       if (index != -1) {
         accessKey = userInfo.substring(0, index);
-        secretAccessKey = userInfo.substring(index + 1);
+        secretAccessKey = userInfo.substring(index + 1).replace("%2F","/");
       } else {
         accessKey = userInfo;
       }

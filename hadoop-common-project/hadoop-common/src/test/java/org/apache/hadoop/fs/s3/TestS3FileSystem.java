@@ -37,6 +37,9 @@ public class TestS3FileSystem extends TestCase {
     initializationTest("s3://c", "s3://c");
     initializationTest("s3://c/", "s3://c");
     initializationTest("s3://c/path", "s3://c");
+    initializationTest("s3://a:b%2Fwith%2Fescaped%2Fslashes@c", "s3://a:b%2Fwith%2Fescaped%2Fslashes@c");
+    initializationTest("s3://a:b%2Fwith%2Fescaped%2Fslashes@c/", "s3://a:b%2Fwith%2Fescaped%2Fslashes@c");
+    initializationTest("s3://a:b%2Fwith%2Fescaped%2Fslashes@c/path", "s3://a:b%2Fwith%2Fescaped%2Fslashes@c");
   }
   
   private void initializationTest(String initializationUri, String expectedUri)

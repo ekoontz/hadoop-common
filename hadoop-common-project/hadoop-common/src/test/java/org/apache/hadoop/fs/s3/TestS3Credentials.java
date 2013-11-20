@@ -20,10 +20,13 @@ package org.apache.hadoop.fs.s3;
 import java.net.URI;
 
 import junit.framework.TestCase;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 
 public class TestS3Credentials extends TestCase {
+
+  @Test(timeout=10000)
   public void testInvalidHostnameWithUnderscores() throws Exception {
     S3Credentials s3Credentials = new S3Credentials();
     try {
@@ -33,4 +36,18 @@ public class TestS3Credentials extends TestCase {
       assertEquals("Invalid hostname in URI s3://a:b@c_d", e.getMessage());
     }
   }
+
+  @Test(timeout=10000)
+  public void testUserInfo() throws Exception {
+    S3Credentials s3Credentials = new S3Credentials();
+    // The URI needs to be carefully constructed to cause the initialize code
+    // to fail with an undecoded %2F in the same way that it fails when trying
+    // to use the code with hadoop fs, distcp, or other user-level tools.
+    s3Credentials.initialize(new URI("s3", "my_access_key:+MyVerysecret%2FK3y@s3.hostname.com", 
+				     null, null, null),
+			     new Configuration());
+    assertEquals(s3Credentials.getAccessKey(), "my_access_key");
+    assertEquals(s3Credentials.getSecretAccessKey(), "+MyVerysecret/K3y");
+  }
+
 }
