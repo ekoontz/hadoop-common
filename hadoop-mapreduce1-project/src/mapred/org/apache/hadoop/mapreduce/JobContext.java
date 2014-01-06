@@ -222,7 +222,7 @@ public interface JobContext {
    * grouping keys of inputs to the combiner.
    *
    * @return comparator set by the user for grouping values.
-   * @see Job#setCombinerKeyGroupingComparatorClass(Class) for details.
+   * @see Job#setCombinerKeyGroupingComparatorClass(Class)
    */
   public RawComparator<?> getCombinerKeyGroupingComparator();
 
@@ -232,8 +232,7 @@ public interface JobContext {
    * 
    * @return comparator set by the user for grouping values.
    * @see Job#setGroupingComparatorClass(Class) for details.  
-   * @see {@link #getCombinerKeyGroupingComparator()} for setting a
-   * comparator for the combiner.
+   * @see #getCombinerKeyGroupingComparator()
    */
   public RawComparator<?> getGroupingComparator();
   

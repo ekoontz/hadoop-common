@@ -320,7 +320,7 @@ public class Job extends JobContextImpl implements JobContext {
    * are passed to the {@link Reducer}.
    * @param cls the raw comparator
    * @throws IllegalStateException if the job is submitted
-   * @see {@link #setCombinerKeyGroupingComparatorClass(Class)}
+   * @see #setCombinerKeyGroupingComparatorClass(Class)
    */
   public void setSortComparatorClass(Class<? extends RawComparator> cls
                                      ) throws IllegalStateException {
@@ -350,8 +350,7 @@ public class Job extends JobContextImpl implements JobContext {
    *                       org.apache.hadoop.mapreduce.Reducer.Context)}
    * @param cls the raw comparator to use
    * @throws IllegalStateException if the job is submitted
-   * @see {@link #setCombinerKeyGroupingComparatorClass(Class)} for setting a
-   * comparator for the combiner.
+   * @see #setCombinerKeyGroupingComparatorClass(Class)
    */
   public void setGroupingComparatorClass(Class<? extends RawComparator> cls
                                          ) throws IllegalStateException {
