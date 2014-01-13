@@ -106,6 +106,8 @@ public class FairScheduler extends TaskScheduler {
    */
   public final static String ALLOW_UNDECLARED_POOLS_KEY =
     "mapred.fairscheduler.allow.undeclared.pools";
+  public static final boolean DEFAULT_ALLOW_UNDECLARED_POOLS = true;
+
   private boolean allowUndeclaredPools = false;
 
   private MetricsUpdater metricsUpdater; // responsible for pushing hadoop metrics
