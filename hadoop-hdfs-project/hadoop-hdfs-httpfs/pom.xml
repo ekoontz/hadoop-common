@@ -34,6 +34,7 @@
   <description>Apache Hadoop HttpFS</description>
 
   <properties>
+    <tomcat.version>${cdh.tomcat.version}</tomcat.version>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.repository>REPO NOT AVAIL</httpfs.source.repository>
     <httpfs.source.revision>REVISION NOT AVAIL</httpfs.source.revision>
