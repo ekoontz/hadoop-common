@@ -17,10 +17,18 @@
  */
 package org.apache.hadoop.conf;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
+import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.junit.Test;
 
 public class TestJobConf extends TestCase {
 
@@ -86,7 +94,7 @@ public class TestJobConf extends TestCase {
     configuration.set("mapred.job.map.memory.mb","-1");
     configuration.set("mapred.job.reduce.memory.mb","-1");
     Assert.assertEquals(configuration.getMemoryForMapTask(),-1);
-    Assert.assertEquals(configuration.getMemoryForReduceTask(),-1);    
+    Assert.assertEquals(configuration.getMemoryForReduceTask(),-1);
 
     configuration = new JobConf();
     configuration.set("mapred.task.maxvmem" , String.valueOf(2*1024 * 1024));
@@ -95,35 +103,35 @@ public class TestJobConf extends TestCase {
     Assert.assertEquals(configuration.getMemoryForMapTask(),2);
     Assert.assertEquals(configuration.getMemoryForReduceTask(),2);
   }
-  
+
   /**
    * Test that negative values for MAPRED_TASK_MAXVMEM_PROPERTY cause
    * new configuration keys' values to be used.
    */
-  
+
   public void testNegativeValueForTaskVmem() {
     JobConf configuration = new JobConf();
-    
+
     configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-3");
     configuration.set("mapred.job.map.memory.mb", "4");
     configuration.set("mapred.job.reduce.memory.mb", "5");
     Assert.assertEquals(4, configuration.getMemoryForMapTask());
     Assert.assertEquals(5, configuration.getMemoryForReduceTask());
-    
+
   }
-  
+
   /**
    * Test that negative values for all memory configuration properties causes
    * APIs to disable memory limits
    */
-  
+
   public void testNegativeValuesForMemoryParams() {
     JobConf configuration = new JobConf();
-    
+
     configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-4");
     configuration.set("mapred.job.map.memory.mb", "-5");
     configuration.set("mapred.job.reduce.memory.mb", "-6");
-    
+
     Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
                         configuration.getMemoryForMapTask());
     Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
@@ -169,11 +177,23 @@ public class TestJobConf extends TestCase {
     Assert.assertEquals(configuration.getMemoryForMapTask(), 2);
     Assert.assertEquals(configuration.getMemoryForReduceTask(), 2);
 
-    configuration = new JobConf();   
+    configuration = new JobConf();
     configuration.set("mapred.job.map.memory.mb", String.valueOf(300));
     configuration.set("mapred.job.reduce.memory.mb", String.valueOf(400));
     configuration.setMaxVirtualMemoryForTask(2 * 1024 * 1024);
     Assert.assertEquals(configuration.getMemoryForMapTask(), 2);
     Assert.assertEquals(configuration.getMemoryForReduceTask(), 2);
+  }
+
+  @Test
+  public void testGetRpcTimeout() throws IOException {
+    JobConf conf = new JobConf();
+    assertEquals("-1", conf.get(JobClient.MAPREDUCE_CLIENT_RPC_TIMEOUT_KEY));
+    assertEquals(JobClient.MAPREDUCE_CLIENT_RPC_TIMEOUT_DEFAULT,
+        JobClient.getRpcTimeout(conf));
+    conf.set(JobClient.MAPREDUCE_CLIENT_RPC_TIMEOUT_KEY, "0");
+    assertEquals(0, JobClient.getRpcTimeout(conf));
+    conf.set(JobClient.MAPREDUCE_CLIENT_RPC_TIMEOUT_KEY, "-500");
+    assertEquals(-500, JobClient.getRpcTimeout(conf));
   }
 }

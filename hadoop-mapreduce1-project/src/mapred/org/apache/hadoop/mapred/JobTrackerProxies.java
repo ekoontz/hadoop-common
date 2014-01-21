@@ -136,10 +136,10 @@ public class JobTrackerProxies {
     RPC.setProtocolEngine(conf, JobSubmissionProtocol.class, WritableRpcEngine.class);
 
     final long version = RPC.getProtocolVersion(JobSubmissionProtocol.class);
-    
+    int rpcTimeout = JobClient.getRpcTimeout(conf);
     RPC.getProxy(JobSubmissionProtocol.class, version, address, ugi, conf,
-        NetUtils.getDefaultSocketFactory(conf), 0);
-    
+        NetUtils.getDefaultSocketFactory(conf), rpcTimeout);
+
     JobSubmissionProtocol proxy = RPC.getProtocolProxy(
         JobSubmissionProtocol.class, version, address, ugi, conf,
         NetUtils.getDefaultSocketFactory(conf), 0, null).getProxy();
