@@ -867,7 +867,7 @@
     <description>Whether virtual memory limits will be enforced for
     containers.</description>
     <name>yarn.nodemanager.vmem-check-enabled</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>

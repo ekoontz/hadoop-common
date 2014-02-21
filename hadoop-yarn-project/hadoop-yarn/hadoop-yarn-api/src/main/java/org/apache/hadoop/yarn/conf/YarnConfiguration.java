@@ -775,7 +775,7 @@ public class YarnConfiguration extends Configuration {
   /** Specifies whether physical memory check is enabled. */
   public static final String NM_VMEM_CHECK_ENABLED = NM_PREFIX
       + "vmem-check-enabled";
-  public static final boolean DEFAULT_NM_VMEM_CHECK_ENABLED = true;
+  public static final boolean DEFAULT_NM_VMEM_CHECK_ENABLED = false;
 
   /** Conversion ratio for physical memory to virtual memory. */
   public static final String NM_VMEM_PMEM_RATIO =
