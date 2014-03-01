@@ -649,6 +649,11 @@ public class JobHistoryEventHandler extends AbstractService
       summary.setQueue(jse.getJobQueueName());
       summary.setJobSubmitTime(jse.getSubmitTime());
       summary.setJobName(jse.getJobName());
+      try {
+        writeEarlySummaryFile(jobId, summary);
+      } catch (IOException e) {
+        // ignore; this is logged elsewhere and is best effort at this point
+      }
       break;
     case NORMALIZED_RESOURCE:
       NormalizedResourceEvent normalizedResourceEvent = 
@@ -1052,6 +1057,49 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
+  private Path writeEarlySummaryFile(JobId jobId, JobSummary jobSummary)
+      throws IOException {
+    Path stagingDir = new Path(
+            JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(getConfig(),
+                    jobId.toString()));
+    String doneSummaryFileName = JobHistoryUtils
+            .getIntermediateSummaryFileName(jobId);
+    Path qualifiedSummaryDoneFile = doneDirFS.makeQualified(new Path(
+          stagingDir, doneSummaryFileName));
+    return writeSummaryFile(qualifiedSummaryDoneFile, jobSummary);
+  }
+
+  private Path writeSummaryFile(JobId jobId, JobSummary jobSummary)
+          throws IOException {
+     String doneSummaryFileName = getTempFileName(JobHistoryUtils
+        .getIntermediateSummaryFileName(jobId));
+    Path qualifiedSummaryDoneFile = doneDirFS.makeQualified(new Path(
+        doneDirPrefixPath, doneSummaryFileName));
+    Path file = writeSummaryFile(qualifiedSummaryDoneFile, jobSummary);
+    doneDirFS.setPermission(file, new FsPermission(
+        JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
+    return file;
+  }
+
+  private Path writeSummaryFile(Path qualifiedSummaryDoneFile,
+      JobSummary jobSummary) throws IOException {
+    // Writing out the summary file.
+    // TODO JH enhancement - reuse this file to store additional indexing info
+    // like ACLs, etc. JHServer can use HDFS append to build an index file
+    // with more info than is available via the filename.
+    FSDataOutputStream summaryFileOut = null;
+    try {
+      summaryFileOut = doneDirFS.create(qualifiedSummaryDoneFile, true);
+      summaryFileOut.writeUTF(jobSummary.getJobSummaryString());
+      summaryFileOut.close();
+    } catch (IOException e) {
+      LOG.info("Unable to write out JobSummaryInfo to ["
+          + qualifiedSummaryDoneFile + "]", e);
+      throw e;
+    }
+    return qualifiedSummaryDoneFile;
+  }
+
   protected void processDoneFiles(JobId jobId) throws IOException {
 
     final MetaInfo mi = fileMap.get(jobId);
@@ -1065,28 +1113,8 @@ public class JobHistoryEventHandler extends AbstractService
     if (mi.getConfFile() == null) {
       LOG.warn("No file for jobconf with " + jobId + " found in cache!");
     }
-      
-    // Writing out the summary file.
-    // TODO JH enhancement - reuse this file to store additional indexing info
-    // like ACLs, etc. JHServer can use HDFS append to build an index file
-    // with more info than is available via the filename.
-    Path qualifiedSummaryDoneFile = null;
-    FSDataOutputStream summaryFileOut = null;
-    try {
-      String doneSummaryFileName = getTempFileName(JobHistoryUtils
-          .getIntermediateSummaryFileName(jobId));
-      qualifiedSummaryDoneFile = doneDirFS.makeQualified(new Path(
-          doneDirPrefixPath, doneSummaryFileName));
-      summaryFileOut = doneDirFS.create(qualifiedSummaryDoneFile, true);
-      summaryFileOut.writeUTF(mi.getJobSummary().getJobSummaryString());
-      summaryFileOut.close();
-      doneDirFS.setPermission(qualifiedSummaryDoneFile, new FsPermission(
-          JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
-    } catch (IOException e) {
-      LOG.info("Unable to write out JobSummaryInfo to ["
-          + qualifiedSummaryDoneFile + "]", e);
-      throw e;
-    }
+
+    Path qualifiedSummaryDoneFile = writeSummaryFile(jobId, mi.getJobSummary());
 
     try {
 

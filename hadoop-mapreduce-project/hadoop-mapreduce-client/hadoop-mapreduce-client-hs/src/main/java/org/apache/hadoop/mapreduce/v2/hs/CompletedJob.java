@@ -329,6 +329,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     }
     
     if (historyFileAbsolute != null) {
+      verifyHistoryExistsAndNotEmpty(historyFileAbsolute);
       JobHistoryParser parser = null;
       try {
         parser =
@@ -352,6 +353,19 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
       loadAllTasks();
       LOG.info("TaskInfo loaded");
     }    
+  }
+
+  private void verifyHistoryExistsAndNotEmpty(Path historyFileAbsolute) {
+    try {
+      if (historyFileAbsolute.getFileSystem(conf)
+              .getFileStatus(historyFileAbsolute).getLen() == 0) {
+        throw new YarnRuntimeException("History file is empty");
+      }
+    }
+    catch (IOException ioe) {
+      throw new YarnRuntimeException("Could not load history file "
+          + historyFileAbsolute, ioe);
+    }
   }
 
   @Override

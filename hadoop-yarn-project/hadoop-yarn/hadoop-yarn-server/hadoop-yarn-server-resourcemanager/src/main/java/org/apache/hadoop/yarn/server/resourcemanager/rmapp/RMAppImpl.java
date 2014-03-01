@@ -33,11 +33,13 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -102,6 +104,11 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
   private static final String UNAVAILABLE = "N/A";
+
+  final public static FsPermission FAIL_FLAG_DIR_PERMISSION =
+    FsPermission.createImmutable((short) 0777); // rwxrwxrwx
+  final public static FsPermission FAIL_FLAG_PERMISSION =
+    FsPermission.createImmutable((short) 0664); // rw-rw-r--
 
   // Immutable fields
   private final ApplicationId applicationId;
@@ -942,6 +949,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       if (event instanceof RMAppFailedAttemptEvent) {
         msg = app.getAppAttemptFailedDiagnostics(event);
       }
+      app.writeFlagFileForFailedAM();
       LOG.info(msg);
       app.diagnostics.append(msg);
       // Inform the node for app-finish
@@ -1084,8 +1092,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       // pass in the earlier attempt_unregistered event, as it is needed in
       // AppFinishedFinalStateSavedTransition later on
       app.rememberTargetTransitions(event,
-        new AppFinishedFinalStateSavedTransition(app.eventCausingFinalSaving),
-        RMAppState.FINISHED);
+          new AppFinishedFinalStateSavedTransition(app.eventCausingFinalSaving),
+          RMAppState.FINISHED);
     };
   }
 
@@ -1244,6 +1252,28 @@ public class RMAppImpl implements RMApp, Recoverable {
           new AttemptFailedFinalStateSavedTransition(), RMAppState.FAILED,
           RMAppState.FAILED);
         return RMAppState.FINAL_SAVING;
+      }
+    }
+  }
+
+  private void writeFlagFileForFailedAM() {
+    if (getCurrentAppAttempt() != null) {
+      Path failDir = new Path(conf.get(
+              YarnConfiguration.YARN_AM_FAILURE_FLAG_DIR,
+              YarnConfiguration.DEFAULT_YARN_AM_FAILURE_FLAG_DIR));
+      try {
+        FileSystem fs = FileSystem.get(failDir.toUri(), conf);
+        if (!fs.exists(failDir)) {
+            fs.mkdirs(failDir);
+            fs.setPermission(failDir, FAIL_FLAG_DIR_PERMISSION);
+        }
+        Path flagFile = new Path(failDir, user + "_" +
+                getCurrentAppAttempt().getAppAttemptId().toString());
+        fs.createNewFile(flagFile);
+        fs.setPermission(flagFile, FAIL_FLAG_PERMISSION);
+      } catch (IOException ioe) {
+        LOG.warn("Unable to write fail flag file for application "
+                + getCurrentAppAttempt().getAppAttemptId(), ioe);
       }
     }
   }

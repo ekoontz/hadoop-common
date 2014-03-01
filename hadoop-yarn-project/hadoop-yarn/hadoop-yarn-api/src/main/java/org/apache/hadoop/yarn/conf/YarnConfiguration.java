@@ -1199,6 +1199,14 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_APP_CONTAINER_LOG_BACKUPS =
       YARN_PREFIX + "app.container.log.backups";
 
+  /** Directory for fail flag files */
+  @Private
+  public static final String YARN_AM_FAILURE_FLAG_DIR =
+          YARN_PREFIX + "am-failure.flag.dir";
+  @Private
+  public static final String DEFAULT_YARN_AM_FAILURE_FLAG_DIR =
+          "/tmp/hadoop-yarn/fail";
+
   ////////////////////////////////
   // Timeline Service Configs
   ////////////////////////////////

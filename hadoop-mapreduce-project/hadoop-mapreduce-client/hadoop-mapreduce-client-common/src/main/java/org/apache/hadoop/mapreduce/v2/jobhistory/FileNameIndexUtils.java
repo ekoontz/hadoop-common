@@ -82,11 +82,19 @@ public class FileNameIndexUtils {
     sb.append(DELIMITER);
     
     //NumMaps
-    sb.append(indexInfo.getNumMaps());
+    if (indexInfo.getNumMaps() >= 0) {
+      sb.append(indexInfo.getNumMaps());
+    } else {
+      sb.append("NA");
+    }
     sb.append(DELIMITER);
     
     //NumReduces
-    sb.append(indexInfo.getNumReduces());
+    if (indexInfo.getNumReduces() >= 0) {
+      sb.append(indexInfo.getNumReduces());
+    } else {
+      sb.append("NA");
+    }
     sb.append(DELIMITER);
     
     //JobStatus
@@ -98,7 +106,11 @@ public class FileNameIndexUtils {
     sb.append(DELIMITER);
 
     //JobStartTime
-    sb.append(indexInfo.getJobStartTime());
+    if (indexInfo.getJobStartTime() >= 0) {
+      sb.append(indexInfo.getJobStartTime());
+    } else {
+      sb.append(indexInfo.getFinishTime());
+    }
 
     sb.append(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION);
     return encodeJobHistoryFileName(sb.toString());
@@ -146,16 +158,25 @@ public class FileNameIndexUtils {
       }
 
       try {
-        indexInfo.setNumMaps(
-            Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX])));
+        String numMaps = decodeJobHistoryFileName(jobDetails[NUM_MAPS_INDEX]);
+        if (numMaps.equals("NA")) {
+          indexInfo.setNumMaps(-1);
+        } else {
+          indexInfo.setNumMaps(Integer.parseInt(numMaps));
+        }
       } catch (NumberFormatException e) {
         LOG.warn("Unable to parse num maps from job history file "
             + jhFileName + " : " + e);
       }
 
       try {
-        indexInfo.setNumReduces(
-            Integer.parseInt(decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX])));
+        String numReduces =
+                decodeJobHistoryFileName(jobDetails[NUM_REDUCES_INDEX]);
+        if (numReduces.equals("NA")) {
+          indexInfo.setNumReduces(-1);
+        } else {
+          indexInfo.setNumReduces(Integer.parseInt(numReduces));
+        }
       } catch (NumberFormatException e) {
         LOG.warn("Unable to parse num reduces from job history file "
             + jhFileName + " : " + e);

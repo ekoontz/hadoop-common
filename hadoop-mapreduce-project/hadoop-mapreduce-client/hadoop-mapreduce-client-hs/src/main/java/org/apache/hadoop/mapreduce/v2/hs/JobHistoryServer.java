@@ -69,6 +69,7 @@ public class JobHistoryServer extends CompositeService {
   private AggregatedLogDeletionService aggLogDelService;
   private HSAdminServer hsAdminServer;
   private HistoryServerStateStoreService stateStore;
+  private KilledHistoryService killedHistoryService;
 
   // utility class to start and stop secret manager as part of service
   // framework and implement state recovery for secret manager on startup
@@ -133,12 +134,14 @@ public class JobHistoryServer extends CompositeService {
     clientService = createHistoryClientService();
     aggLogDelService = new AggregatedLogDeletionService();
     hsAdminServer = new HSAdminServer(aggLogDelService, jobHistoryService);
+    killedHistoryService = new KilledHistoryService();
     addService(stateStore);
     addService(new HistoryServerSecretManagerService());
     addService(jobHistoryService);
     addService(clientService);
     addService(aggLogDelService);
     addService(hsAdminServer);
+    addService(killedHistoryService);
     super.serviceInit(config);
   }
 

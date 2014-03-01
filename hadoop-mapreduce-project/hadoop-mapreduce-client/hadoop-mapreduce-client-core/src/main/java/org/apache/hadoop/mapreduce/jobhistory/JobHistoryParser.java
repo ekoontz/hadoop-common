@@ -151,6 +151,17 @@ public class JobHistoryParser implements HistoryEventHandler {
 
     info = new JobInfo();
     parse(reader, this);
+    if (info.getJobStatus() == null) {
+      info.jobStatus = JobStatus.getJobRunState(JobStatus.FAILED);
+      if (info.getErrorInfo() == null || info.getErrorInfo().equals("")) {
+        info.errorInfo = "Application failed due to failed ApplicationMaster.\n"
+                + "Only partial information is available; some values may be "
+                + "inaccurate.";
+      }
+    }
+    if (info.getFinishTime() == -1L) {
+      info.finishTime = info.getLaunchTime();
+    }
     return info;
   }
   
