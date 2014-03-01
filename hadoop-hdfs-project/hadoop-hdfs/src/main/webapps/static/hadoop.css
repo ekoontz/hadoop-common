@@ -191,22 +191,22 @@ div.security {
 
 .panel-success > .panel-heading {
   color: #fff !important;
-  background-color: #5FA33E !important;
+  background-color: #004d6f !important;
 }
 
 header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   border-radius: 0px;
-  background-color: #5fa33e;
+  background-color: #004d6f;
   color: #fff;
 }
 
 #ui-tabs > li > a {
-  color: #dcf0d3;
+  color: #fff;
 }
 
 #ui-tabs .active a {
   color: #fff;
-  background-color: #446633;
+  background-color: #00314f;
 }
 
 #alert-panel {
