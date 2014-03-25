@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
@@ -129,6 +130,11 @@ public class JobTrackerProxies {
     }
     return new ProxyAndInfo<T>(proxy, dtService);
   }
+
+  private static int getRpcTimeout(Configuration conf) {
+    return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
+                       CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
+  }
   
   private static JobSubmissionProtocol createJTProxyWithJobSubmissionProtocol(
       InetSocketAddress address, Configuration conf, UserGroupInformation ugi,
@@ -142,7 +148,7 @@ public class JobTrackerProxies {
 
     JobSubmissionProtocol proxy = RPC.getProtocolProxy(
         JobSubmissionProtocol.class, version, address, ugi, conf,
-        NetUtils.getDefaultSocketFactory(conf), 0, null).getProxy();
+        NetUtils.getDefaultSocketFactory(conf), getRpcTimeout(conf), null).getProxy();
     return proxy;
   }
   
@@ -153,7 +159,7 @@ public class JobTrackerProxies {
 
     return RPC.waitForProtocolProxy(
         InterTrackerProtocol.class, InterTrackerProtocol.versionID, address,
-        conf).getProxy();
+        conf, getRpcTimeout(conf), null, Long.MAX_VALUE).getProxy();
   }
   
   @SuppressWarnings("unchecked")
