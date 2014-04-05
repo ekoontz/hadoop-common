@@ -2029,6 +2029,7 @@ public class JobTracker implements MRConstants, JTProtocols, JobTrackerMXBean {
     // Same with 'localDir' except it's always on the local disk.
     asyncDiskService.moveAndDeleteFromEachVolume(SUBDIR);
 
+    LOG.info("JobTracker restarted = " + hasRestarted());
     if (!hasRestarted) {
       jobConf.deleteLocalFiles(SUBDIR);
     }
@@ -4264,12 +4265,10 @@ public class JobTracker implements MRConstants, JTProtocols, JobTrackerMXBean {
     for (TaskStatus report : status.getTaskReports()) {
       report.setTaskTracker(trackerName);
       TaskAttemptID taskId = report.getTaskID();
-      
-      // don't expire the task if it is not unassigned
-      if (report.getRunState() != TaskStatus.State.UNASSIGNED) {
-        expireLaunchingTasks.removeTask(taskId);
-      }
-      
+
+      // Remove task from the list of tasks to be expired.
+      expireLaunchingTasks.removeTask(taskId);
+
       JobInProgress job = getJob(taskId.getJobID());
       if (job == null) {
         // if job is not there in the cleanup list ... add it
