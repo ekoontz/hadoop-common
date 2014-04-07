@@ -1033,7 +1033,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         dir.fsImage.editLog.openForWrite();
       }
-      
+
+      // Enable quota checks.
+      dir.enableQuotaChecks();
       if (haEnabled) {
         // Renew all of the leases before becoming active.
         // This is because, while we were in standby mode,
@@ -1141,6 +1143,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     blockManager.setPostponeBlocksFromFuture(true);
 
+    // Disable quota checks while in standby.
+    dir.disableQuotaChecks();
     editLogTailer = new EditLogTailer(this, conf);
     editLogTailer.start();
     if (standbyShouldCheckpoint) {
