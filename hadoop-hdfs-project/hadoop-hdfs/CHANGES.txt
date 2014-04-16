@@ -105,6 +105,8 @@ Release 2.4.0 - 2014-04-07
 
   IMPROVEMENTS
 
+    HDFS-6214.  Webhdfs has poor throughput for files >2GB (daryn)
+
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
     the corresponding byte value. (jing9)
 
@@ -277,6 +279,8 @@ Release 2.4.0 - 2014-04-07
     (todd)
 
   BUG FIXES
+
+    HDFS-6191. Disable quota checks when replaying edit log.
 
     HDFS-5492. Port HDFS-2069 (Incorrect default trash interval in the
     docs) to trunk. (Akira Ajisaka via Arpit Agarwal)
