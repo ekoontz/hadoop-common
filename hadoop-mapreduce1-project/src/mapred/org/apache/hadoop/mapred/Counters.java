@@ -68,7 +68,7 @@ import com.google.common.collect.Iterators;
 public class Counters
     extends AbstractCounters<Counters.Counter, Counters.Group> {
   
-  public static int MAX_COUNTER_LIMIT = Limits.COUNTERS_MAX;
+  public static int MAX_COUNTER_LIMIT = Limits.getCountersMax();
   
   public Counters() {
     super(groupFactory);

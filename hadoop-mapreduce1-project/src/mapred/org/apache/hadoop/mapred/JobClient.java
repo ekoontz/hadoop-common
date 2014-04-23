@@ -68,6 +68,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
+import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -526,6 +527,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public void init(JobConf conf) throws IOException {
     setConf(conf);
+    Limits.init(conf);
     String tracker = conf.get("mapred.job.tracker", "local");
     tasklogtimeout = conf.getInt(
       TASKLOG_PULL_TIMEOUT_KEY, DEFAULT_TASKLOG_TIMEOUT);
