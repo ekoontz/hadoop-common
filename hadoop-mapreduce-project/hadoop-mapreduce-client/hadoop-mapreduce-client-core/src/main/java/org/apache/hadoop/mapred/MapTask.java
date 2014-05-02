@@ -906,6 +906,11 @@ public class MapTask extends Task {
     final BlockingBuffer bb = new BlockingBuffer();
     volatile boolean spillThreadRunning = false;
     final SpillThread spillThread = new SpillThread();
+    
+    // hao
+    Thread forceSpillThread;
+    boolean timeLongEnoughToSpill = false;
+    int haoSpillEveryMb = 0;
 
     private FileSystem rfs;
 
@@ -1036,6 +1041,30 @@ public class MapTask extends Task {
         throw new IOException("Spill thread failed to initialize",
             sortSpillException);
       }
+
+      // hao
+      boolean forcespill = job.getBoolean("hao.force.spill", false);
+      haoSpillEveryMb = job.getInt("hao.spill.every.mb", 0);
+      System.err.println("HAO: forcespill = " + forcespill + ", spill_every_mb=" + haoSpillEveryMb);
+      if (forcespill) {
+          forceSpillThread = new Thread(new Runnable() {
+    		
+    			@Override
+    			public void run() {
+    				while(true) {
+    					try {
+    						Thread.sleep(2000);
+    						timeLongEnoughToSpill = true;
+    					} catch (InterruptedException e) {
+    						// TODO Auto-generated catch block
+    						e.printStackTrace();
+    					}
+    				}
+    			}
+    		});
+          forceSpillThread.setDaemon(true);
+          forceSpillThread.start();
+      }
     }
 
     /**
@@ -1062,7 +1091,10 @@ public class MapTask extends Task {
       }
       checkSpillException();
       bufferRemaining -= METASIZE;
-      if (bufferRemaining <= 0) {
+      // hao
+      boolean readEnoughToSpill = (haoSpillEveryMb != 0) && (distanceTo(4 * kvindex, bufindex) > haoSpillEveryMb * 1024 * 1024);
+      
+      if (bufferRemaining <= 0 || timeLongEnoughToSpill || readEnoughToSpill) {
         // start spill if the thread is not running and the soft limit has been
         // reached
         spillLock.lock();
@@ -1075,7 +1107,9 @@ public class MapTask extends Task {
               // bufindex, crossing the equator. Note that any void space
               // created by a reset must be included in "used" bytes
               final int bUsed = distanceTo(kvbidx, bufindex);
-              final boolean bufsoftlimit = bUsed >= softLimit;
+              // hao
+              final boolean bufsoftlimit = bUsed >= softLimit || timeLongEnoughToSpill || readEnoughToSpill;
+              
               if ((kvbend + METASIZE) % kvbuffer.length !=
                   equator - (equator % METASIZE)) {
                 // spill finished, reclaim space
@@ -1201,6 +1235,9 @@ public class MapTask extends Task {
         LOG.info("(RESET) equator " + e + " kv " + kvstart + "(" +
           (kvstart * 4) + ")" + " kvi " + kvindex + "(" + (kvindex * 4) + ")");
       }
+      
+      // hao
+      timeLongEnoughToSpill = false;
     }
 
     /**

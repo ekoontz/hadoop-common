@@ -72,6 +72,13 @@ class YarnChild {
   static volatile TaskAttemptID taskid = null;
 
   public static void main(String[] args) throws Throwable {
+	// hao
+	System.err.println("YarnChild args: ");
+	for (int i = 0; i < args.length; ++i) {
+		System.err.println(args[i]);
+	}
+	System.err.println("------------------------------------------");
+	  
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     LOG.debug("Child starting");
 
