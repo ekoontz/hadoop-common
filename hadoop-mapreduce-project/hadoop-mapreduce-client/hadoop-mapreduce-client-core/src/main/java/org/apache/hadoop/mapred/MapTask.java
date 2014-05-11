@@ -61,6 +61,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
+import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
@@ -547,6 +548,37 @@ public class MapTask extends Task {
       }
       return bytesRead;
     }
+    
+    public boolean haoBytesReadCompatile() {
+    	return this.real instanceof LineRecordReader;
+    }
+    
+    public long getReaderStart() {
+    	// hao
+//    	if (this.real instanceof LineRecordReader) {
+    		return ((LineRecordReader)this.real).getStart();
+//    	} else {
+//    		return -1;
+//    	}
+    }
+    
+    public long getReaderPos() {
+    	// hao
+//    	if (this.real instanceof LineRecordReader) {
+    		return ((LineRecordReader)this.real).getPos();
+//    	} else {
+//    		return -1;
+//    	}
+    }
+    
+    public long getReaderEnd() {
+    	// hao
+//    	if (this.real instanceof LineRecordReader) {
+    		return ((LineRecordReader)this.real).getEnd();
+//    	} else {
+//    		return -1;
+//    	}
+    }
   }
 
   /**
@@ -703,6 +735,9 @@ public class MapTask extends Task {
       collector.close();
     }
   }
+  
+  // hao
+  private NewTrackingRecordReader<?, ?> recreader;
 
   @SuppressWarnings("unchecked")
   private <INKEY,INVALUE,OUTKEY,OUTVALUE>
@@ -731,9 +766,10 @@ public class MapTask extends Task {
         splitIndex.getStartOffset());
     LOG.info("Processing split: " + split);
 
-    org.apache.hadoop.mapreduce.RecordReader<INKEY,INVALUE> input =
-      new NewTrackingRecordReader<INKEY,INVALUE>
+    // hao
+    recreader = new NewTrackingRecordReader<INKEY,INVALUE>
         (split, inputFormat, reporter, taskContext);
+    org.apache.hadoop.mapreduce.RecordReader<INKEY,INVALUE> input = (org.apache.hadoop.mapreduce.RecordReader<INKEY,INVALUE>)recreader;
     
     job.setBoolean(JobContext.SKIP_RECORDS, isSkipping());
     org.apache.hadoop.mapreduce.RecordWriter output = null;
@@ -908,9 +944,9 @@ public class MapTask extends Task {
     final SpillThread spillThread = new SpillThread();
     
     // hao
-    Thread forceSpillThread;
-    boolean timeLongEnoughToSpill = false;
-    int haoSpillEveryMb = 0;
+    int haoSpillIntervalMillisSeconds;
+    long haoSpillIntervalInputBytes;
+    long haoLastSpillTime;
 
     private FileSystem rfs;
 
@@ -1043,27 +1079,10 @@ public class MapTask extends Task {
       }
 
       // hao
-      boolean forcespill = job.getBoolean("hao.force.spill", false);
-      haoSpillEveryMb = job.getInt("hao.spill.every.mb", 0);
-      System.err.println("HAO: forcespill = " + forcespill + ", spill_every_mb=" + haoSpillEveryMb);
-      if (forcespill) {
-          forceSpillThread = new Thread(new Runnable() {
-    		
-    			@Override
-    			public void run() {
-    				while(true) {
-    					try {
-    						Thread.sleep(2000);
-    						timeLongEnoughToSpill = true;
-    					} catch (InterruptedException e) {
-    						// TODO Auto-generated catch block
-    						e.printStackTrace();
-    					}
-    				}
-    			}
-    		});
-          forceSpillThread.setDaemon(true);
-          forceSpillThread.start();
+      haoSpillIntervalMillisSeconds = job.getInt("hao.spill.interval.minutes", 0) * 60 * 1000;
+      haoSpillIntervalInputBytes = job.getLong("hao.spill.interval.input.mb", 0) << 20;
+      if (haoSpillIntervalMillisSeconds != 0) {
+    	  haoLastSpillTime = System.currentTimeMillis();
       }
     }
 
@@ -1091,8 +1110,16 @@ public class MapTask extends Task {
       }
       checkSpillException();
       bufferRemaining -= METASIZE;
+      
       // hao
-      boolean readEnoughToSpill = (haoSpillEveryMb != 0) && (distanceTo(4 * kvindex, bufindex) > haoSpillEveryMb * 1024 * 1024);
+      boolean readEnoughToSpill = false;
+      if (this.haoSpillIntervalInputBytes != 0 && mapTask.recreader.haoBytesReadCompatile()) {
+    	  readEnoughToSpill = mapTask.recreader.getReaderPos() - mapTask.recreader.getReaderStart() > this.haoSpillIntervalInputBytes;
+      }
+      boolean timeLongEnoughToSpill = false;
+      if (this.haoSpillIntervalMillisSeconds != 0 && System.currentTimeMillis() - haoLastSpillTime > haoSpillIntervalMillisSeconds) {
+    	  timeLongEnoughToSpill = true;
+      }
       
       if (bufferRemaining <= 0 || timeLongEnoughToSpill || readEnoughToSpill) {
         // start spill if the thread is not running and the soft limit has been
@@ -1119,6 +1146,9 @@ public class MapTask extends Task {
                     softLimit - bUsed) - METASIZE;
                 continue;
               } else if (bufsoftlimit && kvindex != kvend) {
+            	// hao
+            	System.out.println("starting to spill: softLimit=" + (bUsed > softLimit) + " timeLongEnoughToSpill=" + timeLongEnoughToSpill + " readEnoughToSpill="+readEnoughToSpill);
+            	  
                 // spill records, if any collected; check latter, as it may
                 // be possible for metadata alignment to hit spill pcnt
                 startSpill();
@@ -1235,9 +1265,6 @@ public class MapTask extends Task {
         LOG.info("(RESET) equator " + e + " kv " + kvstart + "(" +
           (kvstart * 4) + ")" + " kvi " + kvindex + "(" + (kvindex * 4) + ")");
       }
-      
-      // hao
-      timeLongEnoughToSpill = false;
     }
 
     /**
@@ -1684,6 +1711,7 @@ public class MapTask extends Task {
         }
         LOG.info("Finished spill " + numSpills);
         ++numSpills;
+        
       } finally {
         if (out != null) out.close();
       }

@@ -213,4 +213,16 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
       }
     }
   }
+
+  public long getStart() {
+	return start;
+  }
+
+  public long getPos() {
+	return pos;
+  }
+
+  public long getEnd() {
+	return end;
+  }
 }
