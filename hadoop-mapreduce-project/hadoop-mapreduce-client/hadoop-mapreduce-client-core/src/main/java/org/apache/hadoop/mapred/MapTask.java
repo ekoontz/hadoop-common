@@ -1545,14 +1545,16 @@ public class MapTask extends Task {
       try {
         spillThread.interrupt();
         spillThread.join();
+        System.out.println("hao: all together " + this.numSpills + " spills");
       } catch (InterruptedException e) {
         throw new IOException("Spill failed", e);
       }
       // release sort buffer before the merge
       kvbuffer = null;
-      mergeParts();
-      Path outputPath = mapOutputFile.getOutputFile();
-      fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
+      // hao
+//      mergeParts();
+//      Path outputPath = mapOutputFile.getOutputFile();
+//      fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
     }
 
     public void close() { }
@@ -1691,24 +1693,33 @@ public class MapTask extends Task {
             rec.rawLength = writer.getRawLength();
             rec.partLength = writer.getCompressedLength();
             spillRec.putIndex(rec, i);
+            
+            // hao
+            fileOutputByteCounter.increment(rfs.getFileStatus(filename).getLen());
 
             writer = null;
           } finally {
             if (null != writer) writer.close();
           }
         }
+        
+        // hao
+        Path indexFilename =
+                mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+                    * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+        spillRec.writeToFile(indexFilename, job);
 
-        if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
-          // create spill index file
-          Path indexFilename =
-              mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
-                  * MAP_OUTPUT_INDEX_RECORD_LENGTH);
-          spillRec.writeToFile(indexFilename, job);
-        } else {
-          indexCacheList.add(spillRec);
-          totalIndexCacheMemory +=
-            spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
-        }
+//        if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
+//          // create spill index file
+//          Path indexFilename =
+//              mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+//                  * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+//          spillRec.writeToFile(indexFilename, job);
+//        } else {
+//          indexCacheList.add(spillRec);
+//          totalIndexCacheMemory +=
+//            spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
+//        }
         LOG.info("Finished spill " + numSpills);
         ++numSpills;
         
@@ -1764,17 +1775,24 @@ public class MapTask extends Task {
             throw e;
           }
         }
-        if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
-          // create spill index file
-          Path indexFilename =
-              mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
-                  * MAP_OUTPUT_INDEX_RECORD_LENGTH);
-          spillRec.writeToFile(indexFilename, job);
-        } else {
-          indexCacheList.add(spillRec);
-          totalIndexCacheMemory +=
-            spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
-        }
+        
+        // hao
+        Path indexFilename =
+                mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+                    * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+        spillRec.writeToFile(indexFilename, job);
+        
+//        if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
+//          // create spill index file
+//          Path indexFilename =
+//              mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+//                  * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+//          spillRec.writeToFile(indexFilename, job);
+//        } else {
+//          indexCacheList.add(spillRec);
+//          totalIndexCacheMemory +=
+//            spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
+//        }
         ++numSpills;
       } finally {
         if (out != null) out.close();

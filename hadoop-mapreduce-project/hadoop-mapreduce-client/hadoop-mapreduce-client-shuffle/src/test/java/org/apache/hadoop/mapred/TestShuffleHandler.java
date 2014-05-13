@@ -137,7 +137,7 @@ public class TestShuffleHandler {
           }
           @Override
           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
-              Channel ch, String user, String jobId, String mapId, int reduce)
+              Channel ch, String user, String jobId, String mapId, int reduce, int spillid)
                   throws IOException {
             // send a shuffle header and a lot of data down the channel
             // to trigger a broken pipe
@@ -243,7 +243,7 @@ public class TestShuffleHandler {
           }
           @Override
           protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx,
-              Channel ch, String user, String jobId, String mapId, int reduce)
+              Channel ch, String user, String jobId, String mapId, int reduce, int spillid)
                   throws IOException {
             // send a shuffle header and a lot of data down the channel
             // to trigger a broken pipe

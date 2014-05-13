@@ -113,6 +113,7 @@ import org.jboss.netty.util.CharsetUtil;
 
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.sun.tools.javac.code.Attribute.Array;
 
 public class ShuffleHandler extends AuxiliaryService {
 
@@ -450,6 +451,7 @@ public class ShuffleHandler extends AuxiliaryService {
         new QueryStringDecoder(request.getUri()).getParameters();
       final List<String> mapIds = splitMaps(q.get("map"));
       final List<String> reduceQ = q.get("reduce");
+      final List<String> spillQ =q.get("spill");
       final List<String> jobQ = q.get("job");
       if (LOG.isDebugEnabled()) {
         LOG.debug("RECV: " + request.getUri() +
@@ -463,8 +465,8 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
       if (reduceQ.size() != 1 || jobQ.size() != 1) {
-        sendError(ctx, "Too many job/reduce parameters", BAD_REQUEST);
-        return;
+          sendError(ctx, "Too many job/reduce parameters", BAD_REQUEST);
+          return;
       }
       int reduceId;
       String jobId;
@@ -478,6 +480,31 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx, "Bad job parameter", BAD_REQUEST);
         return;
       }
+      
+      List<Integer> spills = new ArrayList<Integer>();
+      if (spillQ != null) {
+          try {
+        	  for (String s : spillQ) {
+        		  // if * is specified, then all spill is needed
+        		  if (s.equals("*")) {
+            		  spills.clear();
+            		  break;
+        		  }
+        		  spills.add(Integer.parseInt(s));
+        	  }
+          }catch (NumberFormatException e) {
+              sendError(ctx, "Bad spill parameter", BAD_REQUEST);
+              return;
+          }
+      }
+      
+      // either specify one map and several spills, or specify several map and * for spills
+      if (mapIds.size() != 1 && spills.size() != 0) {
+          sendError(ctx, "either specify one map and several spills, or specify several map and * for spills", BAD_REQUEST);
+          return;
+      }
+      
+      
       final String reqUri = request.getUri();
       if (null == reqUri) {
         // TODO? add upstream?
@@ -493,30 +520,66 @@ public class ShuffleHandler extends AuxiliaryService {
         sendError(ctx, e.getMessage(), UNAUTHORIZED);
         return;
       }
+      
+      System.out.println("hao exists");
 
       Channel ch = evt.getChannel();
       ch.write(response);
       // TODO refactor the following into the pipeline
       ChannelFuture lastMap = null;
       for (String mapId : mapIds) {
-        try {
-          lastMap =
-            sendMapOutput(ctx, ch, userRsrc.get(jobId), jobId, mapId, reduceId);
-          if (null == lastMap) {
-            sendError(ctx, NOT_FOUND);
-            return;
-          }
-        } catch (IOException e) {
-          LOG.error("Shuffle error :", e);
-          StringBuffer sb = new StringBuffer(e.getMessage());
-          Throwable t = e;
-          while (t.getCause() != null) {
-            sb.append(t.getCause().getMessage());
-            t = t.getCause();
-          }
-          sendError(ctx,sb.toString() , INTERNAL_SERVER_ERROR);
-          return;
-        }
+    	  if (spills.size() == 0) {
+    		  // all spills needed
+    	      JobID jobID = JobID.forName(jobId);
+    	      ApplicationId appID = ApplicationId.newInstance(
+    	          Long.parseLong(jobID.getJtIdentifier()), jobID.getId());
+    	      
+    	    final String dirname = this.conf.get("yarn.nodemanager.local-dirs") + "/" +
+    	    ContainerLocalizer.USERCACHE + "/" + userRsrc.get(jobId) + "/"
+    	        + ContainerLocalizer.APPCACHE + "/"
+    	        + ConverterUtils.toString(appID) + "/";
+    	    
+    	    
+    	    final String spillFilePrefix = mapId + "_spill_";
+    	    System.out.println("hao.spill.dirname=" + dirname);
+    	    File dir = new File(dirname);
+    	    File[] files = dir.listFiles();
+    	    int spillcount = 0;
+    	    for (File f : files) {
+    	    	System.out.println("file: " + f);
+    	    	if (f.getName().startsWith(spillFilePrefix)) {
+    	    		++spillcount;
+    	    	}
+    	    }
+    	    spillcount /= 2;
+    	    for (int i = 0; i < spillcount; ++i) {
+    	    	spills.add(i);
+    	    }
+    	  }
+
+  	    
+  	    System.out.println("hao: " + spills.size() + " spills found");
+    	  
+    	  for (Integer spillid : spills) {
+	        try {
+	          lastMap =
+	            sendMapOutput(ctx, ch, userRsrc.get(jobId), jobId, mapId, reduceId, spillid);
+	          if (null == lastMap) {
+	            sendError(ctx, NOT_FOUND);
+	            return;
+	          }
+	        } catch (IOException e) {
+	          LOG.error("Shuffle error :", e);
+	          StringBuffer sb = new StringBuffer(e.getMessage());
+	          Throwable t = e;
+	          while (t.getCause() != null) {
+	            sb.append(t.getCause().getMessage());
+	            t = t.getCause();
+	          }
+	          sendError(ctx,sb.toString() , INTERNAL_SERVER_ERROR);
+	          return;
+	        }
+    	}
       }
       lastMap.addListener(metrics);
       lastMap.addListener(ChannelFutureListener.CLOSE);
@@ -564,7 +627,7 @@ public class ShuffleHandler extends AuxiliaryService {
     }
 
     protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
-        String user, String jobId, String mapId, int reduce)
+        String user, String jobId, String mapId, int reduce, int spillid)
         throws IOException {
       // TODO replace w/ rsrc alloc
       // $x/$user/appcache/$appId/output/$mapId
@@ -572,19 +635,27 @@ public class ShuffleHandler extends AuxiliaryService {
       JobID jobID = JobID.forName(jobId);
       ApplicationId appID = ApplicationId.newInstance(
           Long.parseLong(jobID.getJtIdentifier()), jobID.getId());
-      final String base =
-          ContainerLocalizer.USERCACHE + "/" + user + "/"
-              + ContainerLocalizer.APPCACHE + "/"
-              + ConverterUtils.toString(appID) + "/output" + "/" + mapId;
+      
+      // hao
+//      final String base =
+//          ContainerLocalizer.USERCACHE + "/" + user + "/"
+//              + ContainerLocalizer.APPCACHE + "/"
+//              + ConverterUtils.toString(appID) + "/output" + "/" + mapId;
+    final String base =
+    ContainerLocalizer.USERCACHE + "/" + user + "/"
+        + ContainerLocalizer.APPCACHE + "/"
+        + ConverterUtils.toString(appID) + "/" + mapId + "_spill_" + spillid + ".out";
+      
+      
       if (LOG.isDebugEnabled()) {
         LOG.debug("DEBUG0 " + base);
       }
       // Index file
       Path indexFileName = lDirAlloc.getLocalPathToRead(
-          base + "/file.out.index", conf);
+          base + ".index", conf);
       // Map-output file
       Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-          base + "/file.out", conf);
+          base, conf);
       if (LOG.isDebugEnabled()) {
         LOG.debug("DEBUG1 " + base + " : " + mapOutputFileName + " : "
             + indexFileName);
