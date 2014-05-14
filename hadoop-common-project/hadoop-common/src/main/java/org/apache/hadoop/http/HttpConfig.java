@@ -19,6 +19,8 @@ package org.apache.hadoop.http;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * Singleton to get access to Http related configuration.
@@ -48,5 +50,32 @@ public class HttpConfig {
     public boolean isHttpsEnabled() {
       return this == HTTPS_ONLY || this == HTTP_AND_HTTPS;
     }
+  }
+
+  // CDH: The below is for MR1 compatibility only; MR2 should use
+  // YarnConfiguration.useHttps(conf)
+  private static Policy policy;
+  static {
+    Configuration conf = new Configuration();
+    boolean sslEnabled = conf.getBoolean(
+            CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
+            CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT);
+    policy = sslEnabled ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY;
+  }
+
+  public static void setPolicy(Policy policy) {
+    HttpConfig.policy = policy;
+  }
+
+  public static boolean isSecure() {
+    return policy == Policy.HTTPS_ONLY;
+  }
+
+  public static String getSchemePrefix() {
+    return (isSecure()) ? "https://" : "http://";
+  }
+
+  public static String getScheme(Policy policy) {
+    return policy == Policy.HTTPS_ONLY ? "https://" : "http://";
   }
 }
