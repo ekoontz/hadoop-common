@@ -149,6 +149,18 @@ public class LineReader implements Closeable {
   public void close() throws IOException {
     in.close();
   }
+
+  public long skip(long n) throws IOException {
+    long currentBytesLeftInBuffer = Math.min(0, bufferLength - bufferPosn);
+
+    if (n <= currentBytesLeftInBuffer) {
+      bufferPosn += n;
+      return n;
+    } else {
+      bufferPosn = bufferLength;
+      return in.skip(n - currentBytesLeftInBuffer);
+    }
+  }
   
   /**
    * Read one line from the InputStream into the given Text.
@@ -365,3 +377,4 @@ public class LineReader implements Closeable {
     return readLine(str, Integer.MAX_VALUE, Integer.MAX_VALUE);
   }
 }
+

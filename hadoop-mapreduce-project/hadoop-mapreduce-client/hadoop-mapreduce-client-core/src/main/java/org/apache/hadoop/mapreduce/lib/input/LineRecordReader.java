@@ -43,14 +43,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 
 /**
- * Treats keys as offset in file and value as line. 
+ * Treats keys as offset in file and value as line.
  */
-@InterfaceAudience.LimitedPrivate({"MapReduce", "Pig"})
+@InterfaceAudience.LimitedPrivate({ "MapReduce", "Pig" })
 @InterfaceStability.Evolving
 public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private static final Log LOG = LogFactory.getLog(LineRecordReader.class);
-  public static final String MAX_LINE_LENGTH = 
-    "mapreduce.input.linerecordreader.line.maxlength";
+  public static final String MAX_LINE_LENGTH = "mapreduce.input.linerecordreader.line.maxlength";
 
   private long start;
   private long pos;
@@ -72,8 +71,8 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     this.recordDelimiterBytes = recordDelimiter;
   }
 
-  public void initialize(InputSplit genericSplit,
-                         TaskAttemptContext context) throws IOException {
+  public void initialize(InputSplit genericSplit, TaskAttemptContext context)
+      throws IOException {
     FileSplit split = (FileSplit) genericSplit;
     Configuration job = context.getConfiguration();
     this.maxLineLength = job.getInt(MAX_LINE_LENGTH, Integer.MAX_VALUE);
@@ -84,17 +83,16 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     // open the file and seek to the start of the split
     final FileSystem fs = file.getFileSystem(job);
     fileIn = fs.open(file);
-    
+
     CompressionCodec codec = new CompressionCodecFactory(job).getCodec(file);
-    if (null!=codec) {
-      isCompressedInput = true;	
+    if (null != codec) {
+      isCompressedInput = true;
       decompressor = CodecPool.getDecompressor(codec);
       if (codec instanceof SplittableCompressionCodec) {
-        final SplitCompressionInputStream cIn =
-          ((SplittableCompressionCodec)codec).createInputStream(
-            fileIn, decompressor, start, end,
-            SplittableCompressionCodec.READ_MODE.BYBLOCK);
-        if (null == this.recordDelimiterBytes){
+        final SplitCompressionInputStream cIn = ((SplittableCompressionCodec) codec)
+            .createInputStream(fileIn, decompressor, start, end,
+                SplittableCompressionCodec.READ_MODE.BYBLOCK);
+        if (null == this.recordDelimiterBytes) {
           in = new LineReader(cIn, job);
         } else {
           in = new LineReader(cIn, job, this.recordDelimiterBytes);
@@ -108,14 +106,14 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
           in = new LineReader(codec.createInputStream(fileIn, decompressor),
               job);
         } else {
-          in = new LineReader(codec.createInputStream(fileIn,
-              decompressor), job, this.recordDelimiterBytes);
+          in = new LineReader(codec.createInputStream(fileIn, decompressor),
+              job, this.recordDelimiterBytes);
         }
         filePosition = fileIn;
       }
     } else {
       fileIn.seek(start);
-      if (null == this.recordDelimiterBytes){
+      if (null == this.recordDelimiterBytes) {
         in = new LineReader(fileIn, job);
       } else {
         in = new LineReader(fileIn, job, this.recordDelimiterBytes);
@@ -131,12 +129,10 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     }
     this.pos = start;
   }
-  
 
   private int maxBytesToConsume(long pos) {
-    return isCompressedInput
-      ? Integer.MAX_VALUE
-      : (int) Math.min(Integer.MAX_VALUE, end - pos);
+    return isCompressedInput ? Integer.MAX_VALUE : (int) Math.min(
+        Integer.MAX_VALUE, end - pos);
   }
 
   private long getFilePosition() throws IOException {
@@ -147,6 +143,10 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
       retVal = pos;
     }
     return retVal;
+  }
+
+  public long skip(long n) throws IOException {
+    return in.skip(n);
   }
 
   public boolean nextKeyValue() throws IOException {
@@ -169,8 +169,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
       }
 
       // line too long. try again
-      LOG.info("Skipped line of size " + newSize + " at pos " + 
-               (pos - newSize));
+      LOG.info("Skipped line of size " + newSize + " at pos " + (pos - newSize));
     }
     if (newSize == 0) {
       key = null;
@@ -198,10 +197,11 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     if (start == end) {
       return 0.0f;
     } else {
-      return Math.min(1.0f, (getFilePosition() - start) / (float)(end - start));
+      return Math
+          .min(1.0f, (getFilePosition() - start) / (float) (end - start));
     }
   }
-  
+
   public synchronized void close() throws IOException {
     try {
       if (in != null) {
@@ -215,14 +215,14 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   }
 
   public long getStart() {
-	return start;
+    return start;
   }
 
   public long getPos() {
-	return pos;
+    return pos;
   }
 
   public long getEnd() {
-	return end;
+    return end;
   }
 }
