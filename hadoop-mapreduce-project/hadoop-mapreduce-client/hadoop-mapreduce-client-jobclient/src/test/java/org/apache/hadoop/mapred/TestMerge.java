@@ -263,6 +263,9 @@ public class TestMerge extends TestCase {
 
     public MapOutputCopier() {
     }
+    
+    public void enableSpill() {}
+    public void disableSpill() {}
 
     @SuppressWarnings("unchecked")
     public void init(MapOutputCollector.Context context)

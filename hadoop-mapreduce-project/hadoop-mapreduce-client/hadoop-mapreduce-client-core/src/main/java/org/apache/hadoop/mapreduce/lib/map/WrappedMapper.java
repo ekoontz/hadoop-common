@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.security.Credentials;
@@ -64,9 +65,28 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
       extends Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>.Context {
 
     protected MapContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapContext;
+    
+    protected RecordWriter<KEYOUT,VALUEOUT> output;
 
     public Context(MapContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapContext) {
       this.mapContext = mapContext;
+      output = mapContext.getWriter();
+    }
+    
+    @Override
+    public void enableSpill()
+    {
+    	if (output != null) {
+    		output.enableSpill();
+    	}
+    }
+    
+    @Override
+    public void disableSpill()
+    {
+    	if (output != null) {
+    		output.disableSpill();
+    	}
     }
 
     /**
@@ -322,5 +342,10 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     public float getProgress() {
       return mapContext.getProgress();
     }
+
+	@Override
+	public RecordWriter<KEYOUT, VALUEOUT> getWriter() {
+		return mapContext.getWriter();
+	}
   }
 }

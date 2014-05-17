@@ -36,6 +36,8 @@ public interface MapOutputCollector<K, V> {
     
   public void flush() throws IOException, InterruptedException, 
                              ClassNotFoundException;
+  public void enableSpill();
+  public void disableSpill();
 
   @InterfaceAudience.LimitedPrivate({"MapReduce"})
   @InterfaceStability.Unstable

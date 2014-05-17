@@ -80,5 +80,10 @@ public class MapContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
     return reader.nextKeyValue();
   }
 
+@Override
+public RecordWriter<KEYOUT, VALUEOUT> getWriter() {
+	return this.output;
+}
+
 }
      

@@ -54,4 +54,6 @@ public abstract class RecordWriter<K, V> {
    */ 
   public abstract void close(TaskAttemptContext context
                              ) throws IOException, InterruptedException;
+  public void enableSpill() {}
+  public void disableSpill() {}
 }

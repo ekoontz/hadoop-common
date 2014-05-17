@@ -550,31 +550,38 @@ public class MapTask extends Task {
     }
     
     public boolean haoBytesReadCompatile() {
-    	return this.real instanceof LineRecordReader;
+    	if (this.real instanceof LineRecordReader) {
+    		haoRecordReader = (LineRecordReader)this.real;
+    		return true;
+    	} {
+    		return false;
+    	}
     }
     
-    public long getReaderStart() {
+    LineRecordReader haoRecordReader = null;
+    
+    public long getReaderRawStart() {
     	// hao
 //    	if (this.real instanceof LineRecordReader) {
-    		return ((LineRecordReader)this.real).getStart();
+    		return haoRecordReader.getStart();
 //    	} else {
 //    		return -1;
 //    	}
     }
     
-    public long getReaderPos() {
+    public long getReaderRawPos() {
     	// hao
 //    	if (this.real instanceof LineRecordReader) {
-    		return ((LineRecordReader)this.real).getPos();
+    		return haoRecordReader.getPos();
 //    	} else {
 //    		return -1;
 //    	}
     }
     
-    public long getReaderEnd() {
+    public long getReaderRawEnd() {
     	// hao
 //    	if (this.real instanceof LineRecordReader) {
-    		return ((LineRecordReader)this.real).getEnd();
+    		return haoRecordReader.getEnd();
 //    	} else {
 //    		return -1;
 //    	}
@@ -734,6 +741,17 @@ public class MapTask extends Task {
       }
       collector.close();
     }
+    
+
+    @Override
+	public void enableSpill() {
+      collector.enableSpill();
+    }
+    
+    @Override
+	public void disableSpill() {
+      collector.disableSpill();
+    }
   }
   
   // hao
@@ -823,6 +841,9 @@ public class MapTask extends Task {
 
     public DirectMapOutputCollector() {
     }
+    
+    public void enableSpill() {}
+    public void disableSpill() {}
 
     @SuppressWarnings("unchecked")
     public void init(MapOutputCollector.Context context
@@ -947,6 +968,7 @@ public class MapTask extends Task {
     int haoSpillIntervalMillisSeconds;
     long haoSpillIntervalInputBytes;
     long haoLastSpillTime;
+    boolean haoSpillEnabled = false;
 
     private FileSystem rfs;
 
@@ -1085,6 +1107,13 @@ public class MapTask extends Task {
     	  haoLastSpillTime = System.currentTimeMillis();
       }
     }
+    
+    public void enableSpill() {
+    	haoSpillEnabled = true;
+    }
+    public void disableSpill() {
+    	haoSpillEnabled = false;
+    }
 
     /**
      * Serialize the key, value to intermediate storage.
@@ -1093,6 +1122,15 @@ public class MapTask extends Task {
      */
     public synchronized void collect(K key, V value, final int partition
                                      ) throws IOException {
+//    	if (mapTask.recreader.haoBytesReadCompatile()) {
+//    	  System.out.println("HAO: start=" + mapTask.recreader.getReaderRawStart());
+//    	  System.out.println("HAO:   pos=" + mapTask.recreader.getReaderRawPos());
+//    	  System.out.println("HAO:   end=" + mapTask.recreader.getReaderRawEnd());
+//    	  System.out.println("HAO:enable=" + haoSpillEnabled);
+//    	} else {
+//    		System.out.println("HAO: not compatible");
+//    	}
+    	
       reporter.progress();
       if (key.getClass() != keyClass) {
         throw new IOException("Type mismatch in key from map: expected "
@@ -1114,7 +1152,7 @@ public class MapTask extends Task {
       // hao
       boolean readEnoughToSpill = false;
       if (this.haoSpillIntervalInputBytes != 0 && mapTask.recreader.haoBytesReadCompatile()) {
-    	  readEnoughToSpill = mapTask.recreader.getReaderPos() - mapTask.recreader.getReaderStart() > this.haoSpillIntervalInputBytes;
+    	  readEnoughToSpill = mapTask.recreader.getReaderRawPos() - mapTask.recreader.getReaderRawStart() > this.haoSpillIntervalInputBytes;
       }
       boolean timeLongEnoughToSpill = false;
       if (this.haoSpillIntervalMillisSeconds != 0 && System.currentTimeMillis() - haoLastSpillTime > haoSpillIntervalMillisSeconds) {
@@ -1124,6 +1162,11 @@ public class MapTask extends Task {
       if (bufferRemaining <= 0 || timeLongEnoughToSpill || readEnoughToSpill) {
         // start spill if the thread is not running and the soft limit has been
         // reached
+    	  
+    	if (bufferRemaining < 0 && haoSpillEnabled == false) {
+    		LOG.error("HAO: bufferRemaining < 0 && haoFlushEnabled == false");
+    	}
+    	  
         spillLock.lock();
         try {
           do {
@@ -1135,7 +1178,7 @@ public class MapTask extends Task {
               // created by a reset must be included in "used" bytes
               final int bUsed = distanceTo(kvbidx, bufindex);
               // hao
-              final boolean bufsoftlimit = bUsed >= softLimit || timeLongEnoughToSpill || readEnoughToSpill;
+              final boolean bufsoftlimit = haoSpillEnabled && (bUsed >= softLimit || timeLongEnoughToSpill || readEnoughToSpill);
               
               if ((kvbend + METASIZE) % kvbuffer.length !=
                   equator - (equator % METASIZE)) {
@@ -1224,8 +1267,9 @@ public class MapTask extends Task {
         LOG.info("Record too large for in-memory buffer: " + e.getMessage());
         spillSingleRecord(key, value, partition);
         mapOutputRecordCounter.increment(1);
-        return;
       }
+      this.disableSpill();
+      return;
     }
 
     private TaskAttemptID getTaskID() {
@@ -1692,6 +1736,14 @@ public class MapTask extends Task {
             rec.startOffset = segmentStart;
             rec.rawLength = writer.getRawLength();
             rec.partLength = writer.getCompressedLength();
+            
+            if (mapTask.recreader.haoBytesReadCompatile()) {
+            	rec.mapStartOffset = mapTask.recreader.getReaderRawStart();
+            	rec.mapRawLength = mapTask.recreader.getReaderRawPos();
+            	// FIXME buggy what about compressed input
+            	rec.mapCompressedLength = mapTask.recreader.getReaderRawPos();
+            }
+            
             spillRec.putIndex(rec, i);
             
             // hao
@@ -1735,6 +1787,7 @@ public class MapTask extends Task {
      */
     private void spillSingleRecord(final K key, final V value,
                                    int partition) throws IOException {
+      LOG.error("HAO: spillSingleRecord");
       long size = kvbuffer.length + partitions * APPROX_HEADER_LENGTH;
       FSDataOutputStream out = null;
       try {

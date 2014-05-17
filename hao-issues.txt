@@ -1,0 +1,3 @@
+1 如果map的某个输出key value过大，会调用spillOneRecord，这时会出问题，需要先把当前缓冲区中的spill掉
+2 压缩的输入，Recordeader没有提供压缩的位置，也提供不了，IndexRecord中的值设置有问题；无法判断一个map的输入split究竟有多少压缩后的字节
+3 map task完成时，org.apache.hadoop.mapred.Task.done(Task.java:1026)会去检查map输出文件的大小，但是文件没有了，会跑异常org.apache.hadoop.util.DiskChecker$DiskErrorException

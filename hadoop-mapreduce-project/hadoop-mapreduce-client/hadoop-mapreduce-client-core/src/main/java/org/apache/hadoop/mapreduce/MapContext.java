@@ -38,5 +38,7 @@ public interface MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT>
    */
   public InputSplit getInputSplit();
   
+  RecordWriter<KEYOUT,VALUEOUT> getWriter();
+  
 }
      

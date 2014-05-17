@@ -44,7 +44,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 public abstract class TaskInputOutputContextImpl<KEYIN,VALUEIN,KEYOUT,VALUEOUT> 
        extends TaskAttemptContextImpl 
        implements TaskInputOutputContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
-  private RecordWriter<KEYOUT,VALUEOUT> output;
+  protected RecordWriter<KEYOUT,VALUEOUT> output;
   private OutputCommitter committer;
 
   public TaskInputOutputContextImpl(Configuration conf, TaskAttemptID taskid,

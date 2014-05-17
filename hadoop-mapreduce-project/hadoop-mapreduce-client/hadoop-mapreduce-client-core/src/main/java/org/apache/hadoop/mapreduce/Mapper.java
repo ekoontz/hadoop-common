@@ -104,6 +104,8 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
    */
   public abstract class Context
     implements MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
+	  public void enableSpill() {}
+	  public void disableSpill() {}
   }
   
   /**
@@ -140,9 +142,12 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
    */
   public void run(Context context) throws IOException, InterruptedException {
     setup(context);
+//    System.out.println("HAO:  Mapper.run");
     try {
       while (context.nextKeyValue()) {
+//    	System.out.println("-----------------new mapper input key value pair-------------------");
         map(context.getCurrentKey(), context.getCurrentValue(), context);
+        context.enableSpill();
       }
     } finally {
       cleanup(context);
