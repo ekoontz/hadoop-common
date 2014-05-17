@@ -1599,6 +1599,8 @@ public class MapTask extends Task {
 //      mergeParts();
 //      Path outputPath = mapOutputFile.getOutputFile();
 //      fileOutputByteCounter.increment(rfs.getFileStatus(outputPath).getLen());
+      
+      this.disableSpill();
     }
 
     public void close() { }
