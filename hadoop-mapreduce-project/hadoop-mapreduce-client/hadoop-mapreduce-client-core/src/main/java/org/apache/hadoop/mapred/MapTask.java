@@ -28,7 +28,10 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -532,13 +535,50 @@ public class MapTask extends Task {
 
       System.out.println("NewTrackingRecordReader.initialize: compatile="
           + this.haoBytesReadCompatile());
+      ignoreRangeIter = ignoreRanges.iterator();
+      if (ignoreRangeIter.hasNext()) {
+        nextRangeToIgnore = ignoreRangeIter.next();
+      }
     }
+    
+    MapOutputBuffer<?, ?> haoMapOutputBuffer = null;
+
+    public void setHaoMapOutputBuffer(MapOutputBuffer<?, ?> haoMapOutputBuffer) {
+      this.haoMapOutputBuffer = haoMapOutputBuffer;
+    }
+    
+    public List<InputRange> ignoreRanges = null;
+    
+    public List<InputRange> getIgnoreRanges() {
+      return ignoreRanges;
+    }
+
+    public void setIgnoreRanges(List<InputRange> ignoreRanges) {
+      this.ignoreRanges = ignoreRanges;
+    }
+    
+    Iterator<InputRange> ignoreRangeIter;
+    InputRange nextRangeToIgnore = null;
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-      // TODO add skip code here
-      if (haoRecordReader != null) {
-        haoRecordReader.skip(0);
+      // TODO add skip code here, assume ignore range is asceding and disjoint, and recordreader cannot bypass one ignore range
+      if (haoRecordReader != null && nextRangeToIgnore != null) {
+        long current = haoRecordReader.getPos();
+        if (current >= nextRangeToIgnore.start) {
+//          System.out.println("HAO: skip current=" + current + " rangeStart=" + nextRangeToIgnore.start + " rangeEnd=" + nextRangeToIgnore.end + " len=" + (nextRangeToIgnore.end - current));
+          haoRecordReader.skip(nextRangeToIgnore.end - current);
+          try {
+            haoMapOutputBuffer.readerHeadReset(nextRangeToIgnore.end);
+          } catch (ClassNotFoundException e) {
+            throw new IOException(e);
+          }
+          if (ignoreRangeIter.hasNext()) {
+            nextRangeToIgnore = ignoreRangeIter.next();
+          } else {
+            nextRangeToIgnore = null;
+          }
+        }
       }
 
       long bytesInPrev = getInputBytes(fsStats);
@@ -767,6 +807,19 @@ public class MapTask extends Task {
 
   // hao
   private NewTrackingRecordReader<?, ?> recreader;
+  private long haoInputStartOffset = -1;
+  
+  public static class InputRange {
+    public long start;
+    public long end;
+    public InputRange(long start, long end) {
+      this.start = start;
+      this.end = end;
+    }
+    public String toString() {
+      return "(" + start + "," + end + ")";
+    }
+  }
 
   @SuppressWarnings("unchecked")
   private <INKEY, INVALUE, OUTKEY, OUTVALUE> void runNewMapper(
@@ -789,8 +842,24 @@ public class MapTask extends Task {
     LOG.info("Processing split: " + split);
 
     // hao
+    // get ignore ranges
+    int[] ignores = job.getInts("hao.map.input.ignore");
+    List<InputRange> ranges = new ArrayList<MapTask.InputRange>();
+    if (ignores != null) {
+      for (int i = 0; i+1 < ignores.length; i+=2) {
+        ranges.add(new InputRange(ignores[i], ignores[i+1]));
+      }
+    }
+    System.out.println("HAO: ignore ranges=" + ranges.toString());
+    
     recreader = new NewTrackingRecordReader<INKEY, INVALUE>(split, inputFormat,
         reporter, taskContext);
+    recreader.setIgnoreRanges(ranges);
+    if (split instanceof org.apache.hadoop.mapreduce.lib.input.FileSplit) {
+      haoInputStartOffset = ((org.apache.hadoop.mapreduce.lib.input.FileSplit)split).getStart();
+    } else {
+      haoInputStartOffset = -1;
+    }
     org.apache.hadoop.mapreduce.RecordReader<INKEY, INVALUE> input = (org.apache.hadoop.mapreduce.RecordReader<INKEY, INVALUE>) recreader;
 
     job.setBoolean(JobContext.SKIP_RECORDS, isSkipping());
@@ -933,9 +1002,9 @@ public class MapTask extends Task {
 
     int equator; // marks origin of meta/serialization
     int bufstart; // marks beginning of spill
-    int bufend; // marks beginning of collectable
-    int bufmark; // marks end of record
-    int bufindex; // marks end of collected
+    int bufend; // marks beginning of collectable, that is, end of current spill range
+    int bufmark; // marks end of record, that is, it moves along with bufindex when both key and value are written into buffer
+    int bufindex; // marks end of collected, that is, free memory begins here
     int bufvoid; // marks the point where we should stop
                  // reading at the end of the buffer
 
@@ -971,6 +1040,10 @@ public class MapTask extends Task {
     long haoSpillIntervalInputBytes;
     long haoLastSpillTime;
     boolean haoSpillEnabled = false;
+    long haoInputStart = -1;
+    long haoInputEndPosOfLastKey = -1;
+    boolean haoHasToSpill = false;
+    BlockingQueue<InputRange> haoSpillRecordQueue = new ArrayBlockingQueue<InputRange>(5);
 
     private FileSystem rfs;
 
@@ -998,6 +1071,8 @@ public class MapTask extends Task {
       job = context.getJobConf();
       reporter = context.getReporter();
       mapTask = context.getMapTask();
+      mapTask.recreader.setHaoMapOutputBuffer(this);
+      haoInputEndPosOfLastKey = haoInputStart = mapTask.haoInputStartOffset;
       mapOutputFile = mapTask.getMapOutputFile();
       sortPhase = mapTask.getSortPhase();
       spilledRecordsCounter = reporter.getCounter(TaskCounter.SPILLED_RECORDS);
@@ -1118,6 +1193,62 @@ public class MapTask extends Task {
     public void disableSpill() {
       haoSpillEnabled = false;
     }
+    
+    /**
+     * record reader has skipped a range of data, so if output buffer contains some data, needs spilling
+     * @param inputRangeEndPos
+     */
+    public void readerHeadReset(long newInputStart) throws IOException, ClassNotFoundException {
+      if (this.haoInputStart < 0) {
+        // does not support hao
+        System.out.println("HAO readerHeadReset: does not support head reset");
+        return;
+      } else if (this.haoInputEndPosOfLastKey <= this.haoInputStart) {
+        // no input processed yet, so no need to spill, just move inputStart
+        System.out.println("HAO readerHeadReset: no input processed yet");
+        this.haoInputStart = newInputStart;
+        return;
+      }
+      System.out.println("HAO readerHeadReset: splling");
+      spillLock.lock();
+      try {
+        while (spillInProgress) {
+          reporter.progress();
+          spillDone.await();
+        }
+        checkSpillException();
+
+        final int kvbend = 4 * kvend;
+        if ((kvbend + METASIZE) % kvbuffer.length != equator
+            - (equator % METASIZE)) {
+          // spill finished
+          resetSpill();
+        }
+        if (kvindex != kvend) {
+          kvend = (kvindex + NMETA) % kvmeta.capacity();
+          bufend = bufmark;
+          if (LOG.isInfoEnabled()) {
+            LOG.info("Spilling map output");
+            LOG.info("bufstart = " + bufstart + "; bufend = " + bufmark
+                + "; bufvoid = " + bufvoid);
+            LOG.info("kvstart = " + kvstart + "(" + (kvstart * 4)
+                + "); kvend = " + kvend + "(" + (kvend * 4) + "); length = "
+                + (distanceTo(kvend, kvstart, kvmeta.capacity()) + 1) + "/"
+                + maxRec);
+          }
+          sortAndSpill(this.haoInputStart, this.haoInputEndPosOfLastKey);
+          this.haoInputEndPosOfLastKey = this.haoInputStart = newInputStart;
+        } else {
+          // TODO create dummy spill
+        }
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted while waiting for the writer", e);
+      } finally {
+        spillLock.unlock();
+      }
+      this.disableSpill();
+    
+    }
 
     /**
      * Serialize the key, value to intermediate storage. When this method
@@ -1178,7 +1309,11 @@ public class MapTask extends Task {
         spillLock.lock();
         try {
           do {
+            
             if (!spillInProgress) {
+              assert this.haoSpillRecordQueue.add(new InputRange(this.haoInputStart, this.haoInputEndPosOfLastKey));
+              this.haoInputStart = this.haoInputEndPosOfLastKey;
+              
               final int kvbidx = 4 * kvindex;
               final int kvbend = 4 * kvend;
               // serialized, unspilled bytes always lie between kvindex and
@@ -1276,6 +1411,10 @@ public class MapTask extends Task {
         LOG.info("Record too large for in-memory buffer: " + e.getMessage());
         spillSingleRecord(key, value, partition);
         mapOutputRecordCounter.increment(1);
+      }
+      if (mapTask.recreader.haoBytesReadCompatile()) {
+//        System.out.println("HAO: set end " + haoInputEndPosOfLastKey);
+        this.haoInputEndPosOfLastKey = mapTask.recreader.getReaderRawPos();
       }
       this.disableSpill();
       return;
@@ -1552,6 +1691,8 @@ public class MapTask extends Task {
         InterruptedException {
       LOG.info("Starting flush of map output");
       spillLock.lock();
+      // TODO create dummy spill if data processed but no output generated
+      boolean haoNeedsCreateDummySpill = false;
       try {
         while (spillInProgress) {
           reporter.progress();
@@ -1577,7 +1718,9 @@ public class MapTask extends Task {
                 + (distanceTo(kvend, kvstart, kvmeta.capacity()) + 1) + "/"
                 + maxRec);
           }
-          sortAndSpill();
+          sortAndSpill(this.haoInputStart, mapTask.recreader.getReaderRawPos());
+        } else {
+          // TODO create dummy spill
         }
       } catch (InterruptedException e) {
         throw new IOException("Interrupted while waiting for the writer", e);
@@ -1624,8 +1767,9 @@ public class MapTask extends Task {
               spillReady.await();
             }
             try {
+              InputRange ir = haoSpillRecordQueue.take();
               spillLock.unlock();
-              sortAndSpill();
+              sortAndSpill(ir.start, ir.end);
             } catch (Throwable t) {
               sortSpillException = t;
             } finally {
@@ -1676,7 +1820,7 @@ public class MapTask extends Task {
       spillReady.signal();
     }
 
-    private void sortAndSpill() throws IOException, ClassNotFoundException,
+    private void sortAndSpill(long inputStart, long inputEnd) throws IOException, ClassNotFoundException,
         InterruptedException {
       // approximate the length of the output file to be the length of the
       // buffer + header lengths for the partitions
@@ -1741,10 +1885,12 @@ public class MapTask extends Task {
             rec.partLength = writer.getCompressedLength();
 
             if (mapTask.recreader.haoBytesReadCompatile()) {
-              rec.mapStartOffset = mapTask.recreader.getReaderRawStart();
-              rec.mapRawLength = mapTask.recreader.getReaderRawPos();
-              // FIXME buggy what about compressed input
-              rec.mapCompressedLength = mapTask.recreader.getReaderRawPos();
+//              rec.mapStartOffset = haoSpillStart;
+//              rec.mapEndOffset = mapTask.recreader.getReaderRawStart();
+//              haoSpillStart = rec.mapEndOffset;
+              rec.mapStartOffset = inputStart;
+              rec.mapEndOffset = inputEnd;
+              System.out.println("Spill End: start=" + inputStart + " end=" + inputEnd);
             }
 
             spillRec.putIndex(rec, i);

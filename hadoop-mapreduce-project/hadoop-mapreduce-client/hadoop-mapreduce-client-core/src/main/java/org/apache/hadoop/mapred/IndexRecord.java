@@ -26,9 +26,10 @@ public class IndexRecord {
   public long startOffset;
   public long rawLength;
   public long partLength;
+  
   public long mapStartOffset = -1;
-  public long mapRawLength = -1;
-  public long mapCompressedLength = -1;
+  public long mapEndOffset = -1;
+//  public long mapCompressedLength = -1;
 	
   public IndexRecord() { }
 

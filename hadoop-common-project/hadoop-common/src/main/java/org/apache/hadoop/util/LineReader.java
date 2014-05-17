@@ -151,7 +151,7 @@ public class LineReader implements Closeable {
   }
 
   public long skip(long n) throws IOException {
-    long currentBytesLeftInBuffer = Math.min(0, bufferLength - bufferPosn);
+    long currentBytesLeftInBuffer = Math.max(0, bufferLength - bufferPosn);
 
     if (n <= currentBytesLeftInBuffer) {
       bufferPosn += n;

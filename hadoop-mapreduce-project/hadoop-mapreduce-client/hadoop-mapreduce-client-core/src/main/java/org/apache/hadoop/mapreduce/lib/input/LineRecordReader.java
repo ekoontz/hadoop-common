@@ -146,7 +146,10 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   }
 
   public long skip(long n) throws IOException {
-    return in.skip(n);
+    long realskip = Math.max(0, n);
+    realskip = in.skip(realskip);
+    pos += realskip;
+    return realskip;
   }
 
   public boolean nextKeyValue() throws IOException {
