@@ -160,5 +160,11 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
                                                        int maxLocs,
                                                        TaskAttemptID id) 
   throws IOException;
+  
+  void newMapSpill(TaskAttemptID taskid, MapSpillInfo spill) throws IOException;
 
+  MapTaskSpillInfosUpdate getMapTaskSpillsUpdate(JobID jobId, 
+                                                       int fromIndex, 
+                                                       int maxLocs,
+                                                       TaskAttemptID id);
 }

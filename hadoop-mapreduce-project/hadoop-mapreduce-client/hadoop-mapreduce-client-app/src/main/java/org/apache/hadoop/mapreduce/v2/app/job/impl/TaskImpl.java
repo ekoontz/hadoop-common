@@ -36,9 +36,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.hadoop.mapred.SpillRecord;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
@@ -141,6 +144,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
      ATTEMPT_KILLED_TRANSITION = new AttemptKilledTransition();
   private static final SingleArcTransition<TaskImpl, TaskEvent> 
      KILL_TRANSITION = new KillTransition();
+  
+  private static final NewMapSpillTransition NEW_MAP_SPILL_TRANSITION = new NewMapSpillTransition();
 
   private static final StateMachineFactory
                <TaskImpl, TaskStateInternal, TaskEventType, TaskEvent> 
@@ -195,6 +200,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         new AttemptFailedTransition())
     .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.KILL_WAIT, 
         TaskEventType.T_KILL, KILL_TRANSITION)
+    .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.RUNNING, 
+        TaskEventType.T_ATTEMPT_NEW_SPILL, NEW_MAP_SPILL_TRANSITION)
 
     // Transitions from KILL_WAIT state
     .addTransition(TaskStateInternal.KILL_WAIT,
@@ -941,6 +948,26 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     }
   }
 
+  private static class NewMapSpillTransition implements
+      SingleArcTransition<TaskImpl, TaskEvent> {
+    @Override
+    public void transition(TaskImpl task, TaskEvent event) {
+      MapSpillInfo spillInfo = event.getSpillInfo();
+      JobEvent jobEvent = new JobEvent(task.getID().getJobId(), JobEventType.JOB_NEW_MAP_SPILL);
+      jobEvent.setSpillInfo(event.getSpillInfo());
+     
+      jobEvent.setMapId(event.getSpillMapAttemptID());
+
+      String scheme = (task.encryptedShuffle) ? "https://" : "http://";
+      String url = scheme + event.getHost() + ":" + event.getPort();
+      jobEvent.setNodeHttp(url);
+      
+      task.eventHandler.handle(jobEvent);
+      
+      // TODO HAO
+    }
+  }
+
   private static class AttemptKilledTransition implements
       SingleArcTransition<TaskImpl, TaskEvent> {
     @Override
@@ -960,7 +987,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       }
     }
   }
-
 
   private static class KillWaitAttemptKilledTransition implements
       MultipleArcTransition<TaskImpl, TaskEvent, TaskStateInternal> {

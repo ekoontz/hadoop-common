@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
 import org.apache.hadoop.yarn.event.AbstractEvent;
+import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 
 /**
@@ -28,6 +30,18 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 public class JobEvent extends AbstractEvent<JobEventType> {
 
   private JobId jobID;
+  
+  private MapSpillInfo spillInfo;
+  private TaskAttemptID mapId;
+  private String nodeHttp;
+
+  public MapSpillInfo getSpillInfo() {
+    return spillInfo;
+  }
+
+  public void setSpillInfo(MapSpillInfo spillInfo) {
+    this.spillInfo = spillInfo;
+  }
 
   public JobEvent(JobId jobID, JobEventType type) {
     super(type);
@@ -36,6 +50,22 @@ public class JobEvent extends AbstractEvent<JobEventType> {
 
   public JobId getJobId() {
     return jobID;
+  }
+
+  public TaskAttemptID getMapId() {
+    return mapId;
+  }
+
+  public void setMapId(TaskAttemptID mapId) {
+    this.mapId = mapId;
+  }
+
+  public String getNodeHttp() {
+    return nodeHttp;
+  }
+
+  public void setNodeHttp(String nodeHttp) {
+    this.nodeHttp = nodeHttp;
   }
 
 }

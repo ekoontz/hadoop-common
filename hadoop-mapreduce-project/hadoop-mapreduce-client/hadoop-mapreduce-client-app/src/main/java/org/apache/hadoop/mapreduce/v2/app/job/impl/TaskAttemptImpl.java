@@ -94,6 +94,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
@@ -186,6 +187,9 @@ public abstract class TaskAttemptImpl implements
 
   private static final CleanupContainerTransition CLEANUP_CONTAINER_TRANSITION =
     new CleanupContainerTransition();
+  
+  private static final NewMapTaskSpillTransition NEW_MAP_TASK_SPILL_TRANSITION =
+    new NewMapTaskSpillTransition();
 
   private static final DiagnosticInformationUpdater 
     DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION 
@@ -288,6 +292,9 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.RUNNING,
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP, TaskAttemptEventType.TA_KILL,
          CLEANUP_CONTAINER_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.RUNNING,
+         TaskAttemptStateInternal.RUNNING,
+         TaskAttemptEventType.TA_NEW_SPILL, NEW_MAP_TASK_SPILL_TRANSITION)
 
      // Transitions from COMMIT_PENDING state
      .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
@@ -1860,6 +1867,21 @@ public abstract class TaskAttemptImpl implements
               .weakIntern(taskAttempt.container.getNodeId().toString()),
           taskAttempt.container.getContainerToken(),
           ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP));
+    }
+  }
+  
+  public static class NewMapTaskSpillTransition implements
+      SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      TaskEvent taskEvent = new TaskEvent(taskAttempt.getID().getTaskId(), TaskEventType.T_ATTEMPT_NEW_SPILL);
+      taskEvent.setSpillInfo(event.getSpillInfo());
+      
+      taskEvent.setSpillMapAttemptID(TypeConverter.fromYarn(taskAttempt.getID()));
+      taskEvent.setHost(taskAttempt.getNodeHttpAddress().split(":")[0]);
+      taskEvent.setPort(taskAttempt.getShufflePort());
+      taskAttempt.eventHandler.handle(taskEvent);
     }
   }
 

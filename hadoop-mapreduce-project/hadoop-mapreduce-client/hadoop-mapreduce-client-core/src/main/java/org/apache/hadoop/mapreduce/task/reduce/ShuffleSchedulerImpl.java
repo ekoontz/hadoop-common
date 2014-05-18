@@ -143,6 +143,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
           u.toString(),
           event.getTaskAttemptId());
       maxMapRuntime = Math.max(maxMapRuntime, event.getTaskRunTime());
+      System.out.println("HAO DEBUG: ShuffleScheduler.resolve " + u.toString());
       break;
     case FAILED:
     case KILLED:

@@ -22,6 +22,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.MapTaskCompletionEventsUpdate;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
+import org.apache.hadoop.mapred.MapTaskSpillInfosUpdate;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -36,6 +38,7 @@ class EventFetcher<K,V> extends Thread {
   private final TaskUmbilicalProtocol umbilical;
   private final ShuffleScheduler<K,V> scheduler;
   private int fromEventIdx = 0;
+  private int fromInfoIdx = 0;
   private final int maxEventsToFetch;
   private final ExceptionReporter exceptionReporter;
   
@@ -72,6 +75,7 @@ class EventFetcher<K,V> extends Thread {
           if (!Thread.currentThread().isInterrupted()) {
             Thread.sleep(SLEEP_TIME);
           }
+          
         } catch (InterruptedException e) {
           LOG.info("EventFetcher is interrupted.. Returning");
           return;
@@ -84,6 +88,16 @@ class EventFetcher<K,V> extends Thread {
           // sleep for a bit
           if (!Thread.currentThread().isInterrupted()) {
             Thread.sleep(RETRY_PERIOD);
+          }
+        } finally {
+          
+          MapTaskSpillInfosUpdate update = umbilical.getMapTaskSpillsUpdate(
+              (org.apache.hadoop.mapred.JobID)reduce.getJobID(), fromInfoIdx, maxEventsToFetch, (org.apache.hadoop.mapred.TaskAttemptID)reduce);
+          
+          System.out.println("HAO: MapTaskCompletionEventsUpdate got " + update.getInfos().length + " infos");
+          for (int i = 0; i < update.getInfos() .length; ++i) {
+            MapTaskSpillInfo info = update.getInfos()[i];
+            System.out.println(info);
           }
         }
       }

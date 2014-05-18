@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.jasper.tagplugins.jstl.core.Out;
 
 /**
  * This is used to track task completion events on 
@@ -42,6 +44,7 @@ public class TaskCompletionEvent implements Writable{
   private String taskTrackerHttp;
   private int taskRunTime; // using int since runtime is the time difference
   private TaskAttemptID taskId;
+
   Status status; 
   boolean isMap = false;
   private int idWithinJob;

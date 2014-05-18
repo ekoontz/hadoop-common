@@ -238,6 +238,23 @@ public class TaskAttemptListenerImpl extends CompositeService
   }
 
   @Override
+  public void newMapSpill(TaskAttemptID taskAttemptID, MapSpillInfo spill)
+      throws IOException {
+    // TODO
+    LOG.info("Done acknowledgement from " + taskAttemptID.toString());
+
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        TypeConverter.toYarn(taskAttemptID);
+
+    taskHeartbeatHandler.progressing(attemptID);
+    
+    TaskAttemptEvent event = new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_NEW_SPILL);
+    event.setSpillInfo(spill);
+
+    context.getEventHandler().handle(event);
+  }
+
+  @Override
   public void fatalError(TaskAttemptID taskAttemptID, String msg)
       throws IOException {
     // This happens only in Child and in the Task.
@@ -287,6 +304,23 @@ public class TaskAttemptListenerImpl extends CompositeService
     taskHeartbeatHandler.progressing(attemptID);
     
     return new MapTaskCompletionEventsUpdate(events, shouldReset);
+  }
+
+  @Override
+  public MapTaskSpillInfosUpdate getMapTaskSpillsUpdate(JobID jobId, 
+                                                       int startIndex, 
+                                                       int maxInfos,
+                                                       TaskAttemptID taskAttemptID) {
+    LOG.info("MapTaskSpillInfosUpdate request from " + taskAttemptID.toString()
+        + ". startIndex " + startIndex + " maxEvents " + maxInfos);
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        TypeConverter.toYarn(taskAttemptID);
+    MapTaskSpillInfo[] infos = context.getJob(attemptID.getTaskId().getJobId()).getMapTaskSpillInfos(startIndex, maxInfos);
+
+    taskHeartbeatHandler.progressing(attemptID);
+    
+    return new MapTaskSpillInfosUpdate(infos);
+    
   }
 
   @Override

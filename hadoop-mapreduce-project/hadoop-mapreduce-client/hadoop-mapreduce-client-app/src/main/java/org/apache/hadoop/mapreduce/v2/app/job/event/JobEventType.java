@@ -34,6 +34,7 @@ public enum JobEventType {
   JOB_TASK_COMPLETED,
   JOB_MAP_TASK_RESCHEDULED,
   JOB_TASK_ATTEMPT_COMPLETED,
+  JOB_NEW_MAP_SPILL,
 
   //Producer:CommitterEventHandler
   JOB_SETUP_COMPLETED,

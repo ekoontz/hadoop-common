@@ -605,6 +605,19 @@ public class LocalJobRunner implements ClientProtocol {
       return new MapTaskCompletionEventsUpdate(
         org.apache.hadoop.mapred.TaskCompletionEvent.EMPTY_ARRAY, false);
     }
+
+    @Override
+    public void newMapSpill(TaskAttemptID taskid, MapSpillInfo spill)
+        throws IOException {
+      throw new IOException("HAO: newMapSpill not implemented in LocalJobRunner");
+    }
+
+    @Override
+    public MapTaskSpillInfosUpdate getMapTaskSpillsUpdate(JobID jobId,
+        int fromIndex, int maxLocs, TaskAttemptID id) {
+      // TODO Auto-generated method stub
+      return null;
+    }
     
   }
 

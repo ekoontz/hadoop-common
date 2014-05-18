@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
@@ -614,6 +615,13 @@ public class MockJobs extends MockApps {
         Configuration jobConf = new Configuration(false);
         jobConf.addResource(fc.open(configFile), configFile.toString());
         return jobConf;
+      }
+
+      @Override
+      public MapTaskSpillInfo[] getMapTaskSpillInfos(int startIndex,
+          int maxInfos) {
+        // TODO Auto-generated method stub
+        return null;
       }
     };
   }

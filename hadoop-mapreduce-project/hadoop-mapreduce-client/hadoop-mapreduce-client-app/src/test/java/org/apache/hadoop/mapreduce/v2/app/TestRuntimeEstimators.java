@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -504,6 +505,12 @@ public class TestRuntimeEstimators {
     @Override
     public Configuration loadConfFile() {
       throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public MapTaskSpillInfo[] getMapTaskSpillInfos(int startIndex, int maxInfos) {
+      // TODO Auto-generated method stub
+      return null;
     }
   }
 

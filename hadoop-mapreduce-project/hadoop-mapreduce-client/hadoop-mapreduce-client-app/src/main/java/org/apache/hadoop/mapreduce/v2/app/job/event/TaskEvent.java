@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
 import org.apache.hadoop.yarn.event.AbstractEvent;
+import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 
 /**
@@ -28,6 +30,13 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 public class TaskEvent extends AbstractEvent<TaskEventType> {
 
   private TaskId taskID;
+  
+  private MapSpillInfo spillInfo;
+  
+  private TaskAttemptID spillMapAttemptID;
+  
+  private String host;
+  private int port;
 
   public TaskEvent(TaskId taskID, TaskEventType type) {
     super(type);
@@ -37,4 +46,39 @@ public class TaskEvent extends AbstractEvent<TaskEventType> {
   public TaskId getTaskID() {
     return taskID;
   }
+
+  public MapSpillInfo getSpillInfo() {
+    return spillInfo;
+  }
+
+  public void setSpillInfo(MapSpillInfo spillInfo) {
+    this.spillInfo = spillInfo;
+  }
+
+  public TaskAttemptID getSpillMapAttemptID() {
+    return spillMapAttemptID;
+  }
+
+  public void setSpillMapAttemptID(TaskAttemptID spillMapAttemptID) {
+    this.spillMapAttemptID = spillMapAttemptID;
+  }
+
+  public String getHost() {
+    return host;
+  }
+
+  public void setHost(String host) {
+    this.host = host;
+  }
+
+  public int getPort() {
+    return port;
+  }
+
+  public void setPort(int port) {
+    this.port = port;
+  }
+  
+  
+  
 }

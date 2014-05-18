@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
 import org.apache.hadoop.yarn.event.AbstractEvent;
+import org.apache.hadoop.mapred.MapSpillInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 
 /**
@@ -28,6 +29,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 public class TaskAttemptEvent extends AbstractEvent<TaskAttemptEventType> {
 
   private TaskAttemptId attemptID;
+  
+  private MapSpillInfo spillInfo;
   
   /**
    * Create a new TaskAttemptEvent.
@@ -42,4 +45,14 @@ public class TaskAttemptEvent extends AbstractEvent<TaskAttemptEventType> {
   public TaskAttemptId getTaskAttemptID() {
     return attemptID;
   }
+
+  public MapSpillInfo getSpillInfo() {
+    return spillInfo;
+  }
+
+  public void setSpillInfo(MapSpillInfo spillInfo) {
+    this.spillInfo = spillInfo;
+  }
+  
+  
 }

@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -92,6 +93,8 @@ public interface Job {
   TaskCompletionEvent[]
       getMapAttemptCompletionEvents(int startIndex, int maxEvents);
 
+  MapTaskSpillInfo[] getMapTaskSpillInfos(int startIndex, int maxInfos);
+  
   /**
    * @return information for MR AppMasters (previously failed and current)
    */

@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -47,6 +48,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -212,6 +215,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private List<Integer> taskCompletionIdxToMapCompletionIdx;
   private final List<String> diagnostics = new ArrayList<String>();
   
+  private List<MapTaskSpillInfo> mapTaskSpillInfos;
+  private Lock mapTaskSpillInfoReadLock;
+  private Lock mapTaskSpillInfoWriteLock;
+  
   //task/attempt related datastructures
   private final Map<TaskId, Integer> successAttemptCompletionEventNoMap = 
     new HashMap<TaskId, Integer>();
@@ -227,6 +234,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private static final TaskAttemptCompletedEventTransition
       TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION =
           new TaskAttemptCompletedEventTransition();
+  private static final NewMapSpillTransition NEW_MAP_SPILL_TRANSITION = new NewMapSpillTransition();
   private static final CounterUpdateTransition COUNTER_UPDATE_TRANSITION =
       new CounterUpdateTransition();
   private static final UpdatedNodesTransition UPDATED_NODES_TRANSITION =
@@ -349,6 +357,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobStateInternal.RUNNING, JobStateInternal.REBOOT,
               JobEventType.JOB_AM_REBOOT,
               INTERNAL_REBOOT_TRANSITION)
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
+              JobEventType.JOB_NEW_MAP_SPILL,
+              NEW_MAP_SPILL_TRANSITION)
 
           // Transitions from KILL_WAIT state.
           .addTransition
@@ -673,6 +684,10 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
+    
+    ReadWriteLock spillInfoLock = new ReentrantReadWriteLock();
+    this.mapTaskSpillInfoReadLock = spillInfoLock.readLock();
+    this.mapTaskSpillInfoWriteLock = spillInfoLock.writeLock();
 
     this.jobCredentials = jobCredentials;
     this.jobTokenSecretManager = jobTokenSecretManager;
@@ -815,6 +830,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       return events;
     } finally {
       readLock.unlock();
+    }
+  }
+  
+  public MapTaskSpillInfo[] getMapTaskSpillInfos(int startIndex, int maxInfos)
+  {
+    this.mapTaskSpillInfoReadLock.lock();
+    try {
+      MapTaskSpillInfo[] infos = MapTaskSpillInfo.EMPTY_SPILL_INFOS;
+      if (startIndex < this.mapTaskSpillInfos.size()) {
+        int endpos = Math.min(mapTaskSpillInfos.size(), startIndex + maxInfos);
+        infos = this.mapTaskSpillInfos.subList(startIndex, endpos).toArray(infos);
+      }
+      return infos;
+    } finally {
+      this.mapTaskSpillInfoReadLock.unlock();
     }
   }
 
@@ -1295,6 +1325,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   }
   
   private void actOnUnusableNode(NodeId nodeId, NodeState nodeState) {
+    
     // rerun previously successful map tasks
     List<TaskAttemptId> taskAttemptIdList = nodesToSucceededTaskAttempts.get(nodeId);
     if(taskAttemptIdList != null) {
@@ -1305,6 +1336,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           // reschedule only map tasks because their outputs maybe unusable
           LOG.info(mesg + ". AttemptId:" + id);
           eventHandler.handle(new TaskAttemptKillEvent(id, mesg));
+          
+          System.out.println("HAO: map node became unavailable, nodeid=" + nodeId.toString());
         }
       }
     }
@@ -1422,6 +1455,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.taskAttemptCompletionEvents =
             new ArrayList<TaskAttemptCompletionEvent>(
                 job.numMapTasks + job.numReduceTasks + 10);
+        job.mapTaskSpillInfos = new ArrayList<MapTaskSpillInfo>(job.numMapTasks * 5);
         job.mapAttemptCompletionEvents =
             new ArrayList<TaskCompletionEvent>(job.numMapTasks + 10);
         job.taskCompletionIdxToMapCompletionIdx = new ArrayList<Integer>(
@@ -1767,6 +1801,27 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
             new TaskEvent(task.getID(), TaskEventType.T_KILL));
       }
       job.metrics.endRunningJob(job);
+    }
+  }
+
+  private static class NewMapSpillTransition implements
+      SingleArcTransition<JobImpl, JobEvent> {
+    @Override
+    public void transition(JobImpl job, JobEvent event) {
+      job.mapTaskSpillInfoWriteLock.lock();
+      try {
+        MapTaskSpillInfo info = new MapTaskSpillInfo(job.mapTaskSpillInfos.size(),
+                                                     event.getNodeHttp(),
+                                                     event.getMapId(),
+                                                     MapTaskSpillInfo.Status.NEW_SPILL,
+                                                     event.getSpillInfo());
+        job.mapTaskSpillInfos.add(info);
+      } finally {
+        job.mapTaskSpillInfoWriteLock.unlock();
+      }
+      
+//      System.out.println("HAO JobImpl newMapSpill: " + mapId.toString() + " spill(" + spillInfo.getIndex() + ", " + spillInfo.getStart() + ", " + spillInfo.getEnd() + ")");
+      
     }
   }
 

@@ -30,8 +30,6 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -346,6 +344,12 @@ public class MapTask extends Task {
       runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
     done(umbilical, reporter);
+  }
+  
+  protected void newSpillRecord(long start, long end, int spillIndex) throws IOException
+  {
+    MapSpillInfo info = new MapSpillInfo(start, end, spillIndex);
+    umbilical.newMapSpill(this.getTaskID(), info);
   }
 
   public Progress getSortPhase() {
@@ -1043,7 +1047,7 @@ public class MapTask extends Task {
     long haoInputStart = -1;
     long haoInputEndPosOfLastKey = -1;
     boolean haoHasToSpill = false;
-    BlockingQueue<InputRange> haoSpillRecordQueue = new ArrayBlockingQueue<InputRange>(5);
+    InputRange currentSpillRange = new InputRange(0, 0);
 
     private FileSystem rfs;
 
@@ -1302,17 +1306,13 @@ public class MapTask extends Task {
         // start spill if the thread is not running and the soft limit has been
         // reached
 
-        if (bufferRemaining < 0 && haoSpillEnabled == false) {
-          LOG.error("HAO: bufferRemaining < 0 && haoFlushEnabled == false");
-        }
-
         spillLock.lock();
         try {
           do {
             
-            if (!spillInProgress) {
-              assert this.haoSpillRecordQueue.add(new InputRange(this.haoInputStart, this.haoInputEndPosOfLastKey));
-              this.haoInputStart = this.haoInputEndPosOfLastKey;
+            if (!spillInProgress && haoSpillEnabled) {
+              
+              System.out.println("HAO: haoSpillEnabled=" + haoSpillEnabled);
               
               final int kvbidx = 4 * kvindex;
               final int kvbend = 4 * kvend;
@@ -1334,10 +1334,13 @@ public class MapTask extends Task {
                 continue;
               } else if (bufsoftlimit && kvindex != kvend) {
                 // hao
-                System.out.println("starting to spill: softLimit="
+                currentSpillRange.start = this.haoInputStart;
+                currentSpillRange.end = this.haoInputEndPosOfLastKey;
+                System.out.println("starting to spill" + currentSpillRange + ": softLimit="
                     + (bUsed > softLimit) + " timeLongEnoughToSpill="
                     + timeLongEnoughToSpill + " readEnoughToSpill="
                     + readEnoughToSpill);
+                this.haoInputStart = this.haoInputEndPosOfLastKey;
 
                 // spill records, if any collected; check latter, as it may
                 // be possible for metadata alignment to hit spill pcnt
@@ -1767,9 +1770,8 @@ public class MapTask extends Task {
               spillReady.await();
             }
             try {
-              InputRange ir = haoSpillRecordQueue.take();
               spillLock.unlock();
-              sortAndSpill(ir.start, ir.end);
+              sortAndSpill(currentSpillRange.start, currentSpillRange.end);
             } catch (Throwable t) {
               sortSpillException = t;
             } finally {
@@ -1910,6 +1912,7 @@ public class MapTask extends Task {
         Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(numSpills,
             partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
         spillRec.writeToFile(indexFilename, job);
+        mapTask.newSpillRecord(inputStart, inputEnd, numSpills);
 
         // if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
         // // create spill index file
@@ -1938,70 +1941,70 @@ public class MapTask extends Task {
      */
     private void spillSingleRecord(final K key, final V value, int partition)
         throws IOException {
-      LOG.error("HAO: spillSingleRecord");
-      long size = kvbuffer.length + partitions * APPROX_HEADER_LENGTH;
-      FSDataOutputStream out = null;
-      try {
-        // create spill file
-        final SpillRecord spillRec = new SpillRecord(partitions);
-        final Path filename = mapOutputFile.getSpillFileForWrite(numSpills,
-            size);
-        out = rfs.create(filename);
-
-        // we don't run the combiner for a single record
-        IndexRecord rec = new IndexRecord();
-        for (int i = 0; i < partitions; ++i) {
-          IFile.Writer<K, V> writer = null;
-          try {
-            long segmentStart = out.getPos();
-            // Create a new codec, don't care!
-            writer = new IFile.Writer<K, V>(job, out, keyClass, valClass,
-                codec, spilledRecordsCounter);
-
-            if (i == partition) {
-              final long recordStart = out.getPos();
-              writer.append(key, value);
-              // Note that our map byte count will not be accurate with
-              // compression
-              mapOutputByteCounter.increment(out.getPos() - recordStart);
-            }
-            writer.close();
-
-            // record offsets
-            rec.startOffset = segmentStart;
-            rec.rawLength = writer.getRawLength();
-            rec.partLength = writer.getCompressedLength();
-            spillRec.putIndex(rec, i);
-
-            writer = null;
-          } catch (IOException e) {
-            if (null != writer)
-              writer.close();
-            throw e;
-          }
-        }
-
-        // hao
-        Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(numSpills,
-            partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
-        spillRec.writeToFile(indexFilename, job);
-
-        // if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
-        // // create spill index file
-        // Path indexFilename =
-        // mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
-        // * MAP_OUTPUT_INDEX_RECORD_LENGTH);
-        // spillRec.writeToFile(indexFilename, job);
-        // } else {
-        // indexCacheList.add(spillRec);
-        // totalIndexCacheMemory +=
-        // spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
-        // }
-        ++numSpills;
-      } finally {
-        if (out != null)
-          out.close();
-      }
+      throw new IOException("HAO: spillSingleRecord");
+//      long size = kvbuffer.length + partitions * APPROX_HEADER_LENGTH;
+//      FSDataOutputStream out = null;
+//      try {
+//        // create spill file
+//        final SpillRecord spillRec = new SpillRecord(partitions);
+//        final Path filename = mapOutputFile.getSpillFileForWrite(numSpills,
+//            size);
+//        out = rfs.create(filename);
+//
+//        // we don't run the combiner for a single record
+//        IndexRecord rec = new IndexRecord();
+//        for (int i = 0; i < partitions; ++i) {
+//          IFile.Writer<K, V> writer = null;
+//          try {
+//            long segmentStart = out.getPos();
+//            // Create a new codec, don't care!
+//            writer = new IFile.Writer<K, V>(job, out, keyClass, valClass,
+//                codec, spilledRecordsCounter);
+//
+//            if (i == partition) {
+//              final long recordStart = out.getPos();
+//              writer.append(key, value);
+//              // Note that our map byte count will not be accurate with
+//              // compression
+//              mapOutputByteCounter.increment(out.getPos() - recordStart);
+//            }
+//            writer.close();
+//
+//            // record offsets
+//            rec.startOffset = segmentStart;
+//            rec.rawLength = writer.getRawLength();
+//            rec.partLength = writer.getCompressedLength();
+//            spillRec.putIndex(rec, i);
+//
+//            writer = null;
+//          } catch (IOException e) {
+//            if (null != writer)
+//              writer.close();
+//            throw e;
+//          }
+//        }
+//
+//        // hao
+//        Path indexFilename = mapOutputFile.getSpillIndexFileForWrite(numSpills,
+//            partitions * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+//        spillRec.writeToFile(indexFilename, job);
+//
+//        // if (totalIndexCacheMemory >= indexCacheMemoryLimit) {
+//        // // create spill index file
+//        // Path indexFilename =
+//        // mapOutputFile.getSpillIndexFileForWrite(numSpills, partitions
+//        // * MAP_OUTPUT_INDEX_RECORD_LENGTH);
+//        // spillRec.writeToFile(indexFilename, job);
+//        // } else {
+//        // indexCacheList.add(spillRec);
+//        // totalIndexCacheMemory +=
+//        // spillRec.size() * MAP_OUTPUT_INDEX_RECORD_LENGTH;
+//        // }
+//        ++numSpills;
+//      } finally {
+//        if (out != null)
+//          out.close();
+//      }
     }
 
     /**

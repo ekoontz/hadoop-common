@@ -145,6 +145,19 @@ public class TestMapProgress extends TestCase {
         SortedRanges.Range range) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
+
+    @Override
+    public void newMapSpill(TaskAttemptID taskid, MapSpillInfo spill)
+        throws IOException {
+      throw new IOException("HAO: newMapSpill not implemented in TestMapProcess");
+    }
+
+    @Override
+    public MapTaskSpillInfosUpdate getMapTaskSpillsUpdate(JobID jobId,
+        int fromIndex, int maxLocs, TaskAttemptID id) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
   
   private FileSystem fs = null;
