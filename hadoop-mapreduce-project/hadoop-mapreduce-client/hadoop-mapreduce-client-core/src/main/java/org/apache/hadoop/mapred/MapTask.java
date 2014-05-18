@@ -1237,7 +1237,7 @@ public class MapTask extends Task {
                 + maxRec);
           }
           sortAndSpill(this.haoInputStart, this.haoInputEndPosOfLastKey);
-          this.haoInputEndPosOfLastKey = this.haoInputStart = newInputStart;
+          this.haoInputEndPosOfLastKey = this.haoInputStart = Math.max(newInputStart, mapTask.recreader.getReaderRawPos());
         } else {
           // TODO create dummy spill
         }
