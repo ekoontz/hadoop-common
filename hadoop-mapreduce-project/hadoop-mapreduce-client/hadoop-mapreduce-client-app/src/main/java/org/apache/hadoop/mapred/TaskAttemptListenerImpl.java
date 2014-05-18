@@ -322,6 +322,16 @@ public class TaskAttemptListenerImpl extends CompositeService
     return new MapTaskSpillInfosUpdate(infos);
     
   }
+  public MapInputRange getMapInputRange(JobID jobId, int mapIndex)
+  {
+    MapInputRange range = new MapInputRange(-1, -1);
+    Task maptask = context.getJob(TypeConverter.toYarn(jobId)).getMapTask(mapIndex);
+    if (maptask != null) {
+      range.start = maptask.getMapInputStart();
+      range.end = maptask.getMapInputEnd();
+    }
+    return range;
+  }
 
   @Override
   public boolean ping(TaskAttemptID taskAttemptID) throws IOException {

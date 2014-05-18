@@ -460,4 +460,10 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     // TODO Auto-generated method stub
     return null;
   }
+
+  @Override
+  public Task getMapTask(int taskIndex) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 }

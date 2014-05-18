@@ -462,6 +462,27 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       return TaskState.valueOf(smState.name());
     }
   }
+  
+  private long mapInputStart;
+  private long mapInputEnd;
+
+  public long getMapInputStart() {
+    return mapInputStart;
+  }
+
+  public Task setMapInputStart(long mapInputStart) {
+    this.mapInputStart = mapInputStart;
+    return this;
+  }
+
+  public long getMapInputEnd() {
+    return mapInputEnd;
+  }
+
+  public Task setMapInputEnd(long mapInputEnd) {
+    this.mapInputEnd = mapInputEnd;
+    return this;
+  }
 
   //this is always called in read/write lock
   private long getLaunchTime() {

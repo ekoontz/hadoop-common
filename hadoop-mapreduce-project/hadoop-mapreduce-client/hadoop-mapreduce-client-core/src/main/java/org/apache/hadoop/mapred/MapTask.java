@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -551,18 +552,18 @@ public class MapTask extends Task {
       this.haoMapOutputBuffer = haoMapOutputBuffer;
     }
     
-    public List<InputRange> ignoreRanges = null;
+    public List<MapInputRange> ignoreRanges = null;
     
-    public List<InputRange> getIgnoreRanges() {
+    public List<MapInputRange> getIgnoreRanges() {
       return ignoreRanges;
     }
 
-    public void setIgnoreRanges(List<InputRange> ignoreRanges) {
+    public void setIgnoreRanges(List<MapInputRange> ignoreRanges) {
       this.ignoreRanges = ignoreRanges;
     }
     
-    Iterator<InputRange> ignoreRangeIter;
-    InputRange nextRangeToIgnore = null;
+    Iterator<MapInputRange> ignoreRangeIter;
+    MapInputRange nextRangeToIgnore = null;
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
@@ -812,18 +813,6 @@ public class MapTask extends Task {
   // hao
   private NewTrackingRecordReader<?, ?> recreader;
   private long haoInputStartOffset = -1;
-  
-  public static class InputRange {
-    public long start;
-    public long end;
-    public InputRange(long start, long end) {
-      this.start = start;
-      this.end = end;
-    }
-    public String toString() {
-      return "(" + start + "," + end + ")";
-    }
-  }
 
   @SuppressWarnings("unchecked")
   private <INKEY, INVALUE, OUTKEY, OUTVALUE> void runNewMapper(
@@ -848,10 +837,10 @@ public class MapTask extends Task {
     // hao
     // get ignore ranges
     int[] ignores = job.getInts("hao.map.input.ignore");
-    List<InputRange> ranges = new ArrayList<MapTask.InputRange>();
+    List<MapInputRange> ranges = new ArrayList<MapInputRange>();
     if (ignores != null) {
       for (int i = 0; i+1 < ignores.length; i+=2) {
-        ranges.add(new InputRange(ignores[i], ignores[i+1]));
+        ranges.add(new MapInputRange(ignores[i], ignores[i+1]));
       }
     }
     System.out.println("HAO: ignore ranges=" + ranges.toString());
@@ -1047,7 +1036,7 @@ public class MapTask extends Task {
     long haoInputStart = -1;
     long haoInputEndPosOfLastKey = -1;
     boolean haoHasToSpill = false;
-    InputRange currentSpillRange = new InputRange(0, 0);
+    MapInputRange currentSpillRange = new MapInputRange(0, 0);
 
     private FileSystem rfs;
 

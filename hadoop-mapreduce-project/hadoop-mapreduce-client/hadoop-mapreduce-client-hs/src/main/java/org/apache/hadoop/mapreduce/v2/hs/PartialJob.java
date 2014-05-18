@@ -197,4 +197,10 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
     return null;
   }
 
+  @Override
+  public Task getMapTask(int taskIndex) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 }

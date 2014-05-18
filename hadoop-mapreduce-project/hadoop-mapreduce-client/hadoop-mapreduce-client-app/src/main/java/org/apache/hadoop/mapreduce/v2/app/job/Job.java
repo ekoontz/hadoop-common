@@ -69,6 +69,7 @@ public interface Job {
   boolean isUber();
   String getUserName();
   String getQueueName();
+  Task getMapTask(int mapIndex);
   
   /**
    * @return a path to where the config file for this job is located.

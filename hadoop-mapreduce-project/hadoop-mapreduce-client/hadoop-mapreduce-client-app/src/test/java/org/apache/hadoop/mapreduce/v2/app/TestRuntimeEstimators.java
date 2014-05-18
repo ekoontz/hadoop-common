@@ -356,6 +356,30 @@ public class TestRuntimeEstimators {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 
+    @Override
+    public Task setMapInputStart(long mapInputStart) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Task setMapInputEnd(long mapInputEnd) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public long getMapInputStart() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
+    @Override
+    public long getMapInputEnd() {
+      // TODO Auto-generated method stub
+      return 0;
+    }
+
   }
 
   class MyJobImpl implements Job {
@@ -509,6 +533,12 @@ public class TestRuntimeEstimators {
 
     @Override
     public MapTaskSpillInfo[] getMapTaskSpillInfos(int startIndex, int maxInfos) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public Task getMapTask(int taskIndex) {
       // TODO Auto-generated method stub
       return null;
     }

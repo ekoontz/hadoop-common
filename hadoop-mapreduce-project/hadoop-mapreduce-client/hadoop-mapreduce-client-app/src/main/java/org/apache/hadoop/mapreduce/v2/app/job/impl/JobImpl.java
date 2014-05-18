@@ -49,6 +49,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.hadoop.mapred.MapTask;
 import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
@@ -1028,6 +1029,18 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       lastNonFinalState = state;
     }
   }
+  
+  MapTaskImpl[] haoMapTasks;
+  
+  @Override
+  public Task getMapTask(int mapIndex)
+  {
+    if (mapIndex < this.haoMapTasks.length) {
+      return haoMapTasks[mapIndex];
+    } else {
+      return null;
+    }
+  }
 
   @Private
   public JobStateInternal getInternalState() {
@@ -1525,8 +1538,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
     private void createMapTasks(JobImpl job, long inputLength,
                                 TaskSplitMetaInfo[] splits) {
+      job.haoMapTasks = new MapTaskImpl[job.numMapTasks];
       for (int i=0; i < job.numMapTasks; ++i) {
-        TaskImpl task =
+        long inputStart = splits[i].getSplitIndex().getStartOffset();
+        long inputEnd = inputStart + splits[i].getInputDataLength();
+        job.haoMapTasks[i] = 
             new MapTaskImpl(job.jobId, i,
                 job.eventHandler, 
                 job.remoteJobConfFile, 
@@ -1536,7 +1552,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.clock,
                 job.applicationAttemptId.getAttemptId(),
                 job.metrics, job.appContext);
-        job.addTask(task);
+        job.haoMapTasks[i].setMapInputStart(inputStart);
+        job.haoMapTasks[i].setMapInputEnd(inputEnd);
+        job.addTask(job.haoMapTasks[i]);
       }
       LOG.info("Input size for job " + job.jobId + " = " + inputLength
           + ". Number of splits = " + splits.length);

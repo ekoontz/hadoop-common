@@ -173,4 +173,28 @@ public class CompletedTask implements Task {
       taskAttemptsLock.unlock();
     }
   }
+
+  @Override
+  public Task setMapInputStart(long mapInputStart) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Task setMapInputEnd(long mapInputEnd) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public long getMapInputStart() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public long getMapInputEnd() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
 }

@@ -40,6 +40,14 @@ public interface Task {
   Map<TaskAttemptId, TaskAttempt> getAttempts();
   TaskAttempt getAttempt(TaskAttemptId attemptID);
 
+  Task setMapInputStart(long mapInputStart);
+
+  Task setMapInputEnd(long mapInputEnd);
+
+  long getMapInputStart();;
+
+  long getMapInputEnd();
+
   /** Has Task reached the final state or not.
    */
   boolean isFinished();

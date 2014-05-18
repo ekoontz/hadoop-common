@@ -167,4 +167,5 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
                                                        int fromIndex, 
                                                        int maxLocs,
                                                        TaskAttemptID id);
+  MapInputRange getMapInputRange(JobID jobId, int mapIndex);
 }
