@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.IFile;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapOutputFile;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.Merger;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reducer;
@@ -246,15 +247,15 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
   }
   
   @Override
-  public synchronized MapOutput<K,V> reserve(TaskAttemptID mapId, 
+  public synchronized MapOutput<K,V> reserve(MapTaskSpillInfo spillInfo, 
                                              long requestedSize,
                                              int fetcher
                                              ) throws IOException {
     if (!canShuffleToMemory(requestedSize)) {
-      LOG.info(mapId + ": Shuffling to disk since " + requestedSize + 
+      LOG.info(spillInfo + ": Shuffling to disk since " + requestedSize + 
                " is greater than maxSingleShuffleLimit (" + 
                maxSingleShuffleLimit + ")");
-      return new OnDiskMapOutput<K,V>(mapId, reduceId, this, requestedSize,
+      return new OnDiskMapOutput<K,V>(spillInfo, reduceId, this, requestedSize,
                                       jobConf, mapOutputFile, fetcher, true);
     }
     
@@ -274,17 +275,17 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     // all the stalled threads
     
     if (usedMemory > memoryLimit) {
-      LOG.debug(mapId + ": Stalling shuffle since usedMemory (" + usedMemory
+      LOG.debug(spillInfo + ": Stalling shuffle since usedMemory (" + usedMemory
           + ") is greater than memoryLimit (" + memoryLimit + ")." + 
           " CommitMemory is (" + commitMemory + ")"); 
       return null;
     }
     
     // Allow the in-memory shuffle to progress
-    LOG.debug(mapId + ": Proceeding with shuffle since usedMemory ("
+    LOG.debug(spillInfo + ": Proceeding with shuffle since usedMemory ("
         + usedMemory + ") is lesser than memoryLimit (" + memoryLimit + ")."
         + "CommitMemory is (" + commitMemory + ")"); 
-    return unconditionalReserve(mapId, requestedSize, true);
+    return unconditionalReserve(spillInfo, requestedSize, true);
   }
   
   /**
@@ -292,9 +293,9 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
    * @return
    */
   private synchronized InMemoryMapOutput<K, V> unconditionalReserve(
-      TaskAttemptID mapId, long requestedSize, boolean primaryMapOutput) {
+      MapTaskSpillInfo spillInfo, long requestedSize, boolean primaryMapOutput) {
     usedMemory += requestedSize;
-    return new InMemoryMapOutput<K,V>(jobConf, mapId, this, (int)requestedSize,
+    return new InMemoryMapOutput<K,V>(jobConf, spillInfo, this, (int)requestedSize,
                                       codec, primaryMapOutput);
   }
   
@@ -380,14 +381,14 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         return;
       }
 
-      TaskAttemptID dummyMapId = inputs.get(0).getMapId(); 
+      MapTaskSpillInfo dummySpillInfo = inputs.get(0).getSpillInfo(); 
       List<Segment<K, V>> inMemorySegments = new ArrayList<Segment<K, V>>();
       long mergeOutputSize = 
         createInMemorySegments(inputs, inMemorySegments, 0);
       int noInMemorySegments = inMemorySegments.size();
       
       InMemoryMapOutput<K, V> mergedMapOutputs = 
-        unconditionalReserve(dummyMapId, mergeOutputSize, false);
+        unconditionalReserve(dummySpillInfo, mergeOutputSize, false);
       
       Writer<K, V> writer = 
         new InMemoryWriter<K, V>(mergedMapOutputs.getArrayStream());
@@ -439,8 +440,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       //in the merge method)
 
       //figure out the mapId 
-      TaskAttemptID mapId = inputs.get(0).getMapId();
-      TaskID mapTaskId = mapId.getTaskID();
+      MapTaskSpillInfo dummySpillInfo = inputs.get(0).getSpillInfo();
 
       List<Segment<K, V>> inMemorySegments = new ArrayList<Segment<K, V>>();
       long mergeOutputSize = 
@@ -448,7 +448,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       int noInMemorySegments = inMemorySegments.size();
 
       Path outputPath = 
-        mapOutputFile.getInputFileForWrite(mapTaskId,
+        mapOutputFile.getMapSpillInputFileForWrite(dummySpillInfo,
                                            mergeOutputSize).suffix(
                                                Task.MERGED_OUTPUT_PREFIX);
 
@@ -615,7 +615,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       totalSize += size;
       fullSize -= size;
       Reader<K,V> reader = new InMemoryReader<K,V>(MergeManagerImpl.this, 
-                                                   mo.getMapId(),
+                                                   mo.getSpillInfo().getTaskId(),
                                                    data, 0, (int)size, jobConf);
       inMemorySegments.add(new Segment<K,V>(reader, true, 
                                             (mo.isPrimaryMapOutput() ? 
@@ -691,7 +691,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     long inMemToDiskBytes = 0;
     boolean mergePhaseFinished = false;
     if (inMemoryMapOutputs.size() > 0) {
-      TaskID mapId = inMemoryMapOutputs.get(0).getMapId().getTaskID();
+      MapTaskSpillInfo spillInfo = inMemoryMapOutputs.get(0).getSpillInfo();
       inMemToDiskBytes = createInMemorySegments(inMemoryMapOutputs, 
                                                 memDiskSegments,
                                                 maxInMemReduce);
@@ -709,9 +709,11 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
         mergePhaseFinished = true;
         // must spill to disk, but can't retain in-mem for intermediate merge
         final Path outputPath = 
-          mapOutputFile.getInputFileForWrite(mapId,
-                                             inMemToDiskBytes).suffix(
+          mapOutputFile.getMapSpillInputFileForWrite(spillInfo, inMemToDiskBytes).suffix(
                                                  Task.MERGED_OUTPUT_PREFIX);
+//          mapOutputFile.getInputFileForWrite(mapId,
+//                                             inMemToDiskBytes).suffix(
+//                                                 Task.MERGED_OUTPUT_PREFIX);
         final RawKeyValueIterator rIter = Merger.merge(job, fs,
             keyClass, valueClass, memDiskSegments, numMemDiskSegments,
             tmpDir, comparator, reporter, spilledRecordsCounter, null, 

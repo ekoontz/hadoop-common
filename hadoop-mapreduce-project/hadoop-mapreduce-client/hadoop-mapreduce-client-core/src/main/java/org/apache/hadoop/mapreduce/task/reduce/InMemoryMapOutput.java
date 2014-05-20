@@ -22,22 +22,17 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.io.BoundedByteArrayOutputStream;
 import org.apache.hadoop.io.IOUtils;
-
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Decompressor;
-
 import org.apache.hadoop.mapred.IFileInputStream;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.Reporter;
-
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 @InterfaceAudience.Private
@@ -52,11 +47,11 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
   private final CompressionCodec codec;
   private final Decompressor decompressor;
 
-  public InMemoryMapOutput(Configuration conf, TaskAttemptID mapId,
+  public InMemoryMapOutput(Configuration conf, MapTaskSpillInfo spillInfo,
                            MergeManagerImpl<K, V> merger,
                            int size, CompressionCodec codec,
                            boolean primaryMapOutput) {
-    super(mapId, (long)size, primaryMapOutput);
+    super(spillInfo, (long)size, primaryMapOutput);
     this.conf = conf;
     this.merger = merger;
     this.codec = codec;
@@ -98,7 +93,7 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
       metrics.inputBytes(memory.length);
       reporter.progress();
       LOG.info("Read " + memory.length + " bytes from map-output for " +
-                getMapId());
+                getSpillInfo());
 
       /**
        * We've gotten the amount of data we were expecting. Verify the
@@ -109,7 +104,7 @@ class InMemoryMapOutput<K, V> extends MapOutput<K, V> {
        */
       if (input.read() >= 0 ) {
         throw new IOException("Unexpected extra bytes from input stream for " +
-                               getMapId());
+            getSpillInfo());
       }
 
     } catch (IOException ioe) {      

@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 
 /**
  * Manipulate the working area for the transient store for maps and reduces.
@@ -214,6 +215,13 @@ public class YarnOutputFiles extends MapOutputFile {
         REDUCE_INPUT_FILE_FORMAT_STRING,
         getAttemptOutputDir().toString(), mapId.getId()),
         size, conf);
+  }
+  
+  public Path getMapSpillInputFileForWrite(
+      MapTaskSpillInfo spillInfo, long size) throws IOException {
+    return lDirAlloc.getLocalPathForWrite(String.format(
+        "%s/map_%d_d.out", getAttemptOutputDir().toString(), spillInfo.getTaskId().getId(), spillInfo.getInfoId()),
+        size, getConf());
   }
 
   /** Removes all of the files related to a task. */

@@ -322,6 +322,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     return new MapTaskSpillInfosUpdate(infos);
     
   }
+  
   public MapInputRange getMapInputRange(JobID jobId, int mapIndex)
   {
     MapInputRange range = new MapInputRange(-1, -1);
@@ -331,6 +332,10 @@ public class TaskAttemptListenerImpl extends CompositeService
       range.end = maptask.getMapInputEnd();
     }
     return range;
+  }
+  
+  public MapInputRangeList getMapInputRangeList(JobID jobId) {
+    return context.getJob(TypeConverter.toYarn(jobId)).getMapInputRangeList(jobId);
   }
 
   @Override

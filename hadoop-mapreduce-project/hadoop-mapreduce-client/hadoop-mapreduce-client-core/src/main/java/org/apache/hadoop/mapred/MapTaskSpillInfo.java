@@ -13,7 +13,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 public class MapTaskSpillInfo implements Writable {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  static public enum Status {FAILED, NEW_SPILL};
+  static public enum Status {FAILED, NEW_SPILL, TIP_FAIL};
   
   public static final MapTaskSpillInfo[] EMPTY_SPILL_INFOS = new MapTaskSpillInfo[0];
   
@@ -101,4 +101,21 @@ public class MapTaskSpillInfo implements Writable {
     return String.format("(%d, %s, %s, %s, %s)", infoId, nodeHttp, taskId.toString(), status.toString(), spillInfo.toString());
   }
   
+  @Override
+  public boolean equals(Object other) {
+    if (other instanceof MapTaskSpillInfo) {
+      MapTaskSpillInfo m = (MapTaskSpillInfo)other;
+      return this.infoId == m.infoId;
+    } else {
+      return false;
+    }
+  }
+  
+  public boolean equals(MapTaskSpillInfo other) {
+    return infoId == other.infoId;
+  }
+  @Override
+  public int hashCode() {
+    return this.infoId;
+  }
 }

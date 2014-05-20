@@ -29,14 +29,22 @@ public class IndexRecord {
   
   public long mapStartOffset = -1;
   public long mapEndOffset = -1;
+  public long mapSpillIndex = -1;
 //  public long mapCompressedLength = -1;
 	
   public IndexRecord() { }
 
-  
-  public IndexRecord(long startOffset, long rawLength, long partLength) {
+  public IndexRecord(long startOffset, long rawLength, long partLength,
+      long mapStartOffset, long mapEndOffset, long mapSpillIndex) {
+    super();
     this.startOffset = startOffset;
     this.rawLength = rawLength;
     this.partLength = partLength;
+    this.mapStartOffset = mapStartOffset;
+    this.mapEndOffset = mapEndOffset;
+    this.mapSpillIndex = mapSpillIndex;
   }
+  
+  
+  
 }

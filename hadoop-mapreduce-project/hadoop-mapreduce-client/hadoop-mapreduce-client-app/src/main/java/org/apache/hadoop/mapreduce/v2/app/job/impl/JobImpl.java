@@ -48,6 +48,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapred.MapInputRange;
+import org.apache.hadoop.mapred.MapInputRangeList;
 import org.apache.hadoop.mapred.MapSpillInfo;
 import org.apache.hadoop.mapred.MapTask;
 import org.apache.hadoop.mapred.MapTaskSpillInfo;
@@ -1032,6 +1035,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   
   MapTaskImpl[] haoMapTasks;
   
+  MapInputRangeList mapInputRangeList;
+  
+  public MapInputRangeList getMapInputRangeList(JobID jobId) {
+    return mapInputRangeList;
+  }
+  
   @Override
   public Task getMapTask(int mapIndex)
   {
@@ -1539,6 +1548,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     private void createMapTasks(JobImpl job, long inputLength,
                                 TaskSplitMetaInfo[] splits) {
       job.haoMapTasks = new MapTaskImpl[job.numMapTasks];
+      job.mapInputRangeList = new MapInputRangeList();
+      job.mapInputRangeList.setRanges(new ArrayList<MapInputRange>(job.numMapTasks));
       for (int i=0; i < job.numMapTasks; ++i) {
         long inputStart = splits[i].getSplitIndex().getStartOffset();
         long inputEnd = inputStart + splits[i].getInputDataLength();
@@ -1554,6 +1565,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.metrics, job.appContext);
         job.haoMapTasks[i].setMapInputStart(inputStart);
         job.haoMapTasks[i].setMapInputEnd(inputEnd);
+        job.mapInputRangeList.getRanges().add(new MapInputRange(inputEnd, inputEnd));
         job.addTask(job.haoMapTasks[i]);
       }
       LOG.info("Input size for job " + job.jobId + " = " + inputLength
@@ -1859,7 +1871,21 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // - getMapAttemptCompletionEvents uses index ranges specific to maps
         // - type converting the same events over and over is expensive
         mapEventIdx = job.mapAttemptCompletionEvents.size();
-        job.mapAttemptCompletionEvents.add(TypeConverter.fromYarn(tce));
+        TaskCompletionEvent te = TypeConverter.fromYarn(tce);
+        job.mapAttemptCompletionEvents.add(te);
+        if (tce.getStatus() != TaskAttemptCompletionEventStatus.SUCCEEDED) {
+          job.mapTaskSpillInfoWriteLock.lock();
+          try {
+            MapTaskSpillInfo info = new MapTaskSpillInfo(job.mapTaskSpillInfos.size(),
+                                                         te.getTaskTrackerHttp(),
+                                                         te.getTaskAttemptId(),
+                                                         tce.getStatus() == TaskAttemptCompletionEventStatus.TIPFAILED ? MapTaskSpillInfo.Status.TIP_FAIL : MapTaskSpillInfo.Status.FAILED,
+                                                         null);
+            job.mapTaskSpillInfos.add(info);
+          } finally {
+            job.mapTaskSpillInfoWriteLock.unlock();
+          }
+        }
       }
       job.taskCompletionIdxToMapCompletionIdx.add(mapEventIdx);
       

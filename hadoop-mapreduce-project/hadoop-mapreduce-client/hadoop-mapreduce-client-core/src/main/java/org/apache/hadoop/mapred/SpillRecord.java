@@ -106,7 +106,7 @@ public class SpillRecord {
   public IndexRecord getIndex(int partition) {
     final int pos = partition * MapTask.MAP_OUTPUT_INDEX_RECORD_LENGTH / 8;
     return new IndexRecord(entries.get(pos), entries.get(pos + 1),
-                           entries.get(pos + 2));
+                           entries.get(pos + 2), entries.get(pos + 3), entries.get(pos + 4), entries.get(pos + 5));
   }
 
   /**
@@ -117,6 +117,9 @@ public class SpillRecord {
     entries.put(pos, rec.startOffset);
     entries.put(pos + 1, rec.rawLength);
     entries.put(pos + 2, rec.partLength);
+    entries.put(pos + 3, rec.mapStartOffset);
+    entries.put(pos + 4, rec.mapEndOffset);
+    entries.put(pos + 5, rec.mapSpillIndex);
   }
 
   /**

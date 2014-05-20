@@ -29,6 +29,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.crypto.SecretKey;
 import javax.net.ssl.HttpsURLConnection;
@@ -38,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -223,9 +226,16 @@ class Fetcher<K,V> extends Thread {
     }
   }
 
-  private void abortConnect(MapHost host, Set<TaskAttemptID> remaining) {
-    for (TaskAttemptID left : remaining) {
-      scheduler.putBackKnownMapOutput(host, left);
+//  private void abortConnect(MapHost host, Set<TaskAttemptID> remaining) {
+//    for (TaskAttemptID left : remaining) {
+//      scheduler.putBackKnownMapOutput(host, left);
+//    }
+//    closeConnection();
+//  }
+  
+  private void abortConnect(MapHost host, Set<MapTaskSpillInfo> remaining) {
+    for (MapTaskSpillInfo left : remaining) {
+      scheduler.putBackKnownMapSpill(host, left);
     }
     closeConnection();
   }
@@ -239,26 +249,27 @@ class Fetcher<K,V> extends Thread {
   @VisibleForTesting
   protected void copyFromHost(MapHost host) throws IOException {
     // Get completed maps on 'host'
-    List<TaskAttemptID> maps = scheduler.getMapsForHost(host);
+    List<MapTaskSpillInfo> spills = scheduler.getSpillsForHost(host);
+//    List<TaskAttemptID> maps = scheduler.getMapsForHost(host);
     
     // Sanity check to catch hosts with only 'OBSOLETE' maps, 
     // especially at the tail of large jobs
-    if (maps.size() == 0) {
+    if (spills.size() == 0) {
       return;
     }
     
     if(LOG.isDebugEnabled()) {
       LOG.debug("Fetcher " + id + " going to fetch from " + host + " for: "
-        + maps);
+        + spills);
     }
     
     // List of maps to be fetched yet
-    Set<TaskAttemptID> remaining = new HashSet<TaskAttemptID>(maps);
+    Set<MapTaskSpillInfo> remaining = new HashSet<MapTaskSpillInfo>(spills);
     
     // Construct the url and connect
     DataInputStream input = null;
     try {
-      URL url = getMapOutputURL(host, maps);
+      URL url = getMapSpillOutputURL(host, spills);
       openConnection(url);
       if (stopped) {
         abortConnect(host, remaining);
@@ -319,13 +330,13 @@ class Fetcher<K,V> extends Thread {
 
       // If connect did not succeed, just mark all the maps as failed,
       // indirectly penalizing the host
-      for(TaskAttemptID left: remaining) {
+      for(MapTaskSpillInfo left: remaining) {
         scheduler.copyFailed(left, host, false, connectExcpt);
       }
      
       // Add back all the remaining maps, WITHOUT marking them as failed
-      for(TaskAttemptID left: remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
+      for(MapTaskSpillInfo left: remaining) {
+        scheduler.putBackKnownMapSpill(host, left);
       }
       
       return;
@@ -336,14 +347,14 @@ class Fetcher<K,V> extends Thread {
       // On any error, faildTasks is not null and we exit
       // after putting back the remaining maps to the 
       // yet_to_be_fetched list and marking the failed tasks.
-      TaskAttemptID[] failedTasks = null;
+      MapTaskSpillInfo[] failedTasks = null;
       while (!remaining.isEmpty() && failedTasks == null) {
         failedTasks = copyMapOutput(host, input, remaining);
       }
       
       if(failedTasks != null && failedTasks.length > 0) {
         LOG.warn("copyMapOutput failed for tasks "+Arrays.toString(failedTasks));
-        for(TaskAttemptID left: failedTasks) {
+        for(MapTaskSpillInfo left: failedTasks) {
           scheduler.copyFailed(left, host, true, false);
         }
       }
@@ -360,19 +371,23 @@ class Fetcher<K,V> extends Thread {
         IOUtils.cleanup(LOG, input);
         input = null;
       }
-      for (TaskAttemptID left : remaining) {
-        scheduler.putBackKnownMapOutput(host, left);
+      for (MapTaskSpillInfo left : remaining) {
+        scheduler.putBackKnownMapSpill(host, left);
       }
     }
   }
   
-  private static TaskAttemptID[] EMPTY_ATTEMPT_ID_ARRAY = new TaskAttemptID[0];
+  private static MapTaskSpillInfo[] EMPTY_ATTEMPT_ID_ARRAY = new MapTaskSpillInfo[0];
   
-  private TaskAttemptID[] copyMapOutput(MapHost host,
+  
+  Pattern SPILL_FILENAME_PTH = Pattern.compile("(.+)_spill_(\\d+).out");
+  
+  private MapTaskSpillInfo[] copyMapOutput(MapHost host,
                                 DataInputStream input,
-                                Set<TaskAttemptID> remaining) {
+                                Set<MapTaskSpillInfo> remaining) {
     MapOutput<K,V> mapOutput = null;
-    TaskAttemptID mapId = null;
+    MapTaskSpillInfo spill = null;
+//    TaskAttemptID mapId = null;
     long decompressedLength = -1;
     long compressedLength = -1;
     
@@ -383,7 +398,18 @@ class Fetcher<K,V> extends Thread {
       try {
         ShuffleHeader header = new ShuffleHeader();
         header.readFields(input);
-        mapId = TaskAttemptID.forName(header.mapId);
+        
+        Matcher matcher = SPILL_FILENAME_PTH.matcher(header.mapId);
+        assert matcher.matches();
+        TaskAttemptID attemptId = TaskAttemptID.forName(matcher.group(1));
+        int spillIndex = Integer.parseInt(matcher.group(2), -1);
+        for (MapTaskSpillInfo s : remaining) {
+          if (attemptId.equals(s.getTaskId()) && spillIndex == s.getSpillInfo().getIndex()){
+            spill = s;
+          }
+        }
+        
+        assert spill != null;
         compressedLength = header.compressedLength;
         decompressedLength = header.uncompressedLength;
         forReduce = header.forReduce;
@@ -391,24 +417,25 @@ class Fetcher<K,V> extends Thread {
         badIdErrs.increment(1);
         LOG.warn("Invalid map id ", e);
         //Don't know which one was bad, so consider all of them as bad
-        return remaining.toArray(new TaskAttemptID[remaining.size()]);
+        return remaining.toArray(new MapTaskSpillInfo[remaining.size()]);
       }
 
  
       // Do some basic sanity verification
       if (!verifySanity(compressedLength, decompressedLength, forReduce,
-          remaining, mapId)) {
-        return new TaskAttemptID[] {mapId};
+          remaining, spill)) {
+        return new MapTaskSpillInfo[] {spill};
       }
       
       if(LOG.isDebugEnabled()) {
-        LOG.debug("header: " + mapId + ", len: " + compressedLength + 
+        LOG.debug("header: " + spill + ", len: " + compressedLength + 
             ", decomp len: " + decompressedLength);
       }
       
       // Get the location for the map output - either in-memory or on-disk
       try {
-        mapOutput = merger.reserve(mapId, decompressedLength, id);
+        mapOutput = merger.reserve(spill, decompressedLength, id);
+//        mapOutput = merger.reserve(mapId, decompressedLength, id);
       } catch (IOException ioe) {
         // kill this reduce attempt
         ioErrs.increment(1);
@@ -429,7 +456,7 @@ class Fetcher<K,V> extends Thread {
       try {
         // Go!
         LOG.info("fetcher#" + id + " about to shuffle output of map "
-            + mapOutput.getMapId() + " decomp: " + decompressedLength
+            + mapOutput.getSpillInfo() + " decomp: " + decompressedLength
             + " len: " + compressedLength + " to " + mapOutput.getDescription());
         mapOutput.shuffle(host, input, compressedLength, decompressedLength,
             metrics, reporter);
@@ -440,32 +467,32 @@ class Fetcher<K,V> extends Thread {
       
       // Inform the shuffle scheduler
       long endTime = System.currentTimeMillis();
-      scheduler.copySucceeded(mapId, host, compressedLength, 
+      scheduler.copySucceeded(spill, host, compressedLength, 
                               endTime - startTime, mapOutput);
       // Note successful shuffle
-      remaining.remove(mapId);
+      remaining.remove(spill);
       metrics.successFetch();
       return null;
     } catch (IOException ioe) {
       ioErrs.increment(1);
-      if (mapId == null || mapOutput == null) {
+      if (spill == null || mapOutput == null) {
         LOG.info("fetcher#" + id + " failed to read map header" + 
-                 mapId + " decomp: " + 
+            spill + " decomp: " + 
                  decompressedLength + ", " + compressedLength, ioe);
-        if(mapId == null) {
-          return remaining.toArray(new TaskAttemptID[remaining.size()]);
+        if(spill == null) {
+          return remaining.toArray(new MapTaskSpillInfo[remaining.size()]);
         } else {
-          return new TaskAttemptID[] {mapId};
+          return new MapTaskSpillInfo[] {spill};
         }
       }
       
-      LOG.warn("Failed to shuffle output of " + mapId + 
+      LOG.warn("Failed to shuffle output of " + spill + 
                " from " + host.getHostName(), ioe); 
 
       // Inform the shuffle-scheduler
       mapOutput.abort();
       metrics.failedFetch();
-      return new TaskAttemptID[] {mapId};
+      return new MapTaskSpillInfo[] {spill};
     }
 
   }
@@ -480,11 +507,11 @@ class Fetcher<K,V> extends Thread {
    * @return true/false, based on if the verification succeeded or not
    */
   private boolean verifySanity(long compressedLength, long decompressedLength,
-      int forReduce, Set<TaskAttemptID> remaining, TaskAttemptID mapId) {
+      int forReduce, Set<MapTaskSpillInfo> remaining, MapTaskSpillInfo spill) {
     if (compressedLength < 0 || decompressedLength < 0) {
       wrongLengthErrs.increment(1);
       LOG.warn(getName() + " invalid lengths in map output header: id: " +
-               mapId + " len: " + compressedLength + ", decomp len: " + 
+          spill + " len: " + compressedLength + ", decomp len: " + 
                decompressedLength);
       return false;
     }
@@ -492,45 +519,63 @@ class Fetcher<K,V> extends Thread {
     if (forReduce != reduce) {
       wrongReduceErrs.increment(1);
       LOG.warn(getName() + " data for the wrong reduce map: " +
-               mapId + " len: " + compressedLength + " decomp len: " +
+          spill + " len: " + compressedLength + " decomp len: " +
                decompressedLength + " for reduce " + forReduce);
       return false;
     }
 
     // Sanity check
-    if (!remaining.contains(mapId)) {
+    if (!remaining.contains(spill)) {
       wrongMapErrs.increment(1);
-      LOG.warn("Invalid map-output! Received output for " + mapId);
+      LOG.warn("Invalid map-output! Received output for " + spill);
       return false;
     }
     
     return true;
   }
 
-  /**
-   * Create the map-output-url. This will contain all the map ids
-   * separated by commas
-   * @param host
-   * @param maps
-   * @return
-   * @throws MalformedURLException
-   */
-  private URL getMapOutputURL(MapHost host, List<TaskAttemptID> maps
-                              )  throws MalformedURLException {
-    // Get the base url
+//  /**
+//   * Create the map-output-url. This will contain all the map ids
+//   * separated by commas
+//   * @param host
+//   * @param maps
+//   * @return
+//   * @throws MalformedURLException
+//   */
+//  private URL getMapOutputURL(MapHost host, List<TaskAttemptID> maps
+//                              )  throws MalformedURLException {
+//    // Get the base url
+//    StringBuffer url = new StringBuffer(host.getBaseUrl());
+//    
+//    boolean first = true;
+//    for (TaskAttemptID mapId : maps) {
+//      if (!first) {
+//        url.append(",");
+//      }
+//      url.append(mapId);
+//      first = false;
+//    }
+//   
+//    LOG.debug("MapOutput URL for " + host + " -> " + url.toString());
+//    return new URL(url.toString());
+//  }
+  
+  private URL getMapSpillOutputURL(MapHost host, List<MapTaskSpillInfo> spills
+                              )throws MalformedURLException {
     StringBuffer url = new StringBuffer(host.getBaseUrl());
-    
     boolean first = true;
-    for (TaskAttemptID mapId : maps) {
+    for (MapTaskSpillInfo spill : spills) {
       if (!first) {
         url.append(",");
       }
-      url.append(mapId);
-      first = false;
+      url.append(spill.getTaskId().toString());
+      url.append("_spill_");
+      url.append(spill.getSpillInfo().getIndex());
+      url.append(".out");
     }
-   
-    LOG.debug("MapOutput URL for " + host + " -> " + url.toString());
-    return new URL(url.toString());
+    String finalUrl = url.toString();
+    System.out.println("HAO reduce fetch url: " + finalUrl);
+    return new URL(finalUrl);
   }
   
   /** 

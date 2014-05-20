@@ -23,19 +23,15 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
 import org.apache.hadoop.io.IOUtils;
-
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapOutputFile;
-
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.reduce.MergeManagerImpl.CompressAwarePath;
 
@@ -52,25 +48,26 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
   private final OutputStream disk; 
   private long compressedSize;
 
-  public OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
+  public OnDiskMapOutput(MapTaskSpillInfo spillInfo, TaskAttemptID reduceId,
                          MergeManagerImpl<K,V> merger, long size,
                          JobConf conf,
                          MapOutputFile mapOutputFile,
                          int fetcher, boolean primaryMapOutput)
       throws IOException {
-    this(mapId, reduceId, merger, size, conf, mapOutputFile, fetcher,
+    this(spillInfo, reduceId, merger, size, conf, mapOutputFile, fetcher,
         primaryMapOutput, FileSystem.getLocal(conf),
-        mapOutputFile.getInputFileForWrite(mapId.getTaskID(), size));
+        
+        mapOutputFile.getMapSpillInputFileForWrite(spillInfo, size));
   }
 
   @VisibleForTesting
-  OnDiskMapOutput(TaskAttemptID mapId, TaskAttemptID reduceId,
+  OnDiskMapOutput(MapTaskSpillInfo spillInfo, TaskAttemptID reduceId,
                          MergeManagerImpl<K,V> merger, long size,
                          JobConf conf,
                          MapOutputFile mapOutputFile,
                          int fetcher, boolean primaryMapOutput,
                          FileSystem fs, Path outputPath) throws IOException {
-    super(mapId, size, primaryMapOutput);
+    super(spillInfo, size, primaryMapOutput);
     this.fs = fs;
     this.merger = merger;
     this.outputPath = outputPath;
@@ -97,7 +94,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
         int n = input.read(buf, 0, (int) Math.min(bytesLeft, BYTES_TO_READ));
         if (n < 0) {
           throw new IOException("read past end of stream reading " + 
-                                getMapId());
+                                getSpillInfo());
         }
         disk.write(buf, 0, n);
         bytesLeft -= n;
@@ -106,7 +103,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
       }
 
       LOG.info("Read " + (compressedLength - bytesLeft) + 
-               " bytes from map-output for " + getMapId());
+               " bytes from map-output for " + getSpillInfo());
 
       disk.close();
     } catch (IOException ioe) {
@@ -120,7 +117,7 @@ class OnDiskMapOutput<K, V> extends MapOutput<K, V> {
     // Sanity check
     if (bytesLeft != 0) {
       throw new IOException("Incomplete map output received for " +
-                            getMapId() + " from " +
+          getSpillInfo() + " from " +
                             host.getHostName() + " (" + 
                             bytesLeft + " bytes missing of " + 
                             compressedLength + ")");

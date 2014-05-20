@@ -85,7 +85,8 @@ public class MapTask extends Task {
   /**
    * The size of each record in the index file for the map-outputs.
    */
-  public static final int MAP_OUTPUT_INDEX_RECORD_LENGTH = 24;
+//  public static final int MAP_OUTPUT_INDEX_RECORD_LENGTH = 24;
+  public static final int MAP_OUTPUT_INDEX_RECORD_LENGTH = 48;
 
   private TaskSplitIndex splitMetaInfo = new TaskSplitIndex();
   private final static int APPROX_HEADER_LENGTH = 150;
@@ -1881,6 +1882,7 @@ public class MapTask extends Task {
 //              haoSpillStart = rec.mapEndOffset;
               rec.mapStartOffset = inputStart;
               rec.mapEndOffset = inputEnd;
+              rec.mapSpillIndex = numSpills;
               System.out.println("Spill End: start=" + inputStart + " end=" + inputEnd);
             }
 

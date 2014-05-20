@@ -47,6 +47,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapred.MapReduceChildJVM;
+import org.apache.hadoop.mapred.MapSpillInfo;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskAttemptContextImpl;
@@ -1875,6 +1876,11 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      MapSpillInfo spillInfo = event.getSpillInfo();
+      if (spillInfo.getStart() >= spillInfo.getEnd()) {
+        return;
+      }
+      
       TaskEvent taskEvent = new TaskEvent(taskAttempt.getID().getTaskId(), TaskEventType.T_ATTEMPT_NEW_SPILL);
       taskEvent.setSpillInfo(event.getSpillInfo());
       

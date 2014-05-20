@@ -66,15 +66,27 @@ class EventFetcher<K,V> extends Thread {
     try {
       while (!stopped && !Thread.currentThread().isInterrupted()) {
         try {
-          int numNewMaps = getMapCompletionEvents();
+          int newSpills = getMapSpillUpdate();
           failures = 0;
-          if (numNewMaps > 0) {
-            LOG.info(reduce + ": " + "Got " + numNewMaps + " new map-outputs");
+          if (newSpills > 0) {
+            System.out.println(reduce + ": Got " + newSpills + " new spills");
           }
           LOG.debug("GetMapEventsThread about to sleep for " + SLEEP_TIME);
           if (!Thread.currentThread().isInterrupted()) {
             Thread.sleep(SLEEP_TIME);
           }
+          
+          
+          
+          
+//          int numNewMaps = getMapCompletionEvents();
+//          if (numNewMaps > 0) {
+//            LOG.info(reduce + ": " + "Got " + numNewMaps + " new map-outputs");
+//          }
+//          LOG.debug("GetMapEventsThread about to sleep for " + SLEEP_TIME);
+//          if (!Thread.currentThread().isInterrupted()) {
+//            Thread.sleep(SLEEP_TIME);
+//          }
           
         } catch (InterruptedException e) {
           LOG.info("EventFetcher is interrupted.. Returning");
@@ -88,16 +100,6 @@ class EventFetcher<K,V> extends Thread {
           // sleep for a bit
           if (!Thread.currentThread().isInterrupted()) {
             Thread.sleep(RETRY_PERIOD);
-          }
-        } finally {
-          
-          MapTaskSpillInfosUpdate update = umbilical.getMapTaskSpillsUpdate(
-              (org.apache.hadoop.mapred.JobID)reduce.getJobID(), fromInfoIdx, maxEventsToFetch, (org.apache.hadoop.mapred.TaskAttemptID)reduce);
-          
-          System.out.println("HAO: MapTaskCompletionEventsUpdate got " + update.getInfos().length + " infos");
-          for (int i = 0; i < update.getInfos() .length; ++i) {
-            MapTaskSpillInfo info = update.getInfos()[i];
-            System.out.println(info);
           }
         }
       }
@@ -124,43 +126,86 @@ class EventFetcher<K,V> extends Thread {
    * from a given event ID.
    * @throws IOException
    */  
-  protected int getMapCompletionEvents()
-      throws IOException, InterruptedException {
+//  protected int getMapCompletionEvents()
+//      throws IOException, InterruptedException {
+//    
+//    int numNewMaps = 0;
+//    TaskCompletionEvent events[] = null;
+//
+//    do {
+//      MapTaskCompletionEventsUpdate update =
+//          umbilical.getMapCompletionEvents(
+//              (org.apache.hadoop.mapred.JobID)reduce.getJobID(),
+//              fromEventIdx,
+//              maxEventsToFetch,
+//              (org.apache.hadoop.mapred.TaskAttemptID)reduce);
+//      events = update.getMapTaskCompletionEvents();
+//      LOG.debug("Got " + events.length + " map completion events from " +
+//               fromEventIdx);
+//
+//      assert !update.shouldReset() : "Unexpected legacy state";
+//
+//      // Update the last seen event ID
+//      fromEventIdx += events.length;
+//
+//      // Process the TaskCompletionEvents:
+//      // 1. Save the SUCCEEDED maps in knownOutputs to fetch the outputs.
+//      // 2. Save the OBSOLETE/FAILED/KILLED maps in obsoleteOutputs to stop
+//      //    fetching from those maps.
+//      // 3. Remove TIPFAILED maps from neededOutputs since we don't need their
+//      //    outputs at all.
+//      for (TaskCompletionEvent event : events) {
+//        scheduler.resolve(event);
+//        if (TaskCompletionEvent.Status.SUCCEEDED == event.getTaskStatus()) {
+//          ++numNewMaps;
+//        }
+//      }
+//    } while (events.length == maxEventsToFetch);
+//
+//    return numNewMaps;
+//  }
+  
+  protected int getMapSpillUpdate()
+      throws IOException, InterruptedException  {
+    int newSpills = 0;
+    MapTaskSpillInfo spills[] = null;
     
-    int numNewMaps = 0;
-    TaskCompletionEvent events[] = null;
-
     do {
-      MapTaskCompletionEventsUpdate update =
-          umbilical.getMapCompletionEvents(
-              (org.apache.hadoop.mapred.JobID)reduce.getJobID(),
-              fromEventIdx,
-              maxEventsToFetch,
-              (org.apache.hadoop.mapred.TaskAttemptID)reduce);
-      events = update.getMapTaskCompletionEvents();
-      LOG.debug("Got " + events.length + " map completion events from " +
-               fromEventIdx);
-
-      assert !update.shouldReset() : "Unexpected legacy state";
-
-      // Update the last seen event ID
-      fromEventIdx += events.length;
-
-      // Process the TaskCompletionEvents:
-      // 1. Save the SUCCEEDED maps in knownOutputs to fetch the outputs.
-      // 2. Save the OBSOLETE/FAILED/KILLED maps in obsoleteOutputs to stop
-      //    fetching from those maps.
-      // 3. Remove TIPFAILED maps from neededOutputs since we don't need their
-      //    outputs at all.
-      for (TaskCompletionEvent event : events) {
-        scheduler.resolve(event);
-        if (TaskCompletionEvent.Status.SUCCEEDED == event.getTaskStatus()) {
-          ++numNewMaps;
+      MapTaskSpillInfosUpdate update = umbilical.getMapTaskSpillsUpdate((org.apache.hadoop.mapred.JobID)reduce.getJobID(), fromInfoIdx, maxEventsToFetch, (org.apache.hadoop.mapred.TaskAttemptID)reduce);
+      System.out.println("HAO: MapTaskCompletionEventsUpdate got " + update.getInfos().length + " infos");
+      
+      spills = update.getInfos();
+      fromInfoIdx += spills.length;
+      
+      for (MapTaskSpillInfo info : spills) {
+        scheduler.resolve(info);
+        if (info.getStatus() == MapTaskSpillInfo.Status.NEW_SPILL) {
+          ++newSpills;
         }
+        System.out.println("MapSpillInfo: " + info.toString());
       }
-    } while (events.length == maxEventsToFetch);
-
-    return numNewMaps;
+      
+    } while (spills.length == maxEventsToFetch);
+    return newSpills;
   }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

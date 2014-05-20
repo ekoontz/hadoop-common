@@ -18,7 +18,6 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
-
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -42,7 +41,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.TaskCompletionEvent;
+import org.apache.hadoop.mapred.MapInputRange;
+import org.apache.hadoop.mapred.MapSpillInfo;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -64,6 +65,9 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private static final long INITIAL_PENALTY = 10000;
   private static final float PENALTY_GROWTH_RATE = 1.3f;
   private final static int REPORT_FAILURE_LIMIT = 10;
+  
+  private List<MapInputRange> mapInputRangeList;
+  private List<MapSpillInfo>[] finishedMapRanges;
 
   private final boolean[] finishedMaps;
 
@@ -71,14 +75,16 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private int remainingMaps;
   private Map<String, MapHost> mapLocations = new HashMap<String, MapHost>();
   private Set<MapHost> pendingHosts = new HashSet<MapHost>();
-  private Set<TaskAttemptID> obsoleteMaps = new HashSet<TaskAttemptID>();
+//  private Set<TaskAttemptID> obsoleteMaps = new HashSet<TaskAttemptID>();
+  private Set<Integer> obsoleteSpills = new HashSet<Integer>();
 
   private final TaskAttemptID reduceId;
   private final Random random = new Random();
   private final DelayQueue<Penalty> penalties = new DelayQueue<Penalty>();
   private final Referee referee = new Referee();
-  private final Map<TaskAttemptID,IntWritable> failureCounts =
-    new HashMap<TaskAttemptID,IntWritable>();
+//  private final Map<TaskAttemptID,IntWritable> failureCounts =
+//    new HashMap<TaskAttemptID,IntWritable>();
+  private final Map<Integer, IntWritable> failureCounts = new HashMap<Integer, IntWritable>(); // spill fail counts
   private final Map<String,IntWritable> hostFailures =
     new HashMap<String,IntWritable>();
   private final TaskStatus status;
@@ -111,6 +117,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
                           Counters.Counter failedShuffleCounter) {
     totalMaps = job.getNumMapTasks();
     abortFailureLimit = Math.max(30, totalMaps / 10);
+    
+    finishedMapRanges = new ArrayList[totalMaps];
 
     remainingMaps = totalMaps;
     finishedMaps = new boolean[remainingMaps];
@@ -134,28 +142,49 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         MRJobConfig.DEFAULT_MAX_SHUFFLE_FETCH_RETRY_DELAY);
   }
 
+//  @Override
+//  public void resolve(TaskCompletionEvent event) {
+//    switch (event.getTaskStatus()) {
+//    case SUCCEEDED:
+//      URI u = getBaseURI(reduceId, event.getTaskTrackerHttp());
+//      addKnownMapOutput(u.getHost() + ":" + u.getPort(),
+//          u.toString(),
+//          event.getTaskAttemptId());
+//      maxMapRuntime = Math.max(maxMapRuntime, event.getTaskRunTime());
+//      System.out.println("HAO DEBUG: ShuffleScheduler.resolve " + u.toString());
+//      break;
+//    case FAILED:
+//    case KILLED:
+//    case OBSOLETE:
+//      obsoleteMapOutput(event.getTaskAttemptId());
+//      LOG.info("Ignoring obsolete output of " + event.getTaskStatus() +
+//          " map-task: '" + event.getTaskAttemptId() + "'");
+//      break;
+//    case TIPFAILED:
+//      tipFailed(event.getTaskAttemptId().getTaskID());
+//      LOG.info("Ignoring output of failed map TIP: '" +
+//          event.getTaskAttemptId() + "'");
+//      break;
+//    }
+//  }
+  
   @Override
-  public void resolve(TaskCompletionEvent event) {
-    switch (event.getTaskStatus()) {
-    case SUCCEEDED:
-      URI u = getBaseURI(reduceId, event.getTaskTrackerHttp());
-      addKnownMapOutput(u.getHost() + ":" + u.getPort(),
-          u.toString(),
-          event.getTaskAttemptId());
-      maxMapRuntime = Math.max(maxMapRuntime, event.getTaskRunTime());
-      System.out.println("HAO DEBUG: ShuffleScheduler.resolve " + u.toString());
-      break;
+  public void resolve(MapTaskSpillInfo info) {
+    // TODO hao
+    switch (info.getStatus()) {
     case FAILED:
-    case KILLED:
-    case OBSOLETE:
-      obsoleteMapOutput(event.getTaskAttemptId());
-      LOG.info("Ignoring obsolete output of " + event.getTaskStatus() +
-          " map-task: '" + event.getTaskAttemptId() + "'");
       break;
-    case TIPFAILED:
-      tipFailed(event.getTaskAttemptId().getTaskID());
+    case NEW_SPILL:
+      URI u = getBaseURI(reduceId, info.getNodeHttp());
+      addKnownMapSpill(u.getHost() + ":" + u.getPort(), u.toString(), info);
+      break;
+    case TIP_FAIL:
+      tipFailed(info.getTaskId().getTaskID());
       LOG.info("Ignoring output of failed map TIP: '" +
-          event.getTaskAttemptId() + "'");
+          info.getTaskId() + "'");
+      break;
+      
+    default:
       break;
     }
   }
@@ -173,23 +202,48 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     URI u = URI.create(baseUrl.toString());
     return u;
   }
-
-  public synchronized void copySucceeded(TaskAttemptID mapId,
+  
+  public synchronized void copySucceeded(MapTaskSpillInfo spillInfo,
                                          MapHost host,
                                          long bytes,
                                          long millis,
-                                         MapOutput<K,V> output
-                                         ) throws IOException {
-    failureCounts.remove(mapId);
+                                         MapOutput<K,V> output) throws IOException  {
+    failureCounts.remove(spillInfo.getInfoId());
     hostFailures.remove(host.getHostName());
-    int mapIndex = mapId.getTaskID().getId();
-
+    int mapIndex = spillInfo.getTaskId().getId();
+    
     if (!finishedMaps[mapIndex]) {
+      List<MapSpillInfo> finishedRanges = this.finishedMapRanges[mapIndex];
+      int mypos = 0;
+      MapSpillInfo currentRange = spillInfo.getSpillInfo();
+      while (mypos < finishedRanges.size()) {
+        MapSpillInfo range = finishedRanges.get(mypos);
+        if (currentRange.getStart() >= range.getStart()) {
+          continue;
+        }
+        break;
+      }
+      finishedRanges.add(mypos, currentRange);
       output.commit();
-      finishedMaps[mapIndex] = true;
-      shuffledMapsCounter.increment(1);
-      if (--remainingMaps == 0) {
-        notifyAll();
+      
+      // if whole map result is got
+      if (finishedRanges.get(0).getStart() <= mapInputRangeList.get(mapIndex).start
+          && finishedRanges.get(finishedRanges.size()-1).getEnd() > mapInputRangeList.get(mapIndex).end) {
+        boolean isjoint = true;
+        for (int i = 0; i < finishedRanges.size() - 1; ++i) {
+          if (finishedRanges.get(i).getEnd() < finishedRanges.get(i+1).getStart()) {
+            isjoint = false;
+            break;
+          }
+        }
+        
+        if (isjoint) {
+          finishedMaps[mapIndex] = true;
+          shuffledMapsCounter.increment(1);
+          if (--remainingMaps == 0) {
+            notifyAll();
+          }
+        }
       }
 
       // update the status
@@ -197,9 +251,37 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       updateStatus();
       reduceShuffleBytes.increment(bytes);
       lastProgressTime = System.currentTimeMillis();
-      LOG.debug("map " + mapId + " done " + status.getStateString());
+      System.out.println("HAO: shuffle donne " + spillInfo);
     }
   }
+
+//  public synchronized void copySucceeded(TaskAttemptID mapId,
+//                                         MapHost host,
+//                                         long bytes,
+//                                         long millis,
+//                                         MapOutput<K,V> output
+//                                         ) throws IOException {
+//    failureCounts.remove(mapId);
+//    hostFailures.remove(host.getHostName());
+//    int mapIndex = mapId.getTaskID().getId();
+//    
+//
+//    if (!finishedMaps[mapIndex]) {
+//      output.commit();
+//      finishedMaps[mapIndex] = true;
+//      shuffledMapsCounter.increment(1);
+//      if (--remainingMaps == 0) {
+//        notifyAll();
+//      }
+//
+//      // update the status
+//      totalBytesShuffledTillNow += bytes;
+//      updateStatus();
+//      reduceShuffleBytes.increment(bytes);
+//      lastProgressTime = System.currentTimeMillis();
+//      LOG.debug("map " + mapId + " done " + status.getStateString());
+//    }
+//  }
 
   private void updateStatus() {
     float mbs = (float) totalBytesShuffledTillNow / (1024 * 1024);
@@ -215,16 +297,56 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
         + mbpsFormat.format(transferRate) + " MB/s)");
   }
 
-  public synchronized void copyFailed(TaskAttemptID mapId, MapHost host,
-                                      boolean readError, boolean connectExcpt) {
+//  public synchronized void copyFailed(TaskAttemptID mapId, MapHost host,
+//                                      boolean readError, boolean connectExcpt) {
+//    host.penalize();
+//    int failures = 1;
+//    if (failureCounts.containsKey(mapId)) {
+//      IntWritable x = failureCounts.get(mapId);
+//      x.set(x.get() + 1);
+//      failures = x.get();
+//    } else {
+//      failureCounts.put(mapId, new IntWritable(1));
+//    }
+//    String hostname = host.getHostName();
+//    if (hostFailures.containsKey(hostname)) {
+//      IntWritable x = hostFailures.get(hostname);
+//      x.set(x.get() + 1);
+//    } else {
+//      hostFailures.put(hostname, new IntWritable(1));
+//    }
+//    if (failures >= abortFailureLimit) {
+//      try {
+//        throw new IOException(failures + " failures downloading " + mapId);
+//      } catch (IOException ie) {
+//        reporter.reportException(ie);
+//      }
+//    }
+//
+//    checkAndInformJobTracker(failures, mapId, readError, connectExcpt);
+//
+//    checkReducerHealth();
+//
+//    long delay = (long) (INITIAL_PENALTY *
+//        Math.pow(PENALTY_GROWTH_RATE, failures));
+//    if (delay > maxDelay) {
+//      delay = maxDelay;
+//    }
+//
+//    penalties.add(new Penalty(host, delay));
+//
+//    failedShuffleCounter.increment(1);
+//  }
+  
+  public synchronized void copyFailed(MapTaskSpillInfo spillInfo, MapHost host, boolean readError, boolean connectExcpt) {
     host.penalize();
     int failures = 1;
-    if (failureCounts.containsKey(mapId)) {
-      IntWritable x = failureCounts.get(mapId);
+    if (failureCounts.containsKey(spillInfo.getInfoId())) {
+      IntWritable x = failureCounts.get(spillInfo.getInfoId());
       x.set(x.get() + 1);
       failures = x.get();
     } else {
-      failureCounts.put(mapId, new IntWritable(1));
+      failureCounts.put(spillInfo.getInfoId(), new IntWritable(1));
     }
     String hostname = host.getHostName();
     if (hostFailures.containsKey(hostname)) {
@@ -235,13 +357,13 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     }
     if (failures >= abortFailureLimit) {
       try {
-        throw new IOException(failures + " failures downloading " + mapId);
+        throw new IOException(failures + " failures downloading " + spillInfo);
       } catch (IOException ie) {
         reporter.reportException(ie);
       }
     }
 
-    checkAndInformJobTracker(failures, mapId, readError, connectExcpt);
+    checkAndInformJobTracker(failures, spillInfo.getTaskId(), readError, connectExcpt);
 
     checkReducerHealth();
 
@@ -336,15 +458,32 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     }
   }
 
-  public synchronized void addKnownMapOutput(String hostName,
-                                             String hostUrl,
-                                             TaskAttemptID mapId) {
+//  public synchronized void addKnownMapOutput(String hostName,
+//                                             String hostUrl,
+//                                             TaskAttemptID mapId) {
+//    MapHost host = mapLocations.get(hostName);
+//    if (host == null) {
+//      host = new MapHost(hostName, hostUrl);
+//      mapLocations.put(hostName, host);
+//    }
+//    host.addKnownMap(mapId);
+//
+//    // Mark the host as pending
+//    if (host.getState() == State.PENDING) {
+//      pendingHosts.add(host);
+//      notifyAll();
+//    }
+//  }
+  
+  public synchronized void addKnownMapSpill(String hostName,
+                                            String hostUrl,
+                                            MapTaskSpillInfo spillInfo) {
     MapHost host = mapLocations.get(hostName);
     if (host == null) {
       host = new MapHost(hostName, hostUrl);
       mapLocations.put(hostName, host);
     }
-    host.addKnownMap(mapId);
+    host.addKnownSpill(spillInfo);
 
     // Mark the host as pending
     if (host.getState() == State.PENDING) {
@@ -354,15 +493,18 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   }
 
 
-  public synchronized void obsoleteMapOutput(TaskAttemptID mapId) {
-    obsoleteMaps.add(mapId);
-  }
+//  public synchronized void obsoleteMapOutput(TaskAttemptID mapId) {
+//    obsoleteMaps.add(mapId);
+//  }
 
-  public synchronized void putBackKnownMapOutput(MapHost host,
-                                                 TaskAttemptID mapId) {
-    host.addKnownMap(mapId);
-  }
+//  public synchronized void putBackKnownMapOutput(MapHost host,
+//                                                 TaskAttemptID mapId) {
+//    host.addKnownMap(mapId);
+//  }
 
+  public synchronized void putBackKnownMapSpill(MapHost host, MapTaskSpillInfo spill) {
+    host.addKnownSpill(spill);
+  }
 
   public synchronized MapHost getHost() throws InterruptedException {
       while(pendingHosts.isEmpty()) {
@@ -379,38 +521,65 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       pendingHosts.remove(host);
       host.markBusy();
 
-      LOG.info("Assigning " + host + " with " + host.getNumKnownMapOutputs() +
+      LOG.info("Assigning " + host + " with " + host.getNumKnownSpillOutputs() +
                " to " + Thread.currentThread().getName());
       shuffleStart.set(System.currentTimeMillis());
 
       return host;
   }
 
-  public synchronized List<TaskAttemptID> getMapsForHost(MapHost host) {
-    List<TaskAttemptID> list = host.getAndClearKnownMaps();
-    Iterator<TaskAttemptID> itr = list.iterator();
-    List<TaskAttemptID> result = new ArrayList<TaskAttemptID>();
+//  public synchronized List<TaskAttemptID> getMapsForHost(MapHost host) {
+//    List<TaskAttemptID> list = host.getAndClearKnownMaps();
+//    Iterator<TaskAttemptID> itr = list.iterator();
+//    List<TaskAttemptID> result = new ArrayList<TaskAttemptID>();
+//    int includedMaps = 0;
+//    int totalSize = list.size();
+//    // find the maps that we still need, up to the limit
+//    while (itr.hasNext()) {
+//      TaskAttemptID id = itr.next();
+//      if (!obsoleteMaps.contains(id) && !finishedMaps[id.getTaskID().getId()]) {
+//        result.add(id);
+//        if (++includedMaps >= MAX_MAPS_AT_ONCE) {
+//          break;
+//        }
+//      }
+//    }
+//    // put back the maps left after the limit
+//    while (itr.hasNext()) {
+//      TaskAttemptID id = itr.next();
+//      if (!obsoleteMaps.contains(id) && !finishedMaps[id.getTaskID().getId()]) {
+//        host.addKnownMap(id);
+//      }
+//    }
+//    LOG.info("assigned " + includedMaps + " of " + totalSize + " to " +
+//             host + " to " + Thread.currentThread().getName());
+//    return result;
+//  }
+  
+  public synchronized List<MapTaskSpillInfo> getSpillsForHost(MapHost host) {
+    List<MapTaskSpillInfo> spills = host.getAndClearKnowSpills();
+    Iterator<MapTaskSpillInfo> iter = spills.iterator();
+    List<MapTaskSpillInfo> result = new ArrayList<MapTaskSpillInfo>();
     int includedMaps = 0;
-    int totalSize = list.size();
-    // find the maps that we still need, up to the limit
-    while (itr.hasNext()) {
-      TaskAttemptID id = itr.next();
-      if (!obsoleteMaps.contains(id) && !finishedMaps[id.getTaskID().getId()]) {
-        result.add(id);
-        if (++includedMaps >= MAX_MAPS_AT_ONCE) {
+//    int totalSize = spills.size();
+    
+    while (iter.hasNext()) {
+      MapTaskSpillInfo spillInfo = iter.next();
+      if (!obsoleteSpills.contains(spillInfo.getInfoId()) && !finishedMaps[spillInfo.getTaskId().getId()]) {
+        result.add(spillInfo);
+        if (++includedMaps > MAX_MAPS_AT_ONCE) {
           break;
         }
       }
     }
-    // put back the maps left after the limit
-    while (itr.hasNext()) {
-      TaskAttemptID id = itr.next();
-      if (!obsoleteMaps.contains(id) && !finishedMaps[id.getTaskID().getId()]) {
-        host.addKnownMap(id);
+    
+    while (iter.hasNext()) {
+      MapTaskSpillInfo spillInfo = iter.next();
+      if (!obsoleteSpills.contains(spillInfo.getInfoId()) && !finishedMaps[spillInfo.getTaskId().getId()]) {
+        host.addKnownSpill(spillInfo);
       }
     }
-    LOG.info("assigned " + includedMaps + " of " + totalSize + " to " +
-             host + " to " + Thread.currentThread().getName());
+    
     return result;
   }
 
@@ -427,7 +596,8 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 
   public synchronized void resetKnownMaps() {
     mapLocations.clear();
-    obsoleteMaps.clear();
+//    obsoleteMaps.clear();
+    obsoleteSpills.clear();
     pendingHosts.clear();
   }
 
@@ -440,6 +610,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   @Override
   public synchronized boolean waitUntilDone(int millis
                                             ) throws InterruptedException {
+    
     if (remainingMaps > 0) {
       wait(millis);
       return remainingMaps == 0;
@@ -506,6 +677,14 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   public void close() throws InterruptedException {
     referee.interrupt();
     referee.join();
+  }
+
+  public List<MapInputRange> getMapInputRangeList() {
+    return mapInputRangeList;
+  }
+
+  public void setMapInputRangeList(List<MapInputRange> mapInputRangeList) {
+    this.mapInputRangeList = mapInputRangeList;
   }
 
 }

@@ -24,6 +24,8 @@ import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapred.MapInputRangeList;
 import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
@@ -102,4 +104,5 @@ public interface Job {
   List<AMInfo> getAMInfos();
   
   boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation);
+  MapInputRangeList getMapInputRangeList(JobID jobId);
 }

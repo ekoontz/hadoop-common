@@ -27,6 +27,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapOutputFile;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
@@ -59,7 +60,7 @@ public interface MergeManager<K, V> {
    * @return a MapOutput object that can be used by shuffle to shuffle data.  If
    * required resources cannot be reserved immediately, a null can be returned.
    */
-  public MapOutput<K, V> reserve(TaskAttemptID mapId, long requestedSize,
+  public MapOutput<K, V> reserve(MapTaskSpillInfo spillInfo, long requestedSize,
                                  int fetcher) throws IOException;
 
   /**

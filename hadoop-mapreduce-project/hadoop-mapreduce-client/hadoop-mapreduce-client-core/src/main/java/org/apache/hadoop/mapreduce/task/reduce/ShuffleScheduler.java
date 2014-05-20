@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 
 @InterfaceAudience.Private
@@ -39,9 +40,12 @@ public interface ShuffleScheduler<K,V> {
    * Interpret a {@link TaskCompletionEvent} from the event stream.
    * @param tce Intermediate output metadata
    */
-  public void resolve(TaskCompletionEvent tce)
-    throws IOException, InterruptedException;
+//  public void resolve(TaskCompletionEvent tce)
+//    throws IOException, InterruptedException;
 
   public void close() throws InterruptedException;
+
+  public void resolve(MapTaskSpillInfo info)
+    throws IOException, InterruptedException;
 
 }

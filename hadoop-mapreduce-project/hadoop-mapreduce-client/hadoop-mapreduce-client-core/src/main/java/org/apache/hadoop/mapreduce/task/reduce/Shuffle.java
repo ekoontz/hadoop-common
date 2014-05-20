@@ -18,10 +18,12 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MapInputRange;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Task;
@@ -95,6 +97,9 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     int eventsPerReducer = Math.max(MIN_EVENTS_TO_FETCH,
         MAX_RPC_OUTSTANDING_EVENTS / jobConf.getNumReduceTasks());
     int maxEventsToFetch = Math.min(MAX_EVENTS_TO_FETCH, eventsPerReducer);
+    
+    List<MapInputRange> mapInputRanges = umbilical.getMapInputRangeList((org.apache.hadoop.mapred.JobID)reduceId.getJobID()).getRanges();
+    scheduler.setMapInputRangeList(mapInputRanges);
 
     // Start the map-completion events fetcher thread
     final EventFetcher<K,V> eventFetcher = 

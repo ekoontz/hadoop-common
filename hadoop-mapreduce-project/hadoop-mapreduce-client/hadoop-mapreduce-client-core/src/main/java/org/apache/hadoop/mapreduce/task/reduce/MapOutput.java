@@ -19,15 +19,13 @@ package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.InputStream;
 import java.io.IOException;
-
 import java.util.Comparator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.Reporter;
-
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -36,13 +34,14 @@ public abstract class MapOutput<K, V> {
   private static AtomicInteger ID = new AtomicInteger(0);
   
   private final int id;
-  private final TaskAttemptID mapId;
+//  private final TaskAttemptID mapId;
+  private MapTaskSpillInfo spillInfo;
   private final long size;
   private final boolean primaryMapOutput;
   
-  public MapOutput(TaskAttemptID mapId, long size, boolean primaryMapOutput) {
+  public MapOutput(MapTaskSpillInfo spillInfo, long size, boolean primaryMapOutput) {
     this.id = ID.incrementAndGet();
-    this.mapId = mapId;
+    this.spillInfo = spillInfo;
     this.size = size;
     this.primaryMapOutput = primaryMapOutput;
   }
@@ -64,12 +63,21 @@ public abstract class MapOutput<K, V> {
     return id;
   }
 
-  public TaskAttemptID getMapId() {
-    return mapId;
-  }
+//  public TaskAttemptID getMapId() {
+//    return mapId;
+//  }
+  
 
   public long getSize() {
     return size;
+  }
+
+  public MapTaskSpillInfo getSpillInfo() {
+    return spillInfo;
+  }
+
+  public void setSpillInfo(MapTaskSpillInfo spillInfo) {
+    this.spillInfo = spillInfo;
   }
 
   public abstract void shuffle(MapHost host, InputStream input,
@@ -85,7 +93,7 @@ public abstract class MapOutput<K, V> {
   public abstract String getDescription();
 
   public String toString() {
-    return "MapOutput(" + mapId + ", " + getDescription() + ")";
+    return "MapOutput(" + spillInfo + ", " + getDescription() + ")";
   }
   
   public static class MapOutputComparator<K, V> 

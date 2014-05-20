@@ -164,6 +164,12 @@ public class TestMapProgress extends TestCase {
       // TODO Auto-generated method stub
       return null;
     }
+
+    @Override
+    public MapInputRangeList getMapInputRangeList(JobID jobId) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
   
   private FileSystem fs = null;

@@ -624,6 +624,12 @@ public class LocalJobRunner implements ClientProtocol {
       // TODO Auto-generated method stub
       return null;
     }
+
+    @Override
+    public MapInputRangeList getMapInputRangeList(JobID jobId) {
+      // TODO Auto-generated method stub
+      return null;
+    }
     
   }
 

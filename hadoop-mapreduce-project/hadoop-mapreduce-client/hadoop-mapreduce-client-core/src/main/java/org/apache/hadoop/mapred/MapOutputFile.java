@@ -151,6 +151,9 @@ public abstract class MapOutputFile implements Configurable {
    */
   public abstract Path getInputFileForWrite(
       org.apache.hadoop.mapreduce.TaskID mapId, long size) throws IOException;
+  
+  public abstract Path getMapSpillInputFileForWrite(
+      MapTaskSpillInfo spillInfo, long size) throws IOException;
 
   /** Removes all of the files related to a task. */
   public abstract void removeAll() throws IOException;

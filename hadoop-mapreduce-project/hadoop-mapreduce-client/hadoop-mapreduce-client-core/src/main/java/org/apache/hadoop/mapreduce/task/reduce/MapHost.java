@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
+import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 @InterfaceAudience.LimitedPrivate({"MapReduce"})
@@ -39,7 +39,8 @@ public class MapHost {
   private State state = State.IDLE;
   private final String hostName;
   private final String baseUrl;
-  private List<TaskAttemptID> maps = new ArrayList<TaskAttemptID>();
+//  private List<TaskAttemptID> maps = new ArrayList<TaskAttemptID>();
+  private List<MapTaskSpillInfo> spills = new ArrayList<MapTaskSpillInfo>();
   
   public MapHost(String hostName, String baseUrl) {
     this.hostName = hostName;
@@ -58,17 +59,30 @@ public class MapHost {
     return baseUrl;
   }
 
-  public synchronized void addKnownMap(TaskAttemptID mapId) {
-    maps.add(mapId);
+//  public synchronized void addKnownMap(TaskAttemptID mapId) {
+//    maps.add(mapId);
+//    if (state == State.IDLE) {
+//      state = State.PENDING;
+//    }
+//  }
+  
+  public synchronized void addKnownSpill(MapTaskSpillInfo spill) {
+    spills.add(spill);
     if (state == State.IDLE) {
       state = State.PENDING;
     }
   }
   
-  public synchronized List<TaskAttemptID> getAndClearKnownMaps() {
-    List<TaskAttemptID> currentKnownMaps = maps;
-    maps = new ArrayList<TaskAttemptID>();
-    return currentKnownMaps;
+//  public synchronized List<TaskAttemptID> getAndClearKnownMaps() {
+//    List<TaskAttemptID> currentKnownMaps = maps;
+//    maps = new ArrayList<TaskAttemptID>();
+//    return currentKnownMaps;
+//  }
+  
+  public synchronized List<MapTaskSpillInfo> getAndClearKnowSpills() {
+    List<MapTaskSpillInfo> current = spills;
+    spills = new ArrayList<MapTaskSpillInfo>();
+    return spills;
   }
   
   public synchronized void markBusy() {
@@ -79,16 +93,28 @@ public class MapHost {
     state = State.PENALIZED;
   }
   
-  public synchronized int getNumKnownMapOutputs() {
-    return maps.size();
+//  public synchronized int getNumKnownMapOutputs() {
+//    return maps.size();
+//  }
+  
+  public synchronized int getNumKnownSpillOutputs() {
+    return spills.size();
   }
+
 
   /**
    * Called when the node is done with its penalty or done copying.
    * @return the host's new state
    */
   public synchronized State markAvailable() {
-    if (maps.isEmpty()) {
+//    if (maps.isEmpty()) {
+//      state = State.IDLE;
+//    } else {
+//      state = State.PENDING;
+//    }
+//    return state;
+
+    if (spills.isEmpty()) {
       state = State.IDLE;
     } else {
       state = State.PENDING;

@@ -207,6 +207,13 @@ public class MROutputFiles extends MapOutputFile {
         REDUCE_INPUT_FILE_FORMAT_STRING, MRJobConfig.OUTPUT, mapId.getId()),
         size, getConf());
   }
+  
+  public Path getMapSpillInputFileForWrite(
+      MapTaskSpillInfo spillInfo, long size) throws IOException {
+    return lDirAlloc.getLocalPathForWrite(String.format(
+        "%s/map_%d_d.out", MRJobConfig.OUTPUT, spillInfo.getTaskId().getId(), spillInfo.getInfoId()),
+        size, getConf());
+  }
 
   /** Removes all of the files related to a task. */
   @Override

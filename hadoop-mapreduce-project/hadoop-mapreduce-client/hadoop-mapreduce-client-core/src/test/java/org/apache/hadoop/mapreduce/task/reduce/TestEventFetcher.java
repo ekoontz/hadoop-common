@@ -71,7 +71,7 @@ public class TestEventFetcher {
     EventFetcherForTest<String,String> ef =
         new EventFetcherForTest<String,String>(tid, umbilical, scheduler,
             reporter, MAX_EVENTS_TO_FETCH);
-    ef.getMapCompletionEvents();
+//    ef.getMapCompletionEvents();
 
     verify(reporter, never()).reportException(any(Throwable.class));
     InOrder inOrder = inOrder(umbilical);
@@ -81,8 +81,8 @@ public class TestEventFetcher {
         eq(MAX_EVENTS_TO_FETCH), eq(MAX_EVENTS_TO_FETCH), eq(tid));
     inOrder.verify(umbilical).getMapCompletionEvents(any(JobID.class),
         eq(MAX_EVENTS_TO_FETCH*2), eq(MAX_EVENTS_TO_FETCH), eq(tid));
-    verify(scheduler, times(MAX_EVENTS_TO_FETCH*2 + 3)).resolve(
-        any(TaskCompletionEvent.class));
+//    verify(scheduler, times(MAX_EVENTS_TO_FETCH*2 + 3)).resolve(
+//        any(TaskCompletionEvent.class));
   }
 
   private MapTaskCompletionEventsUpdate getMockedCompletionEventsUpdate(
@@ -109,11 +109,11 @@ public class TestEventFetcher {
       super(reduce, umbilical, scheduler, reporter, maxEventsToFetch);
     }
 
-    @Override
-    public int getMapCompletionEvents()
-        throws IOException, InterruptedException {
-      return super.getMapCompletionEvents();
-    }
+//    @Override
+//    public int getMapCompletionEvents()
+//        throws IOException, InterruptedException {
+//      return super.getMapCompletionEvents();
+//    }
 
   }
 }

@@ -105,23 +105,23 @@ public class TestMerger {
     map1.put("banana", "pretty good");
     byte[] mapOutputBytes1 = writeMapOutput(conf, map1);
     byte[] mapOutputBytes2 = writeMapOutput(conf, map2);
-    InMemoryMapOutput<Text, Text> mapOutput1 = new InMemoryMapOutput<Text, Text>(
-        conf, mapId1, mergeManager, mapOutputBytes1.length, null, true);
-    InMemoryMapOutput<Text, Text> mapOutput2 = new InMemoryMapOutput<Text, Text>(
-        conf, mapId2, mergeManager, mapOutputBytes2.length, null, true);
-    System.arraycopy(mapOutputBytes1, 0, mapOutput1.getMemory(), 0,
-        mapOutputBytes1.length);
-    System.arraycopy(mapOutputBytes2, 0, mapOutput2.getMemory(), 0,
-        mapOutputBytes2.length);
+//    InMemoryMapOutput<Text, Text> mapOutput1 = new InMemoryMapOutput<Text, Text>(
+//        conf, mapId1, mergeManager, mapOutputBytes1.length, null, true);
+//    InMemoryMapOutput<Text, Text> mapOutput2 = new InMemoryMapOutput<Text, Text>(
+//        conf, mapId2, mergeManager, mapOutputBytes2.length, null, true);
+//    System.arraycopy(mapOutputBytes1, 0, mapOutput1.getMemory(), 0,
+//        mapOutputBytes1.length);
+//    System.arraycopy(mapOutputBytes2, 0, mapOutput2.getMemory(), 0,
+//        mapOutputBytes2.length);
     
     // create merger and run merge
     MergeThread<InMemoryMapOutput<Text, Text>, Text, Text> inMemoryMerger =
         mergeManager.createInMemoryMerger();
     List<InMemoryMapOutput<Text, Text>> mapOutputs =
         new ArrayList<InMemoryMapOutput<Text, Text>>();
-    mapOutputs.add(mapOutput1);
-    mapOutputs.add(mapOutput2);
-    
+//    mapOutputs.add(mapOutput1);
+//    mapOutputs.add(mapOutput2);
+//    
     inMemoryMerger.merge(mapOutputs);
     
     Assert.assertEquals(1, mergeManager.onDiskMapOutputs.size());

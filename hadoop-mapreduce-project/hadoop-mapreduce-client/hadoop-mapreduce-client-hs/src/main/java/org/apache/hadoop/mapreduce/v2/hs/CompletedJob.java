@@ -36,6 +36,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
+import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapred.MapInputRangeList;
 import org.apache.hadoop.mapred.MapTaskSpillInfo;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.Counters;
@@ -463,6 +465,12 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public Task getMapTask(int taskIndex) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public MapInputRangeList getMapInputRangeList(JobID jobId) {
     // TODO Auto-generated method stub
     return null;
   }
