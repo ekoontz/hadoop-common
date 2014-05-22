@@ -152,12 +152,13 @@ window.location.href = url;
       return;
     }
 
-    Comparator<Path> lastPathFirst
-      = new Comparator<Path>() {
-          public int compare(Path path1, Path path2) {
-            // these are backwards because we want the lexically lesser names
-            // to occur later in the sort.
-            return path2.getName().compareTo(path1.getName());
+    Comparator<FileStatus> lastPathFirst
+      = new Comparator<FileStatus>() {
+          public int compare(FileStatus path1, FileStatus path2) {
+            // these are backwards because we want the newest
+            // to occur first in the sort.
+            return ((Long)path2.getModificationTime()).
+              compareTo(path1.getModificationTime());
           }
     };
 
@@ -235,30 +236,14 @@ window.location.href = url;
     // I would have used MutableBoxedBoolean if such had been provided.
     AtomicBoolean hasLegacyFiles = new AtomicBoolean(false);
 
-    Path[] snPaths
-      = FileUtil.stat2Paths(JobHistory.localGlobber
-                            (fs, historyPath, "/" + leadGlob, null, hasLegacyFiles));
+    FileStatus[] indexPaths = JobHistory.localGlobber
+                            (fs, historyPath, "/" + leadGlob, null, hasLegacyFiles);
+    Arrays.sort(indexPaths, lastPathFirst);
+    Path[] snPaths = FileUtil.stat2Paths(indexPaths);
 
-    Arrays.sort(snPaths, lastPathFirst);
-
-    int arrayLimit = 0;
-    int tranchesSeen = 0;
-
-    Path lastPath = null;
-
-    while (arrayLimit < snPaths.length
-           && tranchesSeen <= SCAN_SIZES[currentScanSizeIndex]) {
-      if (lastPath == null
-          || lastPathFirst.compare(lastPath, snPaths[arrayLimit]) != 0) {
-        ++tranchesSeen;
-        lastPath = snPaths[arrayLimit];
-      }
-
-      ++arrayLimit;
-    }
-
-    if (tranchesSeen > SCAN_SIZES[currentScanSizeIndex]) {
-      --arrayLimit;
+    int arrayLimit = SCAN_SIZES[currentScanSizeIndex];
+    if (arrayLimit > snPaths.length) {
+      arrayLimit = snPaths.length;
     }
 
     // arrayLimit points to the first element [which could be element 0] that 
@@ -268,7 +253,6 @@ window.location.href = url;
 
     Path[] jobFiles = null;
 
-    {
       Path[][] pathVectorVector = new Path[arrayLimit][];
 
       for (int i = 0; i < arrayLimit; ++i) {
@@ -286,7 +270,6 @@ window.location.href = url;
                          pathVectorVector[i].length);
         pathsCursor += pathVectorVector[i].length;
       }
-    }
 
     boolean sizeIsExact = arrayLimit == snPaths.length;
 
