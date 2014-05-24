@@ -1550,9 +1550,11 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.haoMapTasks = new MapTaskImpl[job.numMapTasks];
       job.mapInputRangeList = new MapInputRangeList();
       job.mapInputRangeList.setRanges(new ArrayList<MapInputRange>(job.numMapTasks));
+//      long currentPos = 0L;
       for (int i=0; i < job.numMapTasks; ++i) {
-        long inputStart = splits[i].getSplitIndex().getStartOffset();
-        long inputEnd = inputStart + splits[i].getInputDataLength();
+        final long inputStart = splits[i].getInputDataStart();
+        final long inputEnd = inputStart + splits[i].getInputDataLength();
+//        currentPos = inputEnd;
         job.haoMapTasks[i] = 
             new MapTaskImpl(job.jobId, i,
                 job.eventHandler, 
@@ -1565,8 +1567,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                 job.metrics, job.appContext);
         job.haoMapTasks[i].setMapInputStart(inputStart);
         job.haoMapTasks[i].setMapInputEnd(inputEnd);
-        job.mapInputRangeList.getRanges().add(new MapInputRange(inputEnd, inputEnd));
+        job.mapInputRangeList.getRanges().add(new MapInputRange(inputStart, inputEnd));
         job.addTask(job.haoMapTasks[i]);
+        LOG.info("createMapTasks " + i + " from " + inputStart + " to " + inputEnd);
       }
       LOG.info("Input size for job " + job.jobId + " = " + inputLength
           + ". Number of splits = " + splits.length);

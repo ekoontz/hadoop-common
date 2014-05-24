@@ -121,7 +121,7 @@ public class TestTaskAttempt{
     hosts[1] = "host2";
     hosts[2] = "host3";
     TaskSplitMetaInfo splitInfo =
-        new TaskSplitMetaInfo(hosts, 0, 128 * 1024 * 1024l);
+        new TaskSplitMetaInfo(hosts, 0, 0, 128 * 1024 * 1024l);
 
     TaskAttemptImpl mockTaskAttempt =
         createMapTaskAttemptImplForTest(eventHandler, splitInfo);
@@ -152,7 +152,7 @@ public class TestTaskAttempt{
     hosts[1] = "host2";
     hosts[2] = "host3";
     TaskSplitMetaInfo splitInfo =
-        new TaskSplitMetaInfo(hosts, 0, 128 * 1024 * 1024l);
+        new TaskSplitMetaInfo(hosts, 0, 0, 128 * 1024 * 1024l);
 
     TaskAttemptImpl mockTaskAttempt =
         createMapTaskAttemptImplForTest(eventHandler, splitInfo);

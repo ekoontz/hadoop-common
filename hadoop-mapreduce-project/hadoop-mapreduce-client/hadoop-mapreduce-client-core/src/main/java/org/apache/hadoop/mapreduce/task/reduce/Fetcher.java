@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -250,6 +251,7 @@ class Fetcher<K,V> extends Thread {
   protected void copyFromHost(MapHost host) throws IOException {
     // Get completed maps on 'host'
     List<MapTaskSpillInfo> spills = scheduler.getSpillsForHost(host);
+    //LOG.info("copyFromHost " + spills);
 //    List<TaskAttemptID> maps = scheduler.getMapsForHost(host);
     
     // Sanity check to catch hosts with only 'OBSOLETE' maps, 
@@ -270,6 +272,7 @@ class Fetcher<K,V> extends Thread {
     DataInputStream input = null;
     try {
       URL url = getMapSpillOutputURL(host, spills);
+     // LOG.info("copyFromHost url=" + url);
       openConnection(url);
       if (stopped) {
         abortConnect(host, remaining);
@@ -400,13 +403,24 @@ class Fetcher<K,V> extends Thread {
         header.readFields(input);
         
         Matcher matcher = SPILL_FILENAME_PTH.matcher(header.mapId);
-        assert matcher.matches();
+      //  LOG.info("copyMapOutput mapid=" + header.mapId);
+        if (matcher.matches() == false) {
+          throw new IllegalArgumentException("mapid does not match pattern");
+        }
         TaskAttemptID attemptId = TaskAttemptID.forName(matcher.group(1));
-        int spillIndex = Integer.parseInt(matcher.group(2), -1);
+        int spillIndex = Integer.parseInt(matcher.group(2));
+        LOG.info("copyMapOutput: taid=" + attemptId + " spillIndex=" + spillIndex);
         for (MapTaskSpillInfo s : remaining) {
-          if (attemptId.equals(s.getTaskId()) && spillIndex == s.getSpillInfo().getIndex()){
+       //   LOG.info("copyMapOutput: " + s);
+          if (attemptId.equals(s.getAttemptID()) && spillIndex == s.getSpillInfo().getIndex()){
+            LOG.info("copyMapOutput: equals");
             spill = s;
+            break;
           }
+        }
+        //LOG.info("copyMapOutput: spill=" + spill);
+        if (spill == null) {
+          throw new IllegalArgumentException("cannot find corresponding spill");
         }
         
         assert spill != null;
@@ -568,10 +582,11 @@ class Fetcher<K,V> extends Thread {
       if (!first) {
         url.append(",");
       }
-      url.append(spill.getTaskId().toString());
+      url.append(spill.getAttemptID().toString());
       url.append("_spill_");
       url.append(spill.getSpillInfo().getIndex());
       url.append(".out");
+      first = false;
     }
     String finalUrl = url.toString();
     System.out.println("HAO reduce fetch url: " + finalUrl);

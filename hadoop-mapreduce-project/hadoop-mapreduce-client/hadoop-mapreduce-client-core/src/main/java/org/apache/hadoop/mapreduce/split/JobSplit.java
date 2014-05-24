@@ -67,22 +67,25 @@ public class JobSplit {
    */
   public static class SplitMetaInfo implements Writable {
     private long startOffset;
+    private long inputDataStart;
     private long inputDataLength;
     private String[] locations;
 
     public SplitMetaInfo() {}
     
-    public SplitMetaInfo(String[] locations, long startOffset, 
+    public SplitMetaInfo(String[] locations, long startOffset, long inputDataStart,
         long inputDataLength) {
       this.locations = locations;
       this.startOffset = startOffset;
       this.inputDataLength = inputDataLength;
+      this.inputDataStart = inputDataStart;
     }
     
-    public SplitMetaInfo(InputSplit split, long startOffset) throws IOException {
+    public SplitMetaInfo(InputSplit split, long startOffset, long inputDataStart) throws IOException {
       try {
         this.locations = split.getLocations();
         this.inputDataLength = split.getLength();
+        this.inputDataStart = inputDataStart;
         this.startOffset = startOffset;
       } catch (InterruptedException ie) {
         throw new IOException(ie);
@@ -109,6 +112,14 @@ public class JobSplit {
       this.inputDataLength = length;
     }
     
+    public long getInputDataStart() {
+      return inputDataStart;
+    }
+
+    public void setInputDataStart(long inputDataStart) {
+      this.inputDataStart = inputDataStart;
+    }
+
     public void readFields(DataInput in) throws IOException {
       int len = WritableUtils.readVInt(in);
       locations = new String[len];
@@ -117,6 +128,7 @@ public class JobSplit {
       }
       startOffset = WritableUtils.readVLong(in);
       inputDataLength = WritableUtils.readVLong(in);
+      inputDataStart = WritableUtils.readVLong(in);
     }
   
     public void write(DataOutput out) throws IOException {
@@ -126,6 +138,7 @@ public class JobSplit {
       }
       WritableUtils.writeVLong(out, startOffset);
       WritableUtils.writeVLong(out, inputDataLength);
+      WritableUtils.writeVLong(out, inputDataStart);
     }
     
     @Override
@@ -147,26 +160,34 @@ public class JobSplit {
   public static class TaskSplitMetaInfo {
     private TaskSplitIndex splitIndex;
     private long inputDataLength;
+    private long inputDataStart;
+    public long getInputDataStart() {
+      return inputDataStart;
+    }
+    public void setInputDataStart(long inputDataStart) {
+      this.inputDataStart = inputDataStart;
+    }
     private String[] locations;
     public TaskSplitMetaInfo(){
       this.splitIndex = new TaskSplitIndex();
       this.locations = new String[0];
     }
-    public TaskSplitMetaInfo(TaskSplitIndex splitIndex, String[] locations, 
+    public TaskSplitMetaInfo(TaskSplitIndex splitIndex, String[] locations, long inputDataStart,
         long inputDataLength) {
       this.splitIndex = splitIndex;
       this.locations = locations;
       this.inputDataLength = inputDataLength;
+      this.inputDataStart = inputDataStart;
     }
-    public TaskSplitMetaInfo(InputSplit split, long startOffset) 
+    public TaskSplitMetaInfo(InputSplit split, long startOffset, long inputDataStart) 
     throws InterruptedException, IOException {
-      this(new TaskSplitIndex("", startOffset), split.getLocations(), 
+      this(new TaskSplitIndex("", startOffset), split.getLocations(), inputDataStart,
           split.getLength());
     }
     
-    public TaskSplitMetaInfo(String[] locations, long startOffset, 
+    public TaskSplitMetaInfo(String[] locations, long startOffset, long inputDataStart,
         long inputDataLength) {
-      this(new TaskSplitIndex("",startOffset), locations, inputDataLength);
+      this(new TaskSplitIndex("",startOffset), locations, inputDataStart, inputDataLength);
     }
     
     public TaskSplitIndex getSplitIndex() {

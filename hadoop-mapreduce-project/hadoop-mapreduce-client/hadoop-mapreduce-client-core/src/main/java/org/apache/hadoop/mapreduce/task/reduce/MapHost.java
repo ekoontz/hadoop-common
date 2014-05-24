@@ -82,7 +82,7 @@ public class MapHost {
   public synchronized List<MapTaskSpillInfo> getAndClearKnowSpills() {
     List<MapTaskSpillInfo> current = spills;
     spills = new ArrayList<MapTaskSpillInfo>();
-    return spills;
+    return current;
   }
   
   public synchronized void markBusy() {
@@ -132,5 +132,9 @@ public class MapHost {
    */
   public synchronized void penalize() {
     state = State.PENALIZED;
+  }
+  
+  public List<MapTaskSpillInfo> getSpillInfos()  {
+    return this.spills;
   }
 }

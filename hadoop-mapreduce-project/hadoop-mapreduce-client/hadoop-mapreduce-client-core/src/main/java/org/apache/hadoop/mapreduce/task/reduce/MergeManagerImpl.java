@@ -615,7 +615,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
       totalSize += size;
       fullSize -= size;
       Reader<K,V> reader = new InMemoryReader<K,V>(MergeManagerImpl.this, 
-                                                   mo.getSpillInfo().getTaskId(),
+                                                   mo.getSpillInfo().getAttemptID(),
                                                    data, 0, (int)size, jobConf);
       inMemorySegments.add(new Segment<K,V>(reader, true, 
                                             (mo.isPrimaryMapOutput() ? 

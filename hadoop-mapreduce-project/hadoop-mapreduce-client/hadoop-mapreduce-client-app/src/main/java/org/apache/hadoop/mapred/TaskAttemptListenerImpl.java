@@ -241,7 +241,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   public void newMapSpill(TaskAttemptID taskAttemptID, MapSpillInfo spill)
       throws IOException {
     // TODO
-    LOG.info("Done acknowledgement from " + taskAttemptID.toString());
+    LOG.info("newMapSpill from " + taskAttemptID + " " + spill);
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);

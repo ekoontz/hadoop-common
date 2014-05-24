@@ -74,7 +74,7 @@ public class SplitMetaInfoReader {
           jobSplitFile, 
           splitMetaInfo.getStartOffset());
       allSplitMetaInfo[i] = new JobSplit.TaskSplitMetaInfo(splitIndex, 
-          splitMetaInfo.getLocations(), 
+          splitMetaInfo.getLocations(), splitMetaInfo.getInputDataStart(),
           splitMetaInfo.getInputDataLength());
     }
     in.close();

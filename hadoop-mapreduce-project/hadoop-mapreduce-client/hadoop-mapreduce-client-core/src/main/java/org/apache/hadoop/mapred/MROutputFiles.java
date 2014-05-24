@@ -211,7 +211,7 @@ public class MROutputFiles extends MapOutputFile {
   public Path getMapSpillInputFileForWrite(
       MapTaskSpillInfo spillInfo, long size) throws IOException {
     return lDirAlloc.getLocalPathForWrite(String.format(
-        "%s/map_%d_d.out", MRJobConfig.OUTPUT, spillInfo.getTaskId().getId(), spillInfo.getInfoId()),
+        "%s/map_%d_%d.out", MRJobConfig.OUTPUT, spillInfo.getAttemptID().getId(), spillInfo.getInfoId()),
         size, getConf());
   }
 

@@ -19,7 +19,7 @@ public class MapTaskSpillInfo implements Writable {
   
   private int infoId;
   private String nodeHttp;
-  private TaskAttemptID taskId;
+  private TaskAttemptID attemptID;
   private Status status;
   private MapSpillInfo spillInfo;
   
@@ -31,7 +31,7 @@ public class MapTaskSpillInfo implements Writable {
     super();
     this.infoId = infoId;
     this.nodeHttp = nodeHttp;
-    this.taskId = taskId;
+    this.attemptID = taskId;
     this.status = status;
     this.spillInfo = spillInfo;
   }
@@ -39,7 +39,7 @@ public class MapTaskSpillInfo implements Writable {
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, infoId);
     WritableUtils.writeString(out, nodeHttp);
-    taskId.write(out);
+    attemptID.write(out);
     WritableUtils.writeEnum(out, status);
     if (spillInfo != null) {
       out.writeBoolean(true);
@@ -52,10 +52,10 @@ public class MapTaskSpillInfo implements Writable {
   public void readFields(DataInput in) throws IOException {
     infoId = WritableUtils.readVInt(in);
     nodeHttp = WritableUtils.readString(in);
-    if (taskId == null) {
-      taskId = new TaskAttemptID();
+    if (attemptID == null) {
+      attemptID = new org.apache.hadoop.mapred.TaskAttemptID();
     }
-    taskId.readFields(in);
+    attemptID.readFields(in);
     status = WritableUtils.readEnum(in, Status.class);
     if (in.readBoolean()) {
       if (spillInfo == null) {
@@ -78,11 +78,11 @@ public class MapTaskSpillInfo implements Writable {
   public void setNodeHttp(String nodeHttp) {
     this.nodeHttp = nodeHttp;
   }
-  public TaskAttemptID getTaskId() {
-    return taskId;
+  public TaskAttemptID getAttemptID() {
+    return attemptID;
   }
-  public void setTaskId(TaskAttemptID taskId) {
-    this.taskId = taskId;
+  public void setAttemptID(TaskAttemptID taskId) {
+    this.attemptID = taskId;
   }
   public Status getStatus() {
     return status;
@@ -98,7 +98,7 @@ public class MapTaskSpillInfo implements Writable {
   }
   
   public String toString() {
-    return String.format("(%d, %s, %s, %s, %s)", infoId, nodeHttp, taskId.toString(), status.toString(), spillInfo.toString());
+    return String.format("(%d, %s, %s, %s, %s)", infoId, nodeHttp, attemptID.toString(), status.toString(), spillInfo);
   }
   
   @Override

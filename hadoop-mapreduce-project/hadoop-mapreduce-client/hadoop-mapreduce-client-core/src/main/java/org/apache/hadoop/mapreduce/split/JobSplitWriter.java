@@ -35,9 +35,11 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.hamcrest.core.Is;
 
 /**
  * The class that is used by the Job clients to write splits (both the meta
@@ -133,9 +135,16 @@ public class JobSplitWriter {
               + split + " splitsize: " + locations.length +
               " maxsize: " + maxBlockLocations);
         }
+        long datastart = 0;
+        System.out.println(split.getClass());
+        if (split instanceof FileSplit) {
+          datastart = ((FileSplit)split).getStart();
+        } else if (split instanceof org.apache.hadoop.mapred.FileSplit) {
+          datastart = ((org.apache.hadoop.mapred.FileSplit)split).getStart();
+        }
         info[i++] = 
           new JobSplit.SplitMetaInfo( 
-              locations, offset,
+              locations, offset, datastart,
               split.getLength());
         offset += currCount - prevCount;
       }
@@ -163,8 +172,15 @@ public class JobSplitWriter {
               + split + " splitsize: " + locations.length +
               " maxsize: " + maxBlockLocations);
         }
+        long datastart = 0;
+        System.out.println(split.getClass());
+        if (split instanceof FileSplit) {
+          datastart = ((FileSplit)split).getStart();
+        } else if (split instanceof org.apache.hadoop.mapred.FileSplit) {
+          datastart = ((org.apache.hadoop.mapred.FileSplit)split).getStart();
+        }
         info[i++] = new JobSplit.SplitMetaInfo( 
-            locations, offset,
+            locations, offset, datastart,
             split.getLength());
         offset += currLen - prevLen;
       }

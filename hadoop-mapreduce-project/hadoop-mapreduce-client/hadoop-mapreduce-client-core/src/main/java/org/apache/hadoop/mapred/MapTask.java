@@ -1204,6 +1204,9 @@ public class MapTask extends Task {
         return;
       }
       System.out.println("HAO readerHeadReset: splling");
+      
+      
+//----------------------------------------------------------------------------------------------------------
       spillLock.lock();
       try {
         while (spillInProgress) {
@@ -1213,11 +1216,20 @@ public class MapTask extends Task {
         checkSpillException();
 
         final int kvbend = 4 * kvend;
-        if ((kvbend + METASIZE) % kvbuffer.length != equator
-            - (equator % METASIZE)) {
-          // spill finished
+//        if ((kvbend + METASIZE) % kvbuffer.length != equator
+//            - (equator % METASIZE)) {
+//          // spill finished
+        final int kvbidx = 4 * kvindex;
+        // serialized, unspilled bytes always lie between kvindex and
+        // bufindex, crossing the equator. Note that any void space
+        // created by a reset must be included in "used" bytes
+        final int bUsed = distanceTo(kvbidx, bufindex);
           resetSpill();
-        }
+          bufferRemaining = Math.min(distanceTo(bufindex, kvbidx) - 2
+              * METASIZE, softLimit - bUsed)
+              - METASIZE;
+          
+//        }
         if (kvindex != kvend) {
           kvend = (kvindex + NMETA) % kvmeta.capacity();
           bufend = bufmark;
@@ -1241,6 +1253,86 @@ public class MapTask extends Task {
         spillLock.unlock();
       }
       this.disableSpill();
+      
+
+      bufvoid = kvbuffer.length;
+      setEquator(0);
+      bufstart = bufend = bufindex = equator;
+      kvstart = kvend = kvindex;
+
+      bufferRemaining = softLimit;
+//--------------------------------------------------------------------------------------------------------------
+      
+
+
+//      spillLock.lock();
+//      try {
+//        do {
+//          while (spillInProgress) {
+//            reporter.progress();
+//            spillDone.await();
+//          }
+//
+//          final int kvbidx = 4 * kvindex;
+//          final int kvbend = 4 * kvend;
+//          // serialized, unspilled bytes always lie between kvindex and
+//          // bufindex, crossing the equator. Note that any void space
+//          // created by a reset must be included in "used" bytes
+//          final int bUsed = distanceTo(kvbidx, bufindex);
+//
+//          if ((kvbend + METASIZE) % kvbuffer.length != equator
+//              - (equator % METASIZE)) {
+//            // spill finished, reclaim space
+//            resetSpill();
+//            bufferRemaining = Math.min(distanceTo(bufindex, kvbidx) - 2
+//                * METASIZE, softLimit - bUsed)
+//                - METASIZE;
+//          }
+//
+//          if (kvindex == kvend) {
+//            // TODO create dummy spill
+//          } else {
+//            sortAndSpill(this.haoInputStart, this.haoInputEndPosOfLastKey);
+//            this.haoInputEndPosOfLastKey = this.haoInputStart = Math.max(
+//                newInputStart, mapTask.recreader.getReaderRawPos());
+//
+//            final int avgRec = (int) (mapOutputByteCounter.getCounter() / mapOutputRecordCounter
+//                .getCounter());
+//            // leave at least half the split buffer for serialization data
+//            // ensure that kvindex >= bufindex
+//            final int distkvi = distanceTo(bufindex, kvbidx);
+//            final int newPos = (bufindex + Math
+//                .max(
+//                    2 * METASIZE - 1,
+//                    Math.min(distkvi / 2, distkvi / (METASIZE + avgRec)
+//                        * METASIZE)))
+//                % kvbuffer.length;
+//            setEquator(newPos);
+//            bufmark = bufindex = newPos;
+//            final int serBound = 4 * kvend;
+//            // bytes remaining before the lock must be held and limits
+//            // checked is the minimum of three arcs: the metadata space, the
+//            // serialization space, and the soft limit
+//            bufferRemaining = Math.min(
+//            // metadata max
+//                distanceTo(bufend, newPos), Math.min(
+//                // serialization max
+//                    distanceTo(newPos, serBound),
+//                    // soft limit
+//                    softLimit)) - 2 * METASIZE;
+//          }
+//        } while (false);
+//      } catch (InterruptedException e) {
+//        throw new IOException("Interrupted while waiting for the writer", e);
+//      } finally {
+//        spillLock.unlock();
+//      }
+//
+//      this.disableSpill();
+//      return;
+//    
+//      
+//      
     
     }
 

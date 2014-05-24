@@ -99,6 +99,7 @@ public class Shuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionRepo
     int maxEventsToFetch = Math.min(MAX_EVENTS_TO_FETCH, eventsPerReducer);
     
     List<MapInputRange> mapInputRanges = umbilical.getMapInputRangeList((org.apache.hadoop.mapred.JobID)reduceId.getJobID()).getRanges();
+    System.out.println("mapInputRanges: " + mapInputRanges);
     scheduler.setMapInputRangeList(mapInputRanges);
 
     // Start the map-completion events fetcher thread

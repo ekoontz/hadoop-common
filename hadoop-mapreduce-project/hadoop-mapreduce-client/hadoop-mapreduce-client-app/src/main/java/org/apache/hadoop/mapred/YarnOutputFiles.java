@@ -220,7 +220,7 @@ public class YarnOutputFiles extends MapOutputFile {
   public Path getMapSpillInputFileForWrite(
       MapTaskSpillInfo spillInfo, long size) throws IOException {
     return lDirAlloc.getLocalPathForWrite(String.format(
-        "%s/map_%d_d.out", getAttemptOutputDir().toString(), spillInfo.getTaskId().getId(), spillInfo.getInfoId()),
+        "%s/map_%d_%d.out", getAttemptOutputDir().toString(), spillInfo.getAttemptID().getId(), spillInfo.getInfoId()),
         size, getConf());
   }
 

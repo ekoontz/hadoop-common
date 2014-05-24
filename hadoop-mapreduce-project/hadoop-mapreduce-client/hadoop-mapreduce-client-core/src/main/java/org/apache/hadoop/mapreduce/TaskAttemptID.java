@@ -200,5 +200,36 @@ public class TaskAttemptID extends org.apache.hadoop.mapred.ID {
     }
     throw new IllegalArgumentException(exceptionMsg);
   }
+  
+  public static TaskAttemptID forNameHao(String str) throws IllegalArgumentException {
+    if(str == null)
+      return null;
+    String exceptionMsg = null;
+    try {
+      String[] parts = str.split(Character.toString(SEPARATOR));
+      if(parts.length == 6) {
+        if(parts[0].equals(ATTEMPT)) {
+          String type = parts[3];
+          TaskType t = TaskID.getTaskType(type.charAt(0));
+          if(t != null) {
+            return new org.apache.hadoop.mapred.TaskAttemptID
+            (parts[1],
+             Integer.parseInt(parts[2]),
+             t, Integer.parseInt(parts[4]), 
+             Integer.parseInt(parts[5]));  
+          } else
+            exceptionMsg = "Bad TaskType identifier. TaskAttemptId string : "
+                + str + " is not properly formed.";
+        }
+      }
+    } catch (Exception ex) {
+      //fall below
+    }
+    if (exceptionMsg == null) {
+      exceptionMsg = "TaskAttemptId string : " + str
+          + " is not properly formed";
+    }
+    throw new IllegalArgumentException(exceptionMsg);
+  }
 
 }
