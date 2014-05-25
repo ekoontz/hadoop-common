@@ -100,6 +100,10 @@ public class MapTaskImpl extends TaskImpl {
   
   protected void handleNewSpill(TaskImpl task, TaskEvent event) {
     
+    if (event.getSpillMapAttemptID().getId() != currentMapAttemptId) {
+      return;
+    }
+    
     try {
       writeLock.lock();
       

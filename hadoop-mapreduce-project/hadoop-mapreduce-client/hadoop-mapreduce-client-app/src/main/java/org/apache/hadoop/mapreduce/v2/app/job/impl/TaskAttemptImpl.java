@@ -325,6 +325,11 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_TIMED_OUT, CLEANUP_CONTAINER_TRANSITION)
+         // Ignore-able events
+     .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
+         TaskAttemptStateInternal.COMMIT_PENDING,
+         EnumSet.of(TaskAttemptEventType.TA_NEW_SPILL))
+      
 
      // Transitions from SUCCESS_CONTAINER_CLEANUP state
      // kill and cleanup the container
@@ -342,7 +347,8 @@ public abstract class TaskAttemptImpl implements
          EnumSet.of(TaskAttemptEventType.TA_KILL,
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_TIMED_OUT,
-             TaskAttemptEventType.TA_CONTAINER_COMPLETED))
+             TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
      // Transitions from FAIL_CONTAINER_CLEANUP state.
      .addTransition(TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
@@ -364,7 +370,8 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG,
-             TaskAttemptEventType.TA_TIMED_OUT))
+             TaskAttemptEventType.TA_TIMED_OUT,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
       // Transitions from KILL_CONTAINER_CLEANUP
      .addTransition(TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
@@ -386,7 +393,8 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG,
-             TaskAttemptEventType.TA_TIMED_OUT))
+             TaskAttemptEventType.TA_TIMED_OUT,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
      // Transitions from FAIL_TASK_CLEANUP
      // run the task cleanup
@@ -409,7 +417,8 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_CONTAINER_CLEANED,
              // Container launch events can arrive late
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
      // Transitions from KILL_TASK_CLEANUP
      .addTransition(TaskAttemptStateInternal.KILL_TASK_CLEANUP,
@@ -431,7 +440,8 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_CONTAINER_CLEANED,
              // Container launch events can arrive late
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
       // Transitions from SUCCEEDED
      .addTransition(TaskAttemptStateInternal.SUCCEEDED, //only possible for map attempts
@@ -451,7 +461,8 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.SUCCEEDED,
          EnumSet.of(TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_CONTAINER_CLEANED,
-             TaskAttemptEventType.TA_CONTAINER_COMPLETED))
+             TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
      // Transitions from FAILED state
      .addTransition(TaskAttemptStateInternal.FAILED, TaskAttemptStateInternal.FAILED,
@@ -470,7 +481,8 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG,
-             TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE))
+             TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
      // Transitions from KILLED state
      .addTransition(TaskAttemptStateInternal.KILLED, TaskAttemptStateInternal.KILLED,
@@ -488,7 +500,8 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_CONTAINER_CLEANED,
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG))
+             TaskAttemptEventType.TA_FAILMSG,
+             TaskAttemptEventType.TA_NEW_SPILL))
 
      // create the topology tables
      .installTopology();

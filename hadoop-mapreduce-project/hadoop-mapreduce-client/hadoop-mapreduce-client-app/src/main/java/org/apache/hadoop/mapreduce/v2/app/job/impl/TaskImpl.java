@@ -137,6 +137,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   // counts the number of attempts that are either running or in a state where
   //  they will come to be running when they get a Container
   private final Set<TaskAttemptId> inProgressAttempts;
+  protected int currentMapAttemptId = -1;
 
   private boolean historyTaskStartGenerated = false;
   
@@ -608,6 +609,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private void addAndScheduleAttempt(Avataar avataar) {
     TaskAttempt attempt = addAttempt(avataar);
     inProgressAttempts.add(attempt.getID());
+    if (this.getType() == TaskType.MAP) {
+      this.currentMapAttemptId = attempt.getID().getId();
+    }
     //schedule the nextAttemptNumber
     if (failedAttempts.size() > 0) {
       eventHandler.handle(new TaskAttemptEvent(attempt.getID(),
@@ -913,6 +917,12 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
       LOG.info("Scheduling a redundant attempt for task " + task.taskId);
+      // hao
+      if (task.getType() == TaskType.MAP) {
+        for (TaskAttemptId taid : task.inProgressAttempts) {
+          task.eventHandler.handle(new TaskAttemptEvent(taid, TaskAttemptEventType.TA_KILL));
+        }
+      }
       task.addAndScheduleAttempt(Avataar.SPECULATIVE);
     }
   }
@@ -990,7 +1000,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           TaskAttemptCompletionEventStatus.KILLED);
       task.finishedAttempts.add(taskAttemptId);
       task.inProgressAttempts.remove(taskAttemptId);
-      if (task.successfulAttempt == null) {
+      if (task.successfulAttempt == null  && task.inProgressAttempts.size() == 0) {
         task.addAndScheduleAttempt(Avataar.VIRGIN);
       }
       if ((task.commitAttempt != null) && (task.commitAttempt == taskAttemptId)) {
