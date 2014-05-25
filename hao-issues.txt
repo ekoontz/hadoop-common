@@ -5,3 +5,4 @@
 5 ShuffleSchedulerImpl::maxMapRunTime
 6 MergeManagerImpl.java,createInMemorySegments:617，是否应该替换为spillInfo，感觉这里mapAttemptId和reduceAttemptId混淆了
 7 需要删除调试日志
+8 任务失败，暂时只考虑其所在节点没有宕机的情况
