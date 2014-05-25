@@ -193,6 +193,13 @@ public class TestTaskCommit extends HadoopTestCase {
       // TODO Auto-generated method stub
       return null;
     }
+
+    @Override
+    public MapInputRangeList getMapAttemptIgnoreRanges(JobID jobId,
+        TaskAttemptID taskid) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
   
   /**

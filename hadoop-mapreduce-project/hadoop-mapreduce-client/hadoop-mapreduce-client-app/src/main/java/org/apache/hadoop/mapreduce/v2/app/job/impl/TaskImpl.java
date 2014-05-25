@@ -463,8 +463,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     }
   }
   
-  private long mapInputStart;
-  private long mapInputEnd;
+  protected long mapInputStart;
+  protected long mapInputEnd;
 
   public long getMapInputStart() {
     return mapInputStart;
@@ -968,24 +968,14 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.finished(TaskStateInternal.SUCCEEDED);
     }
   }
+  
+  protected void handleNewSpill(TaskImpl task, TaskEvent event) {}
 
   private static class NewMapSpillTransition implements
       SingleArcTransition<TaskImpl, TaskEvent> {
     @Override
     public void transition(TaskImpl task, TaskEvent event) {
-      MapSpillInfo spillInfo = event.getSpillInfo();
-      JobEvent jobEvent = new JobEvent(task.getID().getJobId(), JobEventType.JOB_NEW_MAP_SPILL);
-      jobEvent.setSpillInfo(event.getSpillInfo());
-     
-      jobEvent.setMapId(event.getSpillMapAttemptID());
-
-      String scheme = (task.encryptedShuffle) ? "https://" : "http://";
-      String url = scheme + event.getHost() + ":" + event.getPort();
-      jobEvent.setNodeHttp(url);
-      
-      task.eventHandler.handle(jobEvent);
-      
-      // TODO HAO
+      task.handleNewSpill(task, event);
     }
   }
 

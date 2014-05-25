@@ -350,7 +350,7 @@ public class MapTask extends Task {
   
   protected void newSpillRecord(long start, long end, int spillIndex) throws IOException
   {
-    MapSpillInfo info = new MapSpillInfo(start, end, spillIndex);
+    MapSpillInfo info = new MapSpillInfo(start, end, spillIndex, this.getTaskID().getId());
     umbilical.newMapSpill(this.getTaskID(), info);
   }
 
@@ -569,21 +569,25 @@ public class MapTask extends Task {
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
       // TODO add skip code here, assume ignore range is asceding and disjoint, and recordreader cannot bypass one ignore range
-      if (haoRecordReader != null && nextRangeToIgnore != null) {
-        long current = haoRecordReader.getPos();
-        if (current >= nextRangeToIgnore.start) {
-//          System.out.println("HAO: skip current=" + current + " rangeStart=" + nextRangeToIgnore.start + " rangeEnd=" + nextRangeToIgnore.end + " len=" + (nextRangeToIgnore.end - current));
-          haoRecordReader.skip(nextRangeToIgnore.end - current);
-          try {
-            haoMapOutputBuffer.readerHeadReset(nextRangeToIgnore.end);
-          } catch (ClassNotFoundException e) {
-            throw new IOException(e);
-          }
+
+      final long current = haoRecordReader.getPos();
+      if (haoRecordReader != null && nextRangeToIgnore != null && current >= nextRangeToIgnore.start) {
+        // find final pos
+        long targetPos = current;
+        while (nextRangeToIgnore != null && targetPos >= nextRangeToIgnore.start) {
+          targetPos = nextRangeToIgnore.end;
           if (ignoreRangeIter.hasNext()) {
             nextRangeToIgnore = ignoreRangeIter.next();
           } else {
             nextRangeToIgnore = null;
           }
+        }
+        // do the skip
+        haoRecordReader.skip(targetPos - current);
+        try {
+          haoMapOutputBuffer.readerHeadReset(targetPos);
+        } catch (ClassNotFoundException e) {
+          throw new IOException(e);
         }
       }
 
@@ -596,6 +600,11 @@ public class MapTask extends Task {
       }
       fileInputByteCounter.increment(bytesInCurr - bytesInPrev);
       reporter.setProgress(getProgress());
+      
+      if (result == false) {
+        LOG.info("nextKeyValue=false, current=" + current + " now=" + haoRecordReader.getPos());
+      }
+      
       return result;
     }
 
@@ -836,19 +845,20 @@ public class MapTask extends Task {
     LOG.info("Processing split: " + split);
 
     // hao
-    // get ignore ranges
-    int[] ignores = job.getInts("hao.map.input.ignore");
-    List<MapInputRange> ranges = new ArrayList<MapInputRange>();
-    if (ignores != null) {
-      for (int i = 0; i+1 < ignores.length; i+=2) {
-        ranges.add(new MapInputRange(ignores[i], ignores[i+1]));
-      }
-    }
-    System.out.println("HAO: ignore ranges=" + ranges.toString());
+    List<MapInputRange> ignoreRanges = umbilical.getMapAttemptIgnoreRanges(this.getJobID(), getTaskID()).getRanges();
+//    // get ignore ranges
+//    int[] ignores = job.getInts("hao.map.input.ignore");
+//    List<MapInputRange> ranges = new ArrayList<MapInputRange>();
+//    if (ignores != null) {
+//      for (int i = 0; i+1 < ignores.length; i+=2) {
+//        ranges.add(new MapInputRange(ignores[i], ignores[i+1]));
+//      }
+//    }
+    System.out.println("HAO: ignore ranges=" + ignoreRanges.toString());
     
     recreader = new NewTrackingRecordReader<INKEY, INVALUE>(split, inputFormat,
         reporter, taskContext);
-    recreader.setIgnoreRanges(ranges);
+    recreader.setIgnoreRanges(ignoreRanges);
     if (split instanceof org.apache.hadoop.mapreduce.lib.input.FileSplit) {
       haoInputStartOffset = ((org.apache.hadoop.mapreduce.lib.input.FileSplit)split).getStart();
     } else {
@@ -1199,7 +1209,7 @@ public class MapTask extends Task {
         return;
       } else if (this.haoInputEndPosOfLastKey <= this.haoInputStart) {
         // no input processed yet, so no need to spill, just move inputStart
-        System.out.println("HAO readerHeadReset: no input processed yet");
+        System.out.println("HAO readerHeadReset: no input processed yet, new start=" + newInputStart);
         this.haoInputStart = newInputStart;
         return;
       }
@@ -1975,7 +1985,7 @@ public class MapTask extends Task {
               rec.mapStartOffset = inputStart;
               rec.mapEndOffset = inputEnd;
               rec.mapSpillIndex = numSpills;
-              System.out.println("Spill End: start=" + inputStart + " end=" + inputEnd);
+              LOG.info("Spill End: start=" + inputStart + " end=" + inputEnd);
             }
 
             spillRec.putIndex(rec, i);

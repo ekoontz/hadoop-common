@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.MapTaskImpl;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
@@ -252,6 +253,13 @@ public class TaskAttemptListenerImpl extends CompositeService
     event.setSpillInfo(spill);
 
     context.getEventHandler().handle(event);
+  }
+  
+  public MapInputRangeList getMapAttemptIgnoreRanges(JobID jobId, TaskAttemptID taskid) {
+    org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
+        TypeConverter.toYarn(taskid);
+    MapTaskImpl mapTask = (MapTaskImpl)context.getJob(attemptID.getTaskId().getJobId()).getMapTask(taskid.getTaskID().getId());
+    return mapTask.getMapAttemptIgnoreRanges(taskid);
   }
 
   @Override

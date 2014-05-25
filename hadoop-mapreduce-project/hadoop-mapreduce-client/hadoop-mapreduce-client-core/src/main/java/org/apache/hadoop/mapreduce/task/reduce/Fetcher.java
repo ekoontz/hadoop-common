@@ -412,7 +412,7 @@ class Fetcher<K,V> extends Thread {
         LOG.info("copyMapOutput: taid=" + attemptId + " spillIndex=" + spillIndex);
         for (MapTaskSpillInfo s : remaining) {
        //   LOG.info("copyMapOutput: " + s);
-          if (attemptId.equals(s.getAttemptID()) && spillIndex == s.getSpillInfo().getIndex()){
+          if (attemptId.equals(s.getAttemptID()) && spillIndex == s.getSpillInfo().getSpillIndex()){
             LOG.info("copyMapOutput: equals");
             spill = s;
             break;
@@ -584,7 +584,7 @@ class Fetcher<K,V> extends Thread {
       }
       url.append(spill.getAttemptID().toString());
       url.append("_spill_");
-      url.append(spill.getSpillInfo().getIndex());
+      url.append(spill.getSpillInfo().getSpillIndex());
       url.append(".out");
       first = false;
     }

@@ -4,3 +4,4 @@
 4 如果某个输入区间没有产生任何的输出，则spill会发生问题，不会向master报告已经处理该段输入
 5 ShuffleSchedulerImpl::maxMapRunTime
 6 MergeManagerImpl.java,createInMemorySegments:617，是否应该替换为spillInfo，感觉这里mapAttemptId和reduceAttemptId混淆了
+7 需要删除调试日志

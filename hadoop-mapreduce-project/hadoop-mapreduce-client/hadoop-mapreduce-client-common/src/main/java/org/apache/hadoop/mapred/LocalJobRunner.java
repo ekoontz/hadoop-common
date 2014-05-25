@@ -630,6 +630,13 @@ public class LocalJobRunner implements ClientProtocol {
       // TODO Auto-generated method stub
       return null;
     }
+
+    @Override
+    public MapInputRangeList getMapAttemptIgnoreRanges(JobID jobId,
+        TaskAttemptID taskid) {
+      // TODO Auto-generated method stub
+      return null;
+    }
     
   }
 
