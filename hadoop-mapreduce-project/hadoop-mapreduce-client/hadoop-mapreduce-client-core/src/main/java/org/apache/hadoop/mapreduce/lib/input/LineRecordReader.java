@@ -128,6 +128,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
       start += in.readLine(new Text(), 0, maxBytesToConsume(start));
     }
     this.pos = start;
+    LOG.info("initialize start=" + this.start + " end=" + this.end + " pos=" + this.pos);
   }
 
   private int maxBytesToConsume(long pos) {
@@ -177,6 +178,9 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     if (newSize == 0) {
       key = null;
       value = null;
+      
+      LOG.info("lr.nextKeyValue=false, filePos=" + getFilePosition() + " pos=" + pos + " start=" + start + " end=" + end);
+      
       return false;
     } else {
       return true;
