@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.mortbay.log.Log;
 
 /** 
  * Maps input key/value pairs to a set of intermediate key/value pairs.  
@@ -149,6 +150,14 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
         map(context.getCurrentKey(), context.getCurrentValue(), context);
         context.enableSpill();
       }
+    } catch (IOException e) {
+      Log.info("run caught ioe: " + e.getMessage());
+      e.printStackTrace();
+      throw e;
+    } catch (InterruptedException e) {
+      Log.info("run caught ie: " + e.getMessage());
+      e.printStackTrace();
+      throw e;
     } finally {
       cleanup(context);
     }
