@@ -18,18 +18,24 @@
 
 package org.apache.hadoop.mapred;
 
+import it.unimi.dsi.fastutil.booleans.BooleanCollections.IterableCollection;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -37,6 +43,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configuration.IntegerRanges;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -58,16 +66,25 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapred.Task.NewCombinerRunner;
+import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
+import org.apache.hadoop.mapreduce.Reducer.Context;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormatCounter;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.hadoop.mapreduce.lib.map.WrappedMapper;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormatCounter;
+import org.apache.hadoop.mapreduce.lib.reduce.WrappedReducer;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
@@ -1048,6 +1065,24 @@ public class MapTask extends Task {
     long haoInputEndPosOfLastKey = -1;
     boolean haoHasToSpill = false;
     MapInputRange currentSpillRange = new MapInputRange(0, 0);
+    
+    Object2ObjectOpenHashMap<K, HaoValue<V>> haoCache;
+    int haoCacheCapacity;
+    WrapperReducer combiner;
+    static class HaoValue<V> {
+      V value;
+      int partition;
+      boolean isnull = true;
+      public String toString() {
+        return "(" + value + "," + partition + ")";
+      }
+      public HaoValue(V value, int partition, boolean isnull) {
+        super();
+        this.value = value;
+        this.partition = partition;
+        this.isnull = isnull;
+      }
+    }
 
     private FileSystem rfs;
 
@@ -1188,7 +1223,364 @@ public class MapTask extends Task {
       if (haoSpillIntervalMillisSeconds != 0) {
         haoLastSpillTime = System.currentTimeMillis();
       }
+      
+      if (combinerRunner != null) {
+        haoCache = new Object2ObjectOpenHashMap<K, HaoValue<V>>();
+        haoCacheCapacity = job.getInt("hao.cache.capacity", 1000);
+        
+
+        // make a task context so we can get the classes
+        Class<? extends org.apache.hadoop.mapreduce.Reducer> combinerClass = 
+            mapTask.taskContext.getCombinerClass();
+        
+        // make a combiner
+        org.apache.hadoop.mapreduce.Reducer<K, V, K, V> realReducer = 
+            (org.apache.hadoop.mapreduce.Reducer<K,V,K,V>)
+            ReflectionUtils.newInstance(combinerClass, job);
+        combiner = new WrapperReducer();
+        combiner.realReducer = realReducer;
+        combiner.iterable = new HaoIterable();
+      }
     }
+    
+    private class HaoIterable implements Iterable<V> {
+      V first;
+      V second;
+      HaoIterator iterator = new HaoIterator();
+      
+      class HaoIterator implements Iterator<V> {
+        int pos;
+        
+        void rewind() { pos = 0; }
+
+        @Override
+        public boolean hasNext() {
+          return pos < 2;
+        }
+
+        @Override
+        public V next() {
+          switch (pos){
+          case 0:
+            ++pos;
+            return first;
+          case 1:
+            ++pos;
+            return second;
+          default:
+              return null;
+          }
+        }
+        
+        public V current() {
+          switch (pos){
+          case 0:
+            return first;
+          case 1:
+            return second;
+          default:
+              return null;
+          }
+        }
+
+        @Override
+        public void remove() {}
+        
+      }
+      
+      @Override
+      public Iterator<V> iterator() {
+        return iterator;
+      }
+      
+    }
+    
+    private class WrapperReducer extends org.apache.hadoop.mapreduce.Reducer<K, V, K, V> {
+      org.apache.hadoop.mapreduce.Reducer<K, V, K, V> realReducer;
+      CombinerContext context = new CombinerContext();
+      HaoIterable iterable;
+      K key;
+      
+      protected void haoRun(K key, V v1, V v2) throws IOException, InterruptedException {
+        iterable.first = v1;
+        iterable.second = v2;
+        this.key = key;
+        iterable.iterator.rewind();
+        
+        realReducer.reduce(key, iterable, context);
+      }
+      private class CombinerContext extends org.apache.hadoop.mapreduce.Reducer<K, V, K, V>.Context {
+
+        public CombinerContext() {
+          // TODO Auto-generated constructor stub
+        }
+
+        @Override
+        public boolean nextKey() throws IOException, InterruptedException {
+          return false;
+        }
+
+        @Override
+        public Iterable getValues() throws IOException, InterruptedException {
+          return iterable;
+        }
+
+        @Override
+        public boolean nextKeyValue() throws IOException, InterruptedException {
+          return false;
+        }
+
+        @Override
+        public K getCurrentKey() throws IOException, InterruptedException {
+          return key;
+        }
+
+        @Override
+        public V getCurrentValue() throws IOException, InterruptedException {
+          return iterable.iterator.current();
+        }
+
+        @Override
+        public void write(Object key, Object value) throws IOException,
+            InterruptedException {
+          if (key != key) {
+            throw new IOException("combiner shouldn't change key");
+          }
+          if (value != iterable.first) {
+            ReflectionUtils.cloneWritableInto((Writable)iterable.first, (Writable)value);
+          }
+        }
+
+        @Override
+        public OutputCommitter getOutputCommitter() {
+          return null;
+        }
+
+        @Override
+        public org.apache.hadoop.mapreduce.TaskAttemptID getTaskAttemptID() {
+          return mapTask.getTaskID();
+        }
+
+        @Override
+        public void setStatus(String msg) {
+          reporter.setStatus(msg);
+        }
+
+        @Override
+        public String getStatus() {
+          return mapTask.taskContext.getStatus();
+        }
+
+        @Override
+        public float getProgress() {
+          return 0;
+        }
+
+        @Override
+        public org.apache.hadoop.mapreduce.Counter getCounter(Enum<?> counterName) {
+          return reporter.getCounter(counterName);
+        }
+
+        @Override
+        public org.apache.hadoop.mapreduce.Counter getCounter(String groupName,
+            String counterName) {
+          return reporter.getCounter(groupName, counterName);
+        }
+
+        @Override
+        public Configuration getConfiguration() {
+          return job;
+        }
+
+        @Override
+        public Credentials getCredentials() {
+          return job.getCredentials();
+        }
+
+        @Override
+        public JobID getJobID() {
+          return mapTask.getJobID();
+        }
+
+        @Override
+        public int getNumReduceTasks() {
+          return job.getNumReduceTasks();
+        }
+
+        @Override
+        public Path getWorkingDirectory() throws IOException {
+          return mapTask.taskContext.getWorkingDirectory();
+        }
+
+        @Override
+        public Class<?> getOutputKeyClass() {
+          return keyClass;
+        }
+
+        @Override
+        public Class<?> getOutputValueClass() {
+          return valClass;
+        }
+
+        @Override
+        public Class<?> getMapOutputKeyClass() {
+          return job.getMapOutputKeyClass();
+        }
+
+        @Override
+        public Class<?> getMapOutputValueClass() {
+          return job.getMapOutputValueClass();
+        }
+
+        @Override
+        public String getJobName() {
+          return job.getJobName();
+        }
+
+        @Override
+        public Class<? extends InputFormat<?, ?>> getInputFormatClass()
+            throws ClassNotFoundException {
+          return mapTask.taskContext.getInputFormatClass();
+        }
+
+        @Override
+        public Class<? extends Mapper<?, ?, ?, ?>> getMapperClass()
+            throws ClassNotFoundException {
+          return mapTask.taskContext.getMapperClass();
+        }
+
+        @Override
+        public Class<? extends Reducer<?, ?, ?, ?>> getCombinerClass()
+            throws ClassNotFoundException {
+          return mapTask.taskContext.getCombinerClass();
+        }
+
+        @Override
+        public Class<? extends Reducer<?, ?, ?, ?>> getReducerClass()
+            throws ClassNotFoundException {
+          return mapTask.taskContext.getReducerClass();
+        }
+
+        @Override
+        public Class<? extends org.apache.hadoop.mapreduce.OutputFormat<?, ?>> getOutputFormatClass()
+            throws ClassNotFoundException {
+          return mapTask.taskContext.getOutputFormatClass();
+        }
+
+        @Override
+        public Class<? extends org.apache.hadoop.mapreduce.Partitioner<?, ?>> getPartitionerClass()
+            throws ClassNotFoundException {
+          return mapTask.taskContext.getPartitionerClass();
+        }
+
+        @Override
+        public RawComparator<?> getSortComparator() {
+          return mapTask.taskContext.getSortComparator();
+        }
+
+        @Override
+        public String getJar() {
+          return mapTask.taskContext.getJar();
+        }
+
+        @Override
+        public RawComparator<?> getGroupingComparator() {
+          return mapTask.taskContext.getGroupingComparator();
+        }
+
+        @Override
+        public boolean getJobSetupCleanupNeeded() {
+          return mapTask.taskContext.getJobSetupCleanupNeeded();
+        }
+
+        @Override
+        public boolean getTaskCleanupNeeded() {
+          return mapTask.taskContext.getTaskCleanupNeeded();
+        }
+
+        @Override
+        public boolean getProfileEnabled() {
+          return mapTask.taskContext.getProfileEnabled();
+        }
+
+        @Override
+        public String getProfileParams() {
+          return mapTask.taskContext.getProfileParams();
+        }
+
+        @Override
+        public IntegerRanges getProfileTaskRange(boolean isMap) {
+          return mapTask.taskContext.getProfileTaskRange(isMap);
+        }
+
+        @Override
+        public String getUser() {
+          return mapTask.taskContext.getUser();
+        }
+
+        @Override
+        public boolean getSymlink() {
+          return mapTask.taskContext.getSymlink();
+        }
+
+        @Override
+        public Path[] getArchiveClassPaths() {
+          return mapTask.taskContext.getArchiveClassPaths();
+        }
+
+        @Override
+        public URI[] getCacheArchives() throws IOException {
+          return mapTask.taskContext.getCacheArchives();
+        }
+
+        @Override
+        public URI[] getCacheFiles() throws IOException {
+          return mapTask.taskContext.getCacheFiles();
+        }
+
+        @Override
+        public Path[] getLocalCacheArchives() throws IOException {
+          return mapTask.taskContext.getLocalCacheArchives();
+        }
+
+        @Override
+        public Path[] getLocalCacheFiles() throws IOException {
+          return mapTask.taskContext.getLocalCacheFiles();
+        }
+
+        @Override
+        public Path[] getFileClassPaths() {
+          return mapTask.taskContext.getFileClassPaths();
+        }
+
+        @Override
+        public String[] getArchiveTimestamps() {
+          return mapTask.taskContext.getArchiveTimestamps();
+        }
+
+        @Override
+        public String[] getFileTimestamps() {
+          return mapTask.taskContext.getFileTimestamps();
+        }
+
+        @Override
+        public int getMaxMapAttempts() {
+          return mapTask.taskContext.getMaxMapAttempts();
+        }
+
+        @Override
+        public int getMaxReduceAttempts() {
+          return mapTask.taskContext.getMaxReduceAttempts();
+        }
+
+        @Override
+        public void progress() {
+          mapTask.taskContext.progress();
+        }
+        
+      }
+    }
+    
 
     public void enableSpill() {
       haoSpillEnabled = true;
@@ -1213,10 +1605,22 @@ public class MapTask extends Task {
         this.haoInputStart = newInputStart;
         return;
       }
-      System.out.println("HAO readerHeadReset: splling");
+      
+      haoForceSpill(newInputStart);
+    
+    }
+    
+    void haoForceSpill(long newInputStart) throws IOException, ClassNotFoundException {
+//      System.out.println("HAO readerHeadReset: splling");
       
       
-//----------------------------------------------------------------------------------------------------------
+      if (combiner != null) {
+        for (Entry<K, HaoValue<V>> entry : haoCache.entrySet()) {
+          doCollect(entry.getKey(), entry.getValue().value, entry.getValue().partition);
+          entry.getValue().isnull = true;
+        }
+      }
+      
       spillLock.lock();
       try {
         while (spillInProgress) {
@@ -1271,115 +1675,30 @@ public class MapTask extends Task {
       kvstart = kvend = kvindex;
 
       bufferRemaining = softLimit;
-//--------------------------------------------------------------------------------------------------------------
-      
-
-
-//      spillLock.lock();
-//      try {
-//        do {
-//          while (spillInProgress) {
-//            reporter.progress();
-//            spillDone.await();
-//          }
-//
-//          final int kvbidx = 4 * kvindex;
-//          final int kvbend = 4 * kvend;
-//          // serialized, unspilled bytes always lie between kvindex and
-//          // bufindex, crossing the equator. Note that any void space
-//          // created by a reset must be included in "used" bytes
-//          final int bUsed = distanceTo(kvbidx, bufindex);
-//
-//          if ((kvbend + METASIZE) % kvbuffer.length != equator
-//              - (equator % METASIZE)) {
-//            // spill finished, reclaim space
-//            resetSpill();
-//            bufferRemaining = Math.min(distanceTo(bufindex, kvbidx) - 2
-//                * METASIZE, softLimit - bUsed)
-//                - METASIZE;
-//          }
-//
-//          if (kvindex == kvend) {
-//            // TODO create dummy spill
-//          } else {
-//            sortAndSpill(this.haoInputStart, this.haoInputEndPosOfLastKey);
-//            this.haoInputEndPosOfLastKey = this.haoInputStart = Math.max(
-//                newInputStart, mapTask.recreader.getReaderRawPos());
-//
-//            final int avgRec = (int) (mapOutputByteCounter.getCounter() / mapOutputRecordCounter
-//                .getCounter());
-//            // leave at least half the split buffer for serialization data
-//            // ensure that kvindex >= bufindex
-//            final int distkvi = distanceTo(bufindex, kvbidx);
-//            final int newPos = (bufindex + Math
-//                .max(
-//                    2 * METASIZE - 1,
-//                    Math.min(distkvi / 2, distkvi / (METASIZE + avgRec)
-//                        * METASIZE)))
-//                % kvbuffer.length;
-//            setEquator(newPos);
-//            bufmark = bufindex = newPos;
-//            final int serBound = 4 * kvend;
-//            // bytes remaining before the lock must be held and limits
-//            // checked is the minimum of three arcs: the metadata space, the
-//            // serialization space, and the soft limit
-//            bufferRemaining = Math.min(
-//            // metadata max
-//                distanceTo(bufend, newPos), Math.min(
-//                // serialization max
-//                    distanceTo(newPos, serBound),
-//                    // soft limit
-//                    softLimit)) - 2 * METASIZE;
-//          }
-//        } while (false);
-//      } catch (InterruptedException e) {
-//        throw new IOException("Interrupted while waiting for the writer", e);
-//      } finally {
-//        spillLock.unlock();
-//      }
-//
-//      this.disableSpill();
-//      return;
-//    
-//      
-//      
-    
     }
+    
+    boolean needSpill() {
+      if (haoSpillEnabled == false) {
+        return false;
+      }
 
-    /**
-     * Serialize the key, value to intermediate storage. When this method
-     * returns, kvindex must refer to sufficient unused storage to store one
-     * METADATA.
-     */
-    public synchronized void collect(K key, V value, final int partition)
-        throws IOException {
-      // if (mapTask.recreader.haoBytesReadCompatile()) {
-      // System.out.println("HAO: start=" +
-      // mapTask.recreader.getReaderRawStart());
-      // System.out.println("HAO:   pos=" +
-      // mapTask.recreader.getReaderRawPos());
-      // System.out.println("HAO:   end=" +
-      // mapTask.recreader.getReaderRawEnd());
-      // System.out.println("HAO:enable=" + haoSpillEnabled);
-      // } else {
-      // System.out.println("HAO: not compatible");
-      // }
-
-      reporter.progress();
-      if (key.getClass() != keyClass) {
-        throw new IOException("Type mismatch in key from map: expected "
-            + keyClass.getName() + ", received " + key.getClass().getName());
+      // hao
+      boolean readEnoughToSpill = false;
+      if (this.haoSpillIntervalInputBytes != 0
+          && mapTask.recreader.haoBytesReadCompatile()) {
+        readEnoughToSpill = mapTask.recreader.getReaderRawPos()
+            - mapTask.recreader.getReaderRawStart() > this.haoSpillIntervalInputBytes;
       }
-      if (value.getClass() != valClass) {
-        throw new IOException("Type mismatch in value from map: expected "
-            + valClass.getName() + ", received " + value.getClass().getName());
+      boolean timeLongEnoughToSpill = false;
+      if (this.haoSpillIntervalMillisSeconds != 0
+          && System.currentTimeMillis() - haoLastSpillTime > haoSpillIntervalMillisSeconds) {
+        timeLongEnoughToSpill = true;
       }
-      if (partition < 0 || partition >= partitions) {
-        throw new IOException("Illegal partition for " + key + " (" + partition
-            + ")");
-      }
-      checkSpillException();
-      bufferRemaining -= METASIZE;
+      
+      return bufferRemaining <= 0 || timeLongEnoughToSpill || readEnoughToSpill;
+    }
+    
+    void haoCheckSpill() {
 
       // hao
       boolean readEnoughToSpill = false;
@@ -1403,8 +1722,6 @@ public class MapTask extends Task {
           do {
             
             if (!spillInProgress && haoSpillEnabled) {
-              
-              System.out.println("HAO: haoSpillEnabled=" + haoSpillEnabled);
               
               final int kvbidx = 4 * kvindex;
               final int kvbend = 4 * kvend;
@@ -1467,7 +1784,11 @@ public class MapTask extends Task {
           spillLock.unlock();
         }
       }
+    }
 
+    public void doCollect(K key, V value, final int partition) throws IOException {
+
+      bufferRemaining -= METASIZE;
       try {
         // serialize key bytes into buffer
         int keystart = bufindex;
@@ -1513,6 +1834,66 @@ public class MapTask extends Task {
       }
       this.disableSpill();
       return;
+    }
+    
+    
+    /**
+     * Serialize the key, value to intermediate storage. When this method
+     * returns, kvindex must refer to sufficient unused storage to store one
+     * METADATA.
+     */
+    public synchronized void collect(K key, V value, final int partition) throws IOException, InterruptedException{
+      reporter.progress();
+      if (key.getClass() != keyClass) {
+        throw new IOException("Type mismatch in key from map: expected "
+            + keyClass.getName() + ", received " + key.getClass().getName());
+      }
+      if (value.getClass() != valClass) {
+        throw new IOException("Type mismatch in value from map: expected "
+            + valClass.getName() + ", received " + value.getClass().getName());
+      }
+      if (partition < 0 || partition >= partitions) {
+        throw new IOException("Illegal partition for " + key + " (" + partition
+            + ")");
+      }
+      checkSpillException();
+      
+      
+      if (combiner != null) {
+        if (needSpill()) {
+          try {
+            haoForceSpill(haoInputEndPosOfLastKey);
+          } catch (ClassNotFoundException e) {
+            throw new IOException(e);
+          }
+        }
+        
+        if (haoCache.containsKey(key)) {
+//          System.out.println("cache hit " + key + " " + value + " " + partition);
+          HaoValue<V> originalV = haoCache.get(key);
+          if (originalV.isnull) {
+            ReflectionUtils.cloneWritableInto((Writable)originalV.value, (Writable)value);
+            originalV.isnull = false;
+          } else {
+            combiner.haoRun(key, originalV.value, value);
+          }
+        } else if (haoCache.size() < this.haoCacheCapacity) {
+//          System.out.println("cache miss insert   " + key + " " + value + " " + partition);
+          K newkey = ReflectionUtils.newInstance(keyClass, job);
+          ReflectionUtils.cloneWritableInto((Writable)newkey, (Writable)key);
+          V newvalue = ReflectionUtils.newInstance(valClass, job);
+          ReflectionUtils.cloneWritableInto((Writable)newvalue, (Writable)value);
+          haoCache.put(newkey, new HaoValue<V>(newvalue, partition, false));
+        } else {
+//          System.out.println("cache miss fallback " + key + " " + value + " " + partition);
+          doCollect(key, value, partition);
+        }
+      } else {
+
+        haoCheckSpill();
+        
+        doCollect(key, value, partition);
+      }
     }
 
     private TaskAttemptID getTaskID() {
@@ -1784,6 +2165,17 @@ public class MapTask extends Task {
 
     public void flush() throws IOException, ClassNotFoundException,
         InterruptedException {
+      
+
+      if (combiner != null) {
+        for (Entry<K, HaoValue<V>> entry : haoCache.entrySet()) {
+          if (entry.getValue().isnull == false) {
+            doCollect(entry.getKey(), entry.getValue().value, entry.getValue().partition);
+          }
+        }
+      }
+      
+      
       LOG.info("Starting flush of map output");
       spillLock.lock();
       // TODO create dummy spill if data processed but no output generated

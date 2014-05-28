@@ -37,6 +37,13 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-common</artifactId> 
     </dependency>
+	<dependency>
+		<artifactId>fastutil</artifactId>
+		<groupId>it.unimi.di.fastutil</groupId>
+		<version>6.5.15</version>
+		<scope>system</scope>
+		<systemPath>${project.basedir}/lib/fastutil-6.5.15.jar</systemPath>
+	</dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
