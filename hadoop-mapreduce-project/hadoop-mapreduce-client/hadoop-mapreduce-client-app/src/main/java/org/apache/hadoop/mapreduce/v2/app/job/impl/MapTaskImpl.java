@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -48,6 +49,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 
+import com.sun.tools.classfile.Opcode.Set;
 import com.sun.tools.javac.util.Position;
 
 @SuppressWarnings({ "rawtypes" })
@@ -160,6 +162,36 @@ public class MapTaskImpl extends TaskImpl {
       writeLock.unlock();
     }
     
+    
+  }
+  
+  private java.util.Set<Integer> faildAttemptSet = new TreeSet<Integer>();
+  
+  public void recompute(int attemptIndex) {
+    
+    if (faildAttemptSet.contains(attemptIndex)) {
+      return;
+    }
+    faildAttemptSet.add(attemptIndex);
+    
+    try {
+      writeLock.lock();
+      int i = 0;
+      while (i < finishedRanges.size()) {
+        if (finishedRanges.get(i).getAttemptIndex() == i) {
+          MapSpillInfo toremovestart = finishedRanges.get(i);
+          MapSpillInfo toremoveend = new MapSpillInfo(toremovestart.getEnd(), toremovestart.getEnd(), toremovestart.getSpillIndex(), toremovestart.getAttemptIndex());
+          toremovestart.setEnd(toremovestart.getStart());
+          finishedRanges.add(i+1, toremoveend);
+          i+=2;
+        } else {
+          ++i;
+        }
+      }
+      System.out.println("recompute: ta=" + attemptIndex + " after=" + finishedRanges);
+    } finally {
+      writeLock.unlock();
+    }
     
   }
   

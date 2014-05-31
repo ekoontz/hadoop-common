@@ -243,6 +243,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       new CounterUpdateTransition();
   private static final UpdatedNodesTransition UPDATED_NODES_TRANSITION =
       new UpdatedNodesTransition();
+  private static final MapAttemptTimtoutTransition MAP_ATTEMPT_TIMEOUT_TRANSITION = new MapAttemptTimtoutTransition();
 
   protected static final
     StateMachineFactory<JobImpl, JobStateInternal, JobEventType, JobEvent> 
@@ -364,6 +365,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
               JobEventType.JOB_NEW_MAP_SPILL,
               NEW_MAP_SPILL_TRANSITION)
+          .addTransition(JobStateInternal.RUNNING, JobStateInternal.RUNNING,
+              JobEventType.JOB_ATTEMPT_TIMEOUT,
+              MAP_ATTEMPT_TIMEOUT_TRANSITION)
 
           // Transitions from KILL_WAIT state.
           .addTransition
@@ -390,7 +394,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_UPDATED_NODES,
                   JobEventType.JOB_MAP_TASK_RESCHEDULED,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // Transitions from COMMITTING state
           .addTransition(JobStateInternal.COMMITTING,
@@ -422,7 +427,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           .addTransition(JobStateInternal.COMMITTING,
               JobStateInternal.COMMITTING,
               EnumSet.of(JobEventType.JOB_UPDATED_NODES,
-                  JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE))
+                  JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // Transitions from SUCCEEDED state
           .addTransition(JobStateInternal.SUCCEEDED, JobStateInternal.SUCCEEDED,
@@ -441,7 +447,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
                   JobEventType.JOB_AM_REBOOT,
                   JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
-                  JobEventType.JOB_MAP_TASK_RESCHEDULED))
+                  JobEventType.JOB_MAP_TASK_RESCHEDULED,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // Transitions from FAIL_WAIT state
           .addTransition(JobStateInternal.FAIL_WAIT,
@@ -471,7 +478,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
                   JobEventType.JOB_MAP_TASK_RESCHEDULED,
                   JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           //Transitions from FAIL_ABORT state
           .addTransition(JobStateInternal.FAIL_ABORT,
@@ -501,7 +509,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_COMMIT_COMPLETED,
                   JobEventType.JOB_COMMIT_FAILED,
                   JobEventType.JOB_AM_REBOOT,
-                  JobEventType.JOB_FAIL_WAIT_TIMEDOUT))
+                  JobEventType.JOB_FAIL_WAIT_TIMEDOUT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // Transitions from KILL_ABORT state
           .addTransition(JobStateInternal.KILL_ABORT,
@@ -529,7 +538,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_SETUP_FAILED,
                   JobEventType.JOB_COMMIT_COMPLETED,
                   JobEventType.JOB_COMMIT_FAILED,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // Transitions from FAILED state
           .addTransition(JobStateInternal.FAILED, JobStateInternal.FAILED,
@@ -554,7 +564,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_COMMIT_COMPLETED,
                   JobEventType.JOB_COMMIT_FAILED,
                   JobEventType.JOB_ABORT_COMPLETED,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // Transitions from KILLED state
           .addTransition(JobStateInternal.KILLED, JobStateInternal.KILLED,
@@ -577,7 +588,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_COMMIT_COMPLETED,
                   JobEventType.JOB_COMMIT_FAILED,
                   JobEventType.JOB_ABORT_COMPLETED,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
 
           // No transitions from INTERNAL_ERROR state. Ignore all.
           .addTransition(
@@ -619,7 +631,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
                   JobEventType.JOB_COMMIT_FAILED,
                   JobEventType.JOB_ABORT_COMPLETED,
                   JobEventType.INTERNAL_ERROR,
-                  JobEventType.JOB_AM_REBOOT))
+                  JobEventType.JOB_AM_REBOOT,
+                  JobEventType.JOB_ATTEMPT_TIMEOUT))
           .addTransition(JobStateInternal.REBOOT, JobStateInternal.REBOOT,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
 
@@ -1858,6 +1871,30 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
+  private static class MapAttemptTimtoutTransition implements
+      SingleArcTransition<JobImpl, JobEvent> {
+    @Override
+    public void transition(JobImpl job, JobEvent event) {
+      LOG.info("HAO JOB MapAttemptTimtoutTransition " + event.getMapId());
+      job.mapTaskSpillInfoWriteLock.lock();
+      try {
+        MapTaskSpillInfo info = new MapTaskSpillInfo(job.mapTaskSpillInfos.size(),
+                                                     null,
+                                                     event.getMapId(),
+                                                     MapTaskSpillInfo.Status.FAILED,
+                                                     null);
+        job.mapTaskSpillInfos.add(info);
+      } finally {
+        job.mapTaskSpillInfoWriteLock.unlock();
+      }
+      
+//      System.out.println("HAO JobImpl newMapSpill: " + mapId.toString() + " spill(" + spillInfo.getIndex() + ", " + spillInfo.getStart() + ", " + spillInfo.getEnd() + ")");
+      
+    }
+  }
+  
+  
+
   private static class TaskAttemptCompletedEventTransition implements
       SingleArcTransition<JobImpl, JobEvent> {
     @Override
@@ -1876,19 +1913,19 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         mapEventIdx = job.mapAttemptCompletionEvents.size();
         TaskCompletionEvent te = TypeConverter.fromYarn(tce);
         job.mapAttemptCompletionEvents.add(te);
-        if (tce.getStatus() != TaskAttemptCompletionEventStatus.SUCCEEDED) {
-          job.mapTaskSpillInfoWriteLock.lock();
-          try {
-            MapTaskSpillInfo info = new MapTaskSpillInfo(job.mapTaskSpillInfos.size(),
-                                                         te.getTaskTrackerHttp(),
-                                                         te.getTaskAttemptId(),
-                                                         tce.getStatus() == TaskAttemptCompletionEventStatus.TIPFAILED ? MapTaskSpillInfo.Status.TIP_FAIL : MapTaskSpillInfo.Status.FAILED,
-                                                         null);
-            job.mapTaskSpillInfos.add(info);
-          } finally {
-            job.mapTaskSpillInfoWriteLock.unlock();
-          }
-        }
+//        if (tce.getStatus() != TaskAttemptCompletionEventStatus.SUCCEEDED && ((JobTaskAttemptCompletedEvent) event).isRecompute()) {
+//          job.mapTaskSpillInfoWriteLock.lock();
+//          try {
+//            MapTaskSpillInfo info = new MapTaskSpillInfo(job.mapTaskSpillInfos.size(),
+//                                                         te.getTaskTrackerHttp(),
+//                                                         te.getTaskAttemptId(),
+//                                                         tce.getStatus() == TaskAttemptCompletionEventStatus.TIPFAILED ? MapTaskSpillInfo.Status.TIP_FAIL : MapTaskSpillInfo.Status.FAILED,
+//                                                         null);
+//            job.mapTaskSpillInfos.add(info);
+//          } finally {
+//            job.mapTaskSpillInfoWriteLock.unlock();
+//          }
+//        }
       }
       job.taskCompletionIdxToMapCompletionIdx.add(mapEventIdx);
       

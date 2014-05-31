@@ -43,6 +43,8 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerLaunched
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -228,6 +230,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         this.state = ContainerState.DONE;
       }
       // after killing, send killed event to task attempt
+//      context.getEventHandler().handle(new TaskTAttemptEvent(this.taskAttemptID, TaskEventType.T_ATTEMPT_TIMED_OUT));
       context.getEventHandler().handle(
           new TaskAttemptEvent(this.taskAttemptID,
               TaskAttemptEventType.TA_CONTAINER_CLEANED));

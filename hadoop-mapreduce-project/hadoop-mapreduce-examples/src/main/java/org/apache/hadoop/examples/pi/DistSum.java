@@ -365,7 +365,7 @@ public final class DistSum extends Configured implements Tool {
     public static class SummingReducer extends
         Reducer<IntWritable, SummationWritable, NullWritable, TaskResult> {
       @Override
-      protected void reduce(IntWritable index, Iterable<SummationWritable> sums,
+      public void reduce(IntWritable index, Iterable<SummationWritable> sums,
           Context context) throws IOException, InterruptedException {
         LOG.info("index=" + index);
         for(SummationWritable sigma : sums)

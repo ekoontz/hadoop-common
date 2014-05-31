@@ -1566,9 +1566,10 @@ public abstract class TaskAttemptImpl implements
 
       switch(finalState) {
         case FAILED:
-          taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-              taskAttempt.attemptId,
-              TaskEventType.T_ATTEMPT_FAILED));
+          TaskTAttemptEvent tae = new TaskTAttemptEvent(
+              taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED);
+//          tae.setRecompute(true);
+          taskAttempt.eventHandler.handle(tae);
           break;
         case KILLED:
           taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
@@ -1703,6 +1704,9 @@ public abstract class TaskAttemptImpl implements
         LOG.debug("Not generating HistoryFinish event since start event not " +
             "generated for taskAttempt: " + taskAttempt.getID());
       }
+//      TaskTAttemptEvent tae = new TaskTAttemptEvent(
+//          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED);
+//      tae.setRecompute(true);
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
     }
@@ -1787,8 +1791,11 @@ public abstract class TaskAttemptImpl implements
         LOG.debug("Not generating HistoryFinish event since start event not " +
             "generated for taskAttempt: " + taskAttempt.getID());
       }
-      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
-          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
+      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(taskAttempt.getID(), TaskEventType.T_ATTEMPT_TIMED_OUT));
+      TaskTAttemptEvent tae = new TaskTAttemptEvent(
+          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED);
+//      tae.setRecompute(true);
+      taskAttempt.eventHandler.handle(tae);
     }
   }
   
@@ -1868,6 +1875,10 @@ public abstract class TaskAttemptImpl implements
     @Override
     public void transition(TaskAttemptImpl taskAttempt, 
         TaskAttemptEvent event) {
+      
+      LOG.info("HAO: CleanupContainerTransition");
+      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(taskAttempt.getID(), TaskEventType.T_ATTEMPT_TIMED_OUT));
+      
       // unregister it to TaskAttemptListener so that it stops listening
       // for it
       taskAttempt.taskAttemptListener.unregister(
@@ -1948,8 +1959,14 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       TaskAttemptDiagnosticsUpdateEvent diagEvent =
           (TaskAttemptDiagnosticsUpdateEvent) event;
-      LOG.info("Diagnostics report from " + taskAttempt.attemptId + ": "
+      LOG.info(">> HAO Diagnostics report from " + taskAttempt.attemptId + ": "
           + diagEvent.getDiagnosticInfo());
+      if (diagEvent.getDiagnosticInfo().contains("Timed out after")) {
+        LOG.info("HAO diagEvent.getDiagnosticInfo().contains Timed out after");
+        taskAttempt.eventHandler.handle(new TaskTAttemptEvent(taskAttempt.getID(), TaskEventType.T_ATTEMPT_TIMED_OUT));
+      } else {
+        LOG.info("HAO diagEvent.getDiagnosticInfo() NOT contains: " + diagEvent.getDiagnosticInfo());
+      }
       taskAttempt.addDiagnosticInfo(diagEvent.getDiagnosticInfo());
     }
   }

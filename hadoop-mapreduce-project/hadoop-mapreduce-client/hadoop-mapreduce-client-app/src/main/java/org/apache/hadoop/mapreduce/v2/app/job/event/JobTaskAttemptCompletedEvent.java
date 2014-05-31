@@ -30,8 +30,18 @@ public class JobTaskAttemptCompletedEvent extends JobEvent {
         JobEventType.JOB_TASK_ATTEMPT_COMPLETED);
     this.completionEvent = completionEvent;
   }
+  
+  private boolean recompute;
 
   public TaskAttemptCompletionEvent getCompletionEvent() {
     return completionEvent;
+  }
+
+  public boolean isRecompute() {
+    return recompute;
+  }
+
+  public void setRecompute(boolean recompute) {
+    this.recompute = recompute;
   }
 }

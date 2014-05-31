@@ -26,6 +26,7 @@ public class JobTaskEvent extends JobEvent {
 
   private TaskId taskID;
   private TaskState taskState;
+  private boolean recompute = false;
 
   public JobTaskEvent(TaskId taskID, TaskState taskState) {
     super(taskID.getJobId(), JobEventType.JOB_TASK_COMPLETED);
@@ -39,5 +40,13 @@ public class JobTaskEvent extends JobEvent {
 
   public TaskState getState() {
     return taskState;
+  }
+
+  public boolean isRecompute() {
+    return recompute;
+  }
+
+  public void setRecompute(boolean recompute) {
+    this.recompute = recompute;
   }
 }

@@ -191,7 +191,7 @@ public class TestMapCollection {
     }
 
     @Override
-    protected void reduce(KeyWritable k, Iterable<ValWritable> values,
+    public void reduce(KeyWritable k, Iterable<ValWritable> values,
         Context context) throws IOException, InterruptedException {
       for (ValWritable val : values) {
         ++numrecs;

@@ -34,4 +34,12 @@ public class TaskTAttemptEvent extends TaskEvent {
     return attemptID;
   }
 
+  public TaskAttemptId getAttemptID() {
+    return attemptID;
+  }
+
+  public void setAttemptID(TaskAttemptId attemptID) {
+    this.attemptID = attemptID;
+  }
+  
 }

@@ -147,6 +147,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
      KILL_TRANSITION = new KillTransition();
   
   private static final NewMapSpillTransition NEW_MAP_SPILL_TRANSITION = new NewMapSpillTransition();
+  private static final TaskAttemptNodeFailedTransition TASK_ATTEMPT_NODE_FAIL_TRANSITION = new TaskAttemptNodeFailedTransition();
 
   private static final StateMachineFactory
                <TaskImpl, TaskStateInternal, TaskEventType, TaskEvent> 
@@ -203,6 +204,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         TaskEventType.T_KILL, KILL_TRANSITION)
     .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.RUNNING, 
         TaskEventType.T_ATTEMPT_NEW_SPILL, NEW_MAP_SPILL_TRANSITION)
+    .addTransition(TaskStateInternal.RUNNING, TaskStateInternal.RUNNING, 
+        TaskEventType.T_ATTEMPT_TIMED_OUT, TASK_ATTEMPT_NODE_FAIL_TRANSITION)
 
     // Transitions from KILL_WAIT state
     .addTransition(TaskStateInternal.KILL_WAIT,
@@ -224,7 +227,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         EnumSet.of(TaskEventType.T_KILL,
             TaskEventType.T_ATTEMPT_LAUNCHED,
             TaskEventType.T_ATTEMPT_COMMIT_PENDING,
-            TaskEventType.T_ADD_SPEC_ATTEMPT))
+            TaskEventType.T_ADD_SPEC_ATTEMPT,
+            TaskEventType.T_ATTEMPT_TIMED_OUT))
 
     // Transitions from SUCCEEDED state
     .addTransition(TaskStateInternal.SUCCEEDED,
@@ -242,7 +246,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         EnumSet.of(TaskEventType.T_ADD_SPEC_ATTEMPT,
             TaskEventType.T_ATTEMPT_COMMIT_PENDING,
             TaskEventType.T_ATTEMPT_LAUNCHED,
-            TaskEventType.T_KILL))
+            TaskEventType.T_KILL,
+            TaskEventType.T_ATTEMPT_TIMED_OUT))
 
     // Transitions from FAILED state        
     .addTransition(TaskStateInternal.FAILED, TaskStateInternal.FAILED,
@@ -252,12 +257,14 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
                    TaskEventType.T_ATTEMPT_FAILED,
                    TaskEventType.T_ATTEMPT_KILLED,
                    TaskEventType.T_ATTEMPT_LAUNCHED,
-                   TaskEventType.T_ATTEMPT_SUCCEEDED))
+                   TaskEventType.T_ATTEMPT_SUCCEEDED,
+                   TaskEventType.T_ATTEMPT_TIMED_OUT))
 
     // Transitions from KILLED state
     .addTransition(TaskStateInternal.KILLED, TaskStateInternal.KILLED,
         EnumSet.of(TaskEventType.T_KILL,
-                   TaskEventType.T_ADD_SPEC_ATTEMPT))
+                   TaskEventType.T_ADD_SPEC_ATTEMPT,
+                   TaskEventType.T_ATTEMPT_TIMED_OUT))
 
     // create the topology tables
     .installTopology();
@@ -709,7 +716,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       
       //raise the event to job so that it adds the completion event to its
       //data structures
-      eventHandler.handle(new JobTaskAttemptCompletedEvent(tce));
+      JobTaskAttemptCompletedEvent jtace = new JobTaskAttemptCompletedEvent(tce);
+      eventHandler.handle(jtace);
     }
   }
 
@@ -988,6 +996,25 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.handleNewSpill(task, event);
     }
   }
+  
+  private static class TaskAttemptNodeFailedTransition implements
+  SingleArcTransition<TaskImpl, TaskEvent> {
+    @Override
+    public void transition(TaskImpl task, TaskEvent event) {
+      LOG.info("HAO: TaskAttemptNodeFailedTransition ");
+      if (task instanceof MapTaskImpl && event instanceof TaskTAttemptEvent) {
+        MapTaskImpl map = (MapTaskImpl)task;
+        TaskTAttemptEvent tta = (TaskTAttemptEvent)event;
+        LOG.info("HAO: recomputing " + tta.getAttemptID());
+        map.recompute(tta.getAttemptID().getId());
+        
+        JobEvent je = new JobEvent(task.getID().getJobId(), JobEventType.JOB_ATTEMPT_TIMEOUT);
+        
+        je.setMapId(TypeConverter.fromYarn(tta.getAttemptID()));
+        task.eventHandler.handle(je);
+      }
+    }
+  }
 
   private static class AttemptKilledTransition implements
       SingleArcTransition<TaskImpl, TaskEvent> {
@@ -1070,6 +1097,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     @Override
     public TaskStateInternal transition(TaskImpl task, TaskEvent event) {
       TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+//      System.out.println("AttemptFailedTransition " + castEvent.isRecompute() + " " + castEvent.getTaskAttemptID());
       TaskAttemptId taskAttemptId = castEvent.getTaskAttemptID();
       task.failedAttempts.add(taskAttemptId); 
       if (taskAttemptId.equals(task.commitAttempt)) {
@@ -1089,6 +1117,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
             TaskAttemptCompletionEventStatus.FAILED);
         // we don't need a new event if we already have a spare
         task.inProgressAttempts.remove(taskAttemptId);
+        if (task instanceof MapTaskImpl) {
+          ((MapTaskImpl)task).recompute(castEvent.getAttemptID().getId());
+        }
         if (task.inProgressAttempts.size() == 0
             && task.successfulAttempt == null) {
           task.addAndScheduleAttempt(Avataar.VIRGIN);
@@ -1114,8 +1145,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
           LOG.debug("Not generating HistoryFinish event since start event not" +
           		" generated for task: " + task.getID());
         }
-        task.eventHandler.handle(
-            new JobTaskEvent(task.taskId, TaskState.FAILED));
+        JobTaskEvent jte = new JobTaskEvent(task.taskId, TaskState.FAILED);
+        jte.setRecompute(true);
+        task.eventHandler.handle(jte);
         return task.finished(TaskStateInternal.FAILED);
       }
       return getDefaultState(task);

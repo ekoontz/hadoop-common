@@ -117,7 +117,7 @@ public class BaileyBorweinPlouffe extends Configured implements Tool {
 
     /** Concatenate map outputs. */
     @Override
-    protected void reduce(LongWritable offset, Iterable<BytesWritable> values,
+    public void reduce(LongWritable offset, Iterable<BytesWritable> values,
         Context context) throws IOException, InterruptedException {
       // read map outputs
       for (BytesWritable bytes : values) {

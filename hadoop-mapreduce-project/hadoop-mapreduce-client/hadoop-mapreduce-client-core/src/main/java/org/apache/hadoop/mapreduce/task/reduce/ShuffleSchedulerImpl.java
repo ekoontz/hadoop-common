@@ -79,6 +79,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private Set<MapHost> pendingHosts = new HashSet<MapHost>();
 //  private Set<TaskAttemptID> obsoleteMaps = new HashSet<TaskAttemptID>();
   private Set<Integer> obsoleteSpills = new HashSet<Integer>();
+  private Set<TaskAttemptID> obsoleteMapAttempts = new HashSet<TaskAttemptID>();
 
   private final TaskAttemptID reduceId;
   private final Random random = new Random();
@@ -178,12 +179,14 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     // TODO hao
     switch (info.getStatus()) {
     case FAILED:
+      obsoleteMapAttempts.add(info.getAttemptID());
       break;
     case NEW_SPILL:
       URI u = getBaseURI(reduceId, info.getNodeHttp());
       addKnownMapSpill(u.getHost() + ":" + u.getPort(), u.toString(), info);
       break;
     case TIP_FAIL:
+      obsoleteMapAttempts.add(info.getAttemptID());
       tipFailed(info.getAttemptID().getTaskID());
       LOG.info("Ignoring output of failed map TIP: '" +
           info.getAttemptID() + "'");
@@ -596,7 +599,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     
     while (iter.hasNext()) {
       MapTaskSpillInfo spillInfo = iter.next();
-      if (!obsoleteSpills.contains(spillInfo.getInfoId()) && !finishedMaps[spillInfo.getAttemptID().getTaskID().getId()]) {
+      if (!obsoleteSpills.contains(spillInfo.getInfoId()) && !obsoleteMapAttempts.contains(spillInfo.getAttemptID()) && !finishedMaps[spillInfo.getAttemptID().getTaskID().getId()]) {
         host.addKnownSpill(spillInfo);
       }
     }
@@ -620,6 +623,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
 //    obsoleteMaps.clear();
     obsoleteSpills.clear();
     pendingHosts.clear();
+    obsoleteMapAttempts.clear();
   }
 
   /**
