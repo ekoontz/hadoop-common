@@ -56,61 +56,61 @@ import org.apache.hadoop.yarn.util.Clock;
 public class DefaultSpeculator extends AbstractService implements
     Speculator {
 
-  private static final long ON_SCHEDULE = Long.MIN_VALUE;
-  private static final long ALREADY_SPECULATING = Long.MIN_VALUE + 1;
-  private static final long TOO_NEW = Long.MIN_VALUE + 2;
-  private static final long PROGRESS_IS_GOOD = Long.MIN_VALUE + 3;
-  private static final long NOT_RUNNING = Long.MIN_VALUE + 4;
-  private static final long TOO_LATE_TO_SPECULATE = Long.MIN_VALUE + 5;
+  protected static final long ON_SCHEDULE = Long.MIN_VALUE;
+  protected static final long ALREADY_SPECULATING = Long.MIN_VALUE + 1;
+  protected static final long TOO_NEW = Long.MIN_VALUE + 2;
+  protected static final long PROGRESS_IS_GOOD = Long.MIN_VALUE + 3;
+  protected static final long NOT_RUNNING = Long.MIN_VALUE + 4;
+  protected static final long TOO_LATE_TO_SPECULATE = Long.MIN_VALUE + 5;
 
-  private static final long SOONEST_RETRY_AFTER_NO_SPECULATE = 1000L * 1L;
-  private static final long SOONEST_RETRY_AFTER_SPECULATE = 1000L * 15L;
+  protected static final long SOONEST_RETRY_AFTER_NO_SPECULATE = 1000L * 1L;
+  protected static final long SOONEST_RETRY_AFTER_SPECULATE = 1000L * 15L;
 
-  private static final double PROPORTION_RUNNING_TASKS_SPECULATABLE = 0.1;
-  private static final double PROPORTION_TOTAL_TASKS_SPECULATABLE = 0.01;
-  private static final int  MINIMUM_ALLOWED_SPECULATIVE_TASKS = 10;
+  protected static final double PROPORTION_RUNNING_TASKS_SPECULATABLE = 0.1;
+  protected static final double PROPORTION_TOTAL_TASKS_SPECULATABLE = 0.01;
+  protected static final int  MINIMUM_ALLOWED_SPECULATIVE_TASKS = 10;
 
-  private static final Log LOG = LogFactory.getLog(DefaultSpeculator.class);
+  protected static final Log LOG = LogFactory.getLog(DefaultSpeculator.class);
 
-  private final ConcurrentMap<TaskId, Boolean> runningTasks
+  protected final ConcurrentMap<TaskId, Boolean> runningTasks
       = new ConcurrentHashMap<TaskId, Boolean>();
 
-  private final Map<Task, AtomicBoolean> pendingSpeculations
+  protected final Map<Task, AtomicBoolean> pendingSpeculations
       = new ConcurrentHashMap<Task, AtomicBoolean>();
 
   // Used to track any TaskAttempts that aren't heart-beating for a while, so
   // that we can aggressively speculate instead of waiting for task-timeout.
-  private final ConcurrentMap<TaskAttemptId, TaskAttemptHistoryStatistics>
+  protected final ConcurrentMap<TaskAttemptId, TaskAttemptHistoryStatistics>
       runningTaskAttemptStatistics = new ConcurrentHashMap<TaskAttemptId,
           TaskAttemptHistoryStatistics>();
   // Regular heartbeat from tasks is every 3 secs. So if we don't get a
   // heartbeat in 9 secs (3 heartbeats), we simulate a heartbeat with no change
   // in progress.
-  private static final long MAX_WAITTING_TIME_FOR_HEARTBEAT = 9 * 1000;
+  protected static final long MAX_WAITTING_TIME_FOR_HEARTBEAT = 9 * 1000;
 
   // These are the current needs, not the initial needs.  For each job, these
   //  record the number of attempts that exist and that are actively
   //  waiting for a container [as opposed to running or finished]
-  private final ConcurrentMap<JobId, AtomicInteger> mapContainerNeeds
+  protected final ConcurrentMap<JobId, AtomicInteger> mapContainerNeeds
       = new ConcurrentHashMap<JobId, AtomicInteger>();
-  private final ConcurrentMap<JobId, AtomicInteger> reduceContainerNeeds
+  protected final ConcurrentMap<JobId, AtomicInteger> reduceContainerNeeds
       = new ConcurrentHashMap<JobId, AtomicInteger>();
 
-  private final Set<TaskId> mayHaveSpeculated = new HashSet<TaskId>();
+  protected final Set<TaskId> mayHaveSpeculated = new HashSet<TaskId>();
 
-  private final Configuration conf;
-  private AppContext context;
-  private Thread speculationBackgroundThread = null;
-  private volatile boolean stopped = false;
-  private BlockingQueue<SpeculatorEvent> eventQueue
+  protected final Configuration conf;
+  protected AppContext context;
+  protected Thread speculationBackgroundThread = null;
+  protected volatile boolean stopped = false;
+  protected BlockingQueue<SpeculatorEvent> eventQueue
       = new LinkedBlockingQueue<SpeculatorEvent>();
-  private TaskRuntimeEstimator estimator;
+  protected TaskRuntimeEstimator estimator;
 
-  private BlockingQueue<Object> scanControl = new LinkedBlockingQueue<Object>();
+  protected BlockingQueue<Object> scanControl = new LinkedBlockingQueue<Object>();
 
-  private final Clock clock;
+  protected final Clock clock;
 
-  private final EventHandler<TaskEvent> eventHandler;
+  protected final EventHandler<TaskEvent> eventHandler;
 
   public DefaultSpeculator(Configuration conf, AppContext context) {
     this(conf, context, context.getClock());
@@ -120,7 +120,7 @@ public class DefaultSpeculator extends AbstractService implements
     this(conf, context, getEstimator(conf, context), clock);
   }
   
-  static private TaskRuntimeEstimator getEstimator
+  static protected TaskRuntimeEstimator getEstimator
       (Configuration conf, AppContext context) {
     TaskRuntimeEstimator estimator;
     
@@ -253,7 +253,7 @@ public class DefaultSpeculator extends AbstractService implements
 
   // This section contains the code that gets run for a SpeculatorEvent
 
-  private AtomicInteger containerNeed(TaskId taskID) {
+  protected AtomicInteger containerNeed(TaskId taskID) {
     JobId jobID = taskID.getJobId();
     TaskType taskType = taskID.getTaskType();
 
@@ -270,7 +270,7 @@ public class DefaultSpeculator extends AbstractService implements
     return result;
   }
 
-  private synchronized void processSpeculatorEvent(SpeculatorEvent event) {
+  protected synchronized void processSpeculatorEvent(SpeculatorEvent event) {
     switch (event.getType()) {
       case ATTEMPT_STATUS_UPDATE:
         statusUpdate(event.getReportedStatus(), event.getTimestamp());
@@ -361,7 +361,7 @@ public class DefaultSpeculator extends AbstractService implements
   //
   // All of these values are negative.  Any value that should be allowed to
   //  speculate is 0 or positive.
-  private long speculationValue(TaskId taskID, long now) {
+  protected long speculationValue(TaskId taskID, long now) {
     Job job = context.getJob(taskID.getJobId());
     Task task = job.getTask(taskID);
     Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
@@ -472,15 +472,15 @@ public class DefaultSpeculator extends AbstractService implements
   }
 
 
-  private int maybeScheduleAMapSpeculation() {
+  protected int maybeScheduleAMapSpeculation() {
     return maybeScheduleASpeculation(TaskType.MAP);
   }
 
-  private int maybeScheduleAReduceSpeculation() {
+  protected int maybeScheduleAReduceSpeculation() {
     return maybeScheduleASpeculation(TaskType.REDUCE);
   }
 
-  private int maybeScheduleASpeculation(TaskType type) {
+  protected int maybeScheduleASpeculation(TaskType type) {
     int successes = 0;
 
     long now = clock.getTime();
@@ -547,16 +547,16 @@ public class DefaultSpeculator extends AbstractService implements
     return successes;
   }
 
-  private int computeSpeculations() {
+  protected int computeSpeculations() {
     // We'll try to issue one map and one reduce speculation per job per run
     return maybeScheduleAMapSpeculation() + maybeScheduleAReduceSpeculation();
   }
 
   static class TaskAttemptHistoryStatistics {
 
-    private long estimatedRunTime;
-    private float progress;
-    private long lastHeartBeatTime;
+    protected long estimatedRunTime;
+    protected float progress;
+    protected long lastHeartBeatTime;
 
     public TaskAttemptHistoryStatistics(long estimatedRunTime, float progress,
         long nonProgressStartTime) {

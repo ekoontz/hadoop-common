@@ -71,6 +71,10 @@ public class MapSpillInfo implements WritableComparable<MapSpillInfo> {
     }
   }
   
+  public long getLength() {
+    return end - start;
+  }
+  
   public String toString() {
     return "(" + spillIndex + ", " + start + ", " + end + ")";
   }

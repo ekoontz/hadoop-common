@@ -49,6 +49,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Clock;
 
+import com.sun.org.apache.bcel.internal.generic.FLOAD;
 import com.sun.tools.classfile.Opcode.Set;
 import com.sun.tools.javac.util.Position;
 
@@ -99,6 +100,11 @@ public class MapTaskImpl extends TaskImpl {
   Lock writeLock = finishedRangesLock.writeLock();
 
   private List<MapSpillInfo> finishedRanges = new ArrayList<MapSpillInfo>();
+  private long finishedBytes = 0;
+  
+  public float getFinishedRatio() {
+    return Math.min(1.0f, finishedBytes * 1.0f / taskSplitMetaInfo.getInputDataLength());
+  }
   
   protected void handleNewSpill(TaskImpl task, TaskEvent event) {
     
@@ -143,6 +149,7 @@ public class MapTaskImpl extends TaskImpl {
       }
       
       finishedRanges.add(mypos, newRange);
+      finishedBytes += newRange.getLength();
       LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + "-" + event.getSpillMapAttemptID().getId() + " new range: " + mypos + " " + newRange + " after=" + finishedRanges);
       
       JobEvent jobEvent = new JobEvent(task.getID().getJobId(), JobEventType.JOB_NEW_MAP_SPILL);
@@ -180,6 +187,7 @@ public class MapTaskImpl extends TaskImpl {
       while (i < finishedRanges.size()) {
         if (finishedRanges.get(i).getAttemptIndex() == attemptIndex) {
           MapSpillInfo toremovestart = finishedRanges.get(i);
+          finishedBytes -= toremovestart.getLength();
           MapSpillInfo toremoveend = new MapSpillInfo(toremovestart.getEnd(), toremovestart.getEnd(), toremovestart.getSpillIndex(), toremovestart.getAttemptIndex());
           toremovestart.setEnd(toremovestart.getStart());
           finishedRanges.add(i+1, toremoveend);
