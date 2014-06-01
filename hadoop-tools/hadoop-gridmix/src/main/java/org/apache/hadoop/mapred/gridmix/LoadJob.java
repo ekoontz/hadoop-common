@@ -503,7 +503,7 @@ class LoadJob extends GridmixJob {
       reporter.start();
     }
     @Override
-    protected void reduce(GridmixKey key, Iterable<GridmixRecord> values,
+    public void reduce(GridmixKey key, Iterable<GridmixRecord> values,
                           Context context) 
     throws IOException, InterruptedException {
       for (GridmixRecord ignored : values) {
