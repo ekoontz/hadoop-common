@@ -251,7 +251,7 @@ class Fetcher<K,V> extends Thread {
   protected void copyFromHost(MapHost host) throws IOException {
     // Get completed maps on 'host'
     List<MapTaskSpillInfo> spills = scheduler.getSpillsForHost(host);
-    //LOG.info("copyFromHost " + spills);
+    LOG.info("copyFromHost " + spills.size() + " " + spills);
 //    List<TaskAttemptID> maps = scheduler.getMapsForHost(host);
     
     // Sanity check to catch hosts with only 'OBSOLETE' maps, 

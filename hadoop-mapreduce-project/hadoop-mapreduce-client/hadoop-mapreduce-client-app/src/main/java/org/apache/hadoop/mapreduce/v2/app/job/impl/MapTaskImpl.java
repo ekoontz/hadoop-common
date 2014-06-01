@@ -97,7 +97,7 @@ public class MapTaskImpl extends TaskImpl {
   ReentrantReadWriteLock finishedRangesLock = new ReentrantReadWriteLock();
   Lock readLock = finishedRangesLock.readLock();
   Lock writeLock = finishedRangesLock.writeLock();
-  
+
   private List<MapSpillInfo> finishedRanges = new ArrayList<MapSpillInfo>();
   
   protected void handleNewSpill(TaskImpl task, TaskEvent event) {
@@ -143,7 +143,7 @@ public class MapTaskImpl extends TaskImpl {
       }
       
       finishedRanges.add(mypos, newRange);
-      LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + " new range: " + mypos + " " + newRange + " after=" + finishedRanges);
+      LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + "-" + event.getSpillMapAttemptID().getId() + " new range: " + mypos + " " + newRange + " after=" + finishedRanges);
       
       JobEvent jobEvent = new JobEvent(task.getID().getJobId(), JobEventType.JOB_NEW_MAP_SPILL);
       jobEvent.setSpillInfo(event.getSpillInfo());
@@ -178,7 +178,7 @@ public class MapTaskImpl extends TaskImpl {
       writeLock.lock();
       int i = 0;
       while (i < finishedRanges.size()) {
-        if (finishedRanges.get(i).getAttemptIndex() == i) {
+        if (finishedRanges.get(i).getAttemptIndex() == attemptIndex) {
           MapSpillInfo toremovestart = finishedRanges.get(i);
           MapSpillInfo toremoveend = new MapSpillInfo(toremovestart.getEnd(), toremovestart.getEnd(), toremovestart.getSpillIndex(), toremovestart.getAttemptIndex());
           toremovestart.setEnd(toremovestart.getStart());
@@ -188,7 +188,7 @@ public class MapTaskImpl extends TaskImpl {
           ++i;
         }
       }
-      System.out.println("recompute: ta=" + attemptIndex + " after=" + finishedRanges);
+      System.out.println("recompute: t=" + this.getID().getId() + " ta=" + attemptIndex + " after=" + finishedRanges);
     } finally {
       writeLock.unlock();
     }

@@ -1877,7 +1877,7 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       
       LOG.info("HAO: CleanupContainerTransition");
-      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(taskAttempt.getID(), TaskEventType.T_ATTEMPT_TIMED_OUT));
+//      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(taskAttempt.getID(), TaskEventType.T_ATTEMPT_TIMED_OUT));
       
       // unregister it to TaskAttemptListener so that it stops listening
       // for it

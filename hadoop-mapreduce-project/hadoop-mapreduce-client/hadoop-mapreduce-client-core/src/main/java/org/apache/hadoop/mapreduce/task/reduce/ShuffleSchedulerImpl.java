@@ -78,7 +78,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   private Map<String, MapHost> mapLocations = new HashMap<String, MapHost>();
   private Set<MapHost> pendingHosts = new HashSet<MapHost>();
 //  private Set<TaskAttemptID> obsoleteMaps = new HashSet<TaskAttemptID>();
-  private Set<Integer> obsoleteSpills = new HashSet<Integer>();
+//  private Set<Integer> obsoleteSpills = new HashSet<Integer>();
   private Set<TaskAttemptID> obsoleteMapAttempts = new HashSet<TaskAttemptID>();
 
   private final TaskAttemptID reduceId;
@@ -216,7 +216,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
                                          long bytes,
                                          long millis,
                                          MapOutput<K,V> output) throws IOException  {
-    //LOG.debug("copySucceeded " + spillInfo + " " + host + " " + bytes + " " + millis) ;
+    LOG.debug("copySucceeded " + spillInfo + " " + host + " " + bytes + " " + millis) ;
     
     failureCounts.remove(spillInfo.getInfoId());
     hostFailures.remove(host.getHostName());
@@ -237,18 +237,18 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
       finishedRanges.add(mypos, currentRange);
       output.commit();
       
-     // LOG.info("copySucceeded judge out " + finishedRanges.get(0) + " " + finishedRanges.get(finishedRanges.size() - 1) + " " + mapInputRangeList.get(mapIndex));
+      LOG.info("copySucceeded judge out " + finishedRanges.get(0) + " " + finishedRanges.get(finishedRanges.size() - 1) + " " + mapInputRangeList.get(mapIndex));
       MapInputRange currentMapRange = mapInputRangeList.get(mapIndex);
       final boolean gotFirst = finishedRanges.get(0).getStart() <= currentMapRange.start;
       final boolean gotLast  = finishedRanges.get(finishedRanges.size()-1).getEnd() >= currentMapRange.end;
-      //LOG.info("copySucceeded judge finish first=" + gotFirst + " last=" + gotLast);
+      LOG.info("copySucceeded judge finish first=" + gotFirst + " last=" + gotLast);
       // if whole map result is got
       if (gotFirst && gotLast) {
         boolean isjoint = true;
         for (int i = 0; i < finishedRanges.size() - 1; ++i) {
-       //   LOG.info("copySucceeded judge finish " + finishedRanges.get(i) + " " + finishedRanges.get(i+1));
+          LOG.info("copySucceeded judge finish " + finishedRanges.get(i) + " " + finishedRanges.get(i+1));
           if (finishedRanges.get(i).getEnd() < finishedRanges.get(i+1).getStart()) {
-        //    LOG.info("NO: " + finishedRanges.get(i) + " " + finishedRanges.get(i+1));
+            LOG.info("NO: " + finishedRanges.get(i) + " " + finishedRanges.get(i+1));
             isjoint = false;
             break;
           }
@@ -260,9 +260,9 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
           if (--remainingMaps == 0) {
             notifyAll();
           }
-//          LOG.info("copySucceeded MAP SUCCEED " + mapIndex);
+          LOG.info("copySucceeded MAP SUCCEED " + mapIndex);
         } else {
- //         LOG.info("copySucceeded MAP NOT SUCCEED " + mapIndex);
+          LOG.info("copySucceeded MAP NOT SUCCEED " + mapIndex);
         }
       }
 
@@ -589,7 +589,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     
     while (iter.hasNext()) {
       MapTaskSpillInfo spillInfo = iter.next();
-      if (!obsoleteSpills.contains(spillInfo.getInfoId()) && !finishedMaps[spillInfo.getAttemptID().getTaskID().getId()]) {
+      if (!obsoleteMapAttempts.contains(spillInfo.getAttemptID()) && !finishedMaps[spillInfo.getAttemptID().getTaskID().getId()]) {
         result.add(spillInfo);
         if (++includedMaps > MAX_MAPS_AT_ONCE) {
           break;
@@ -599,7 +599,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
     
     while (iter.hasNext()) {
       MapTaskSpillInfo spillInfo = iter.next();
-      if (!obsoleteSpills.contains(spillInfo.getInfoId()) && !obsoleteMapAttempts.contains(spillInfo.getAttemptID()) && !finishedMaps[spillInfo.getAttemptID().getTaskID().getId()]) {
+      if (!obsoleteMapAttempts.contains(spillInfo.getAttemptID()) && !finishedMaps[spillInfo.getAttemptID().getTaskID().getId()]) {
         host.addKnownSpill(spillInfo);
       }
     }
@@ -621,7 +621,7 @@ public class ShuffleSchedulerImpl<K,V> implements ShuffleScheduler<K,V> {
   public synchronized void resetKnownMaps() {
     mapLocations.clear();
 //    obsoleteMaps.clear();
-    obsoleteSpills.clear();
+//    obsoleteSpills.clear();
     pendingHosts.clear();
     obsoleteMapAttempts.clear();
   }
