@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.tools.CLI;
@@ -467,6 +468,7 @@ public class JobClient extends CLI {
    */
   public void init(JobConf conf) throws IOException {
     setConf(conf);
+    Limits.init(conf);
     cluster = new Cluster(conf);
     clientUgi = UserGroupInformation.getCurrentUser();
   }
