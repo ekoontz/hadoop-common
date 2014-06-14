@@ -33,6 +33,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -207,7 +208,8 @@ public class RandomTextWriter extends Configured implements Tool {
     job.setMapperClass(RandomTextMapper.class);        
     
     Class<? extends OutputFormat> outputFormatClass = 
-      SequenceFileOutputFormat.class;
+        TextOutputFormat.class;
+//      SequenceFileOutputFormat.class;
     List<String> otherArgs = new ArrayList<String>();
     for(int i=0; i < args.length; ++i) {
       try {

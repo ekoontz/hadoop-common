@@ -136,7 +136,7 @@ public class JobSplitWriter {
               " maxsize: " + maxBlockLocations);
         }
         long datastart = 0;
-        System.out.println(split.getClass());
+//        System.out.println(split.getClass());
         if (split instanceof FileSplit) {
           datastart = ((FileSplit)split).getStart();
         } else if (split instanceof org.apache.hadoop.mapred.FileSplit) {
@@ -173,7 +173,7 @@ public class JobSplitWriter {
               " maxsize: " + maxBlockLocations);
         }
         long datastart = 0;
-        System.out.println(split.getClass());
+//        System.out.println(split.getClass());
         if (split instanceof FileSplit) {
           datastart = ((FileSplit)split).getStart();
         } else if (split instanceof org.apache.hadoop.mapred.FileSplit) {

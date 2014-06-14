@@ -20,6 +20,7 @@ package org.apache.hadoop.examples;
 
 import org.apache.hadoop.examples.dancing.DistributedPentomino;
 import org.apache.hadoop.examples.dancing.Sudoku;
+import org.apache.hadoop.examples.hao.HaoGenHiveData;
 import org.apache.hadoop.examples.pi.DistBbp;
 import org.apache.hadoop.examples.terasort.TeraGen;
 import org.apache.hadoop.examples.terasort.TeraSort;
@@ -73,6 +74,7 @@ public class ExampleDriver {
       pgd.addClass("teragen", TeraGen.class, "Generate data for the terasort");
       pgd.addClass("terasort", TeraSort.class, "Run the terasort");
       pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");
+      pgd.addClass("haogen", HaoGenHiveData.class, "generate page range and user visit data");
       exitCode = pgd.run(argv);
     }
     catch(Throwable e){
