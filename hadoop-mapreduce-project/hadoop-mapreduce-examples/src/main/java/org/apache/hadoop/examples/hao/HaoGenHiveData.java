@@ -349,10 +349,10 @@ public class HaoGenHiveData extends Configured implements Tool {
     job.setInputFormat(NLineInputFormat.class);
     FileInputFormat.setInputPaths(job, dummy.getPath());
 
-    job.set("mapred.map.output.compression.type", "BLOCK");
-    MapFileOutputFormat.setCompressOutput(job, true);
+//    job.set("mapred.map.output.compression.type", "BLOCK");
+//    MapFileOutputFormat.setCompressOutput(job, true);
 //    MapFileOutputFormat.setOutputCompressorClass(job, org.apache.hadoop.io.compress.LzoCodec.class);
-    MapFileOutputFormat.setOutputCompressorClass(job, org.apache.hadoop.io.compress.DefaultCodec.class);
+//    MapFileOutputFormat.setOutputCompressorClass(job, org.apache.hadoop.io.compress.DefaultCodec.class);
 
     if (options.isSequenceOut()) {
       job.setOutputFormat(SequenceFileOutputFormat.class);
@@ -361,10 +361,10 @@ public class HaoGenHiveData extends Configured implements Tool {
     }
     
     if (null != options.getCodecClass()) {
-      job.set("mapred.output.compression.type","BLOCK");
+//      job.set("mapred.output.compression.type","BLOCK");
       
-      FileOutputFormat.setCompressOutput(job, true);
-      FileOutputFormat.setOutputCompressorClass(job, options.getCodecClass());
+//      FileOutputFormat.setCompressOutput(job, true);
+//      FileOutputFormat.setOutputCompressorClass(job, options.getCodecClass());
     }
 
     FileOutputFormat.setOutputPath(job, fout);
