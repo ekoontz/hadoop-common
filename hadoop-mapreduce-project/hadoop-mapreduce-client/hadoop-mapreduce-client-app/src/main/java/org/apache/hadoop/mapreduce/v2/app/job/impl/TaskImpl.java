@@ -1117,9 +1117,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
             TaskAttemptCompletionEventStatus.FAILED);
         // we don't need a new event if we already have a spare
         task.inProgressAttempts.remove(taskAttemptId);
-        if (task instanceof MapTaskImpl) {
-          ((MapTaskImpl)task).recompute(castEvent.getAttemptID().getId());
-        }
+//        if (task instanceof MapTaskImpl) {
+//          ((MapTaskImpl)task).recompute(castEvent.getAttemptID().getId());
+//        }
         if (task.inProgressAttempts.size() == 0
             && task.successfulAttempt == null) {
           task.addAndScheduleAttempt(Avataar.VIRGIN);

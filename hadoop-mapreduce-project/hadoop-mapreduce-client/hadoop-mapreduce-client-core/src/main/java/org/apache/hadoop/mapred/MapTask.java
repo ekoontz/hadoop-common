@@ -93,6 +93,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 
+import sun.util.logging.resources.logging;
+
 import com.jcraft.jsch.Logger;
 
 /** A Map task. */
@@ -840,6 +842,7 @@ public class MapTask extends Task {
   // hao
   private NewTrackingRecordReader<?, ?> recreader;
   private long haoInputStartOffset = -1;
+  private long haoSplitEnd = -1;
 
   @SuppressWarnings("unchecked")
   private <INKEY, INVALUE, OUTKEY, OUTVALUE> void runNewMapper(
@@ -878,6 +881,7 @@ public class MapTask extends Task {
     recreader.setIgnoreRanges(ignoreRanges);
     if (split instanceof org.apache.hadoop.mapreduce.lib.input.FileSplit) {
       haoInputStartOffset = ((org.apache.hadoop.mapreduce.lib.input.FileSplit)split).getStart();
+      haoSplitEnd = haoInputStartOffset + ((org.apache.hadoop.mapreduce.lib.input.FileSplit)split).getLength();
     } else {
       haoInputStartOffset = -1;
     }
@@ -1064,6 +1068,9 @@ public class MapTask extends Task {
     long haoInputStart = -1;
     long haoInputEndPosOfLastKey = -1;
     boolean haoHasToSpill = false;
+    private Counters.Counter haoCacheHitCounter;
+    private Counters.Counter haoCacheMissCounter;
+    private Counters.Counter haoCacheInsertCounter;
     MapInputRange currentSpillRange = new MapInputRange(0, 0);
     
     Object2ObjectOpenHashMap<K, HaoValue<V>> haoCache;
@@ -1216,13 +1223,17 @@ public class MapTask extends Task {
       }
 
       // hao
-      haoSpillIntervalMillisSeconds = job.getInt("hao.spill.interval.minutes",
-          0) * 60 * 1000;
+      haoSpillIntervalMillisSeconds = job.getInt("hao.spill.interval.seconds",
+          0) * 1000;
       haoSpillIntervalInputBytes = job
           .getLong("hao.spill.interval.input.mb", 0) << 20;
       if (haoSpillIntervalMillisSeconds != 0) {
         haoLastSpillTime = System.currentTimeMillis();
       }
+      
+      haoCacheMissCounter = reporter.getCounter(TaskCounter.COMBINER_CACHE_MISS);
+      haoCacheHitCounter = reporter.getCounter(TaskCounter.COMBINER_CACHE_HIT);
+      haoCacheInsertCounter = reporter.getCounter(TaskCounter.COMBINER_CACHE_INSERT);
       
       if (combinerRunner != null) {
         haoCache = new Object2ObjectOpenHashMap<K, HaoValue<V>>();
@@ -1686,8 +1697,9 @@ public class MapTask extends Task {
       boolean readEnoughToSpill = false;
       if (this.haoSpillIntervalInputBytes != 0
           && mapTask.recreader.haoBytesReadCompatile()) {
-        readEnoughToSpill = mapTask.recreader.getReaderRawPos()
-            - mapTask.recreader.getReaderRawStart() > this.haoSpillIntervalInputBytes;
+//        readEnoughToSpill = mapTask.recreader.getReaderRawPos()
+//            - mapTask.recreader.getReaderRawStart() > this.haoSpillIntervalInputBytes;
+        readEnoughToSpill = this.haoInputEndPosOfLastKey - this.haoInputStart > this.haoSpillIntervalInputBytes;
       }
       boolean timeLongEnoughToSpill = false;
       if (this.haoSpillIntervalMillisSeconds != 0
@@ -1704,8 +1716,9 @@ public class MapTask extends Task {
       boolean readEnoughToSpill = false;
       if (this.haoSpillIntervalInputBytes != 0
           && mapTask.recreader.haoBytesReadCompatile()) {
-        readEnoughToSpill = mapTask.recreader.getReaderRawPos()
-            - mapTask.recreader.getReaderRawStart() > this.haoSpillIntervalInputBytes;
+//        readEnoughToSpill = mapTask.recreader.getReaderRawPos()
+//            - mapTask.recreader.getReaderRawStart() > this.haoSpillIntervalInputBytes;
+        readEnoughToSpill = this.haoInputEndPosOfLastKey - this.haoInputStart > this.haoSpillIntervalInputBytes;
       }
       boolean timeLongEnoughToSpill = false;
       if (this.haoSpillIntervalMillisSeconds != 0
@@ -1877,6 +1890,7 @@ public class MapTask extends Task {
           } else {
             combiner.haoRun(key, originalV.value, value);
           }
+          haoCacheHitCounter.increment(1);
         } else if (haoCache.size() < this.haoCacheCapacity) {
 //          System.out.println("cache miss insert   " + key + " " + value + " " + partition);
           K newkey = ReflectionUtils.newInstance(keyClass, job);
@@ -1884,9 +1898,12 @@ public class MapTask extends Task {
           V newvalue = ReflectionUtils.newInstance(valClass, job);
           ReflectionUtils.cloneWritableInto((Writable)newvalue, (Writable)value);
           haoCache.put(newkey, new HaoValue<V>(newvalue, partition, false));
+          haoCacheInsertCounter.increment(1);
         } else {
 //          System.out.println("cache miss fallback " + key + " " + value + " " + partition);
           doCollect(key, value, partition);
+          haoCacheMissCounter.increment(1);
+          
         }
       } else {
 
@@ -2165,7 +2182,6 @@ public class MapTask extends Task {
 
     public void flush() throws IOException, ClassNotFoundException,
         InterruptedException {
-      
 
       if (combiner != null) {
         for (Entry<K, HaoValue<V>> entry : haoCache.entrySet()) {
@@ -2205,7 +2221,8 @@ public class MapTask extends Task {
                 + (distanceTo(kvend, kvstart, kvmeta.capacity()) + 1) + "/"
                 + maxRec);
           }
-          sortAndSpill(this.haoInputStart, mapTask.recreader.getReaderRawPos());
+//          sortAndSpill(this.haoInputStart, mapTask.recreader.getReaderRawPos());
+          sortAndSpill(this.haoInputStart, mapTask.haoSplitEnd);
         } else {
           // TODO create dummy spill
         }

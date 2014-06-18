@@ -75,6 +75,8 @@ public class ExampleDriver {
       pgd.addClass("terasort", TeraSort.class, "Run the terasort");
       pgd.addClass("teravalidate", TeraValidate.class, "Checking results of terasort");
       pgd.addClass("haogen", HaoGenHiveData.class, "generate page range and user visit data");
+      pgd.addClass("haoquery", HaoQuery.class, "query user visit data");
+      pgd.addClass("buggywordcount", BuggyWordCount.class, "buggy word count");
       exitCode = pgd.run(argv);
     }
     catch(Throwable e){

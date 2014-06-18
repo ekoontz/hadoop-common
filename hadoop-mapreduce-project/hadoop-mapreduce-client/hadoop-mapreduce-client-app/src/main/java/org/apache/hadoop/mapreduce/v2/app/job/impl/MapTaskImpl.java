@@ -150,7 +150,7 @@ public class MapTaskImpl extends TaskImpl {
       
       finishedRanges.add(mypos, newRange);
       finishedBytes += newRange.getLength();
-      LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + "-" + event.getSpillMapAttemptID().getId() + " new range: " + mypos + " " + newRange + " after=" + finishedRanges);
+//      LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + "-" + event.getSpillMapAttemptID().getId() + " new range: " + mypos + " " + newRange + " after=" + finishedRanges);
       
       JobEvent jobEvent = new JobEvent(task.getID().getJobId(), JobEventType.JOB_NEW_MAP_SPILL);
       jobEvent.setSpillInfo(event.getSpillInfo());
