@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -26,6 +27,8 @@ import java.io.Writer;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -33,10 +36,15 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.tools.ant.util.FileUtils;
 import org.junit.Test;
 
 public class TestLineRecordReader extends TestCase {
+  private static final Log LOG =
+      LogFactory.getLog(TestLineRecordReader.class.getName());
 
   private static Path workDir = new Path(new Path(System.getProperty(
       "test.build.data", "."), "data"), "TestTextInputFormat");
@@ -137,4 +145,51 @@ public class TestLineRecordReader extends TestCase {
     this.assertEquals(expected, readOutputFile(conf));
   }
 
+  /**
+   * Test whether BOM is skipped
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testStripBOM() throws IOException {
+    LOG.info("testStripBOM");
+    // the test data contains a BOM at the start of the file
+    // confirm the BOM is skipped by LineRecordReader
+    String UTF8_BOM = "\uFEFF";
+    Path localCachePath = new Path(System.getProperty("test.cache.data"));
+    Path txtPath = new Path(localCachePath, new Path("testBOM.txt"));
+    LOG.info(txtPath.toString());
+    File testFile = new File(txtPath.toString());
+    long testFileSize = testFile.length();
+    Configuration conf = new Configuration();
+    conf.setInt("mapred.linerecordreader.maxlength", Integer.MAX_VALUE);
+    TaskAttemptContext context = new TaskAttemptContextImpl(conf,
+        new TaskAttemptID());
+
+    // read the data and check whether BOM is skipped
+    FileSplit split = new FileSplit(txtPath, 0, testFileSize,
+        (String[])null);
+    LineRecordReader reader = new LineRecordReader();
+    reader.initialize(split, context);
+    int numRecords = 0;
+    boolean firstLine = true;
+    boolean skipBOM = true;
+    String prevVal = null;
+    while (reader.nextKeyValue()) {
+      if (firstLine) {
+        firstLine = false;
+        if (reader.getCurrentValue().toString().startsWith(UTF8_BOM)) {
+          skipBOM = false;
+        }
+      } else {
+        assertEquals("not same text", prevVal,
+            reader.getCurrentValue().toString());
+      }
+      prevVal = new String(reader.getCurrentValue().toString());
+      ++numRecords;
+    }
+    reader.close();
+
+    assertTrue("BOM is not skipped", skipBOM);
+  }
 }
