@@ -3770,7 +3770,7 @@ public class JobTracker implements MRConstants, JTProtocols, JobTrackerMXBean {
       throw new IOException(
           "Delegation Token can be issued only with kerberos authentication");
     }
-    String user = UserGroupInformation.getCurrentUser().getUserName();
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
     return secretManager.renewToken(token, user);
   }  
 
