@@ -412,6 +412,9 @@ Release 2.3.0 - 2014-02-18
 
   BUG FIXES
 
+    HADOOP-10710 hadoop.auth cookie is not properly constructed according to
+    RFC2109. (Juan Yu via tucu)
+
     HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
 
     HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
