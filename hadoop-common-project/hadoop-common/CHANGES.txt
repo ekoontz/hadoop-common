@@ -6,6 +6,9 @@ Release 2.4.1 - 2014-06-23
 
   IMPROVEMENTS
 
+    HADOOP-10610. Upgrade S3n s3.fs.buffer.dir to support multi directories.
+    (Ted Malaska via atm)
+
     HADOOP-10466. Lower the log level in UserGroupInformation.  (Nicolas
     Liochon via szetszwo)
 
