@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -29,6 +30,7 @@ public class JobSchedulable extends Schedulable {
   private JobInProgress job;
   private TaskType taskType;
   private int demand = 0;
+  private double weight = 1.0;
 
   public JobSchedulable(FairScheduler scheduler, JobInProgress job, 
       TaskType taskType) {
@@ -38,7 +40,10 @@ public class JobSchedulable extends Schedulable {
     
     initMetrics();
   }
-  
+
+  public JobSchedulable() {
+  }
+
   @Override
   public TaskType getTaskType() {
     return taskType;
@@ -117,9 +122,14 @@ public class JobSchedulable extends Schedulable {
   
   @Override
   public double getWeight() {
-    return scheduler.getJobWeight(job, taskType);
+    return weight;
   }
-  
+
+  @Override
+  public void updateWeight() {
+    weight = scheduler.getJobWeight(job, taskType);
+  }
+
   @Override
   public int getMinShare() {
     return 0;
@@ -150,7 +160,6 @@ public class JobSchedulable extends Schedulable {
     }
   }
 
-  
   @Override
   protected String getMetricsContextName() {
     return "jobs";
