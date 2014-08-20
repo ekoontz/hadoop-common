@@ -143,6 +143,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   public static final Log LOG = LogFactory.getLog(ActiveStandbyElector.class);
 
+  static int NUM_RETRIES = 3;
   private static final int SLEEP_AFTER_FAILURE_TO_BECOME_ACTIVE = 1000;
 
   private static enum ConnectionState {
@@ -169,7 +170,6 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private final String zkLockFilePath;
   private final String zkBreadCrumbPath;
   private final String znodeWorkingDir;
-  private final int maxRetryNum;
 
   private Lock sessionReestablishLockForTests = new ReentrantLock();
   private boolean wantToBeInElection;
@@ -207,7 +207,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
       List<ZKAuthInfo> authInfo,
-      ActiveStandbyElectorCallback app, int maxRetryNum) throws IOException,
+      ActiveStandbyElectorCallback app) throws IOException,
       HadoopIllegalArgumentException, KeeperException {
     if (app == null || acl == null || parentZnodeName == null
         || zookeeperHostPorts == null || zookeeperSessionTimeout <= 0) {
@@ -220,8 +220,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     appClient = app;
     znodeWorkingDir = parentZnodeName;
     zkLockFilePath = znodeWorkingDir + "/" + LOCK_FILENAME;
-    zkBreadCrumbPath = znodeWorkingDir + "/" + BREADCRUMB_FILENAME;
-    this.maxRetryNum = maxRetryNum;
+    zkBreadCrumbPath = znodeWorkingDir + "/" + BREADCRUMB_FILENAME;    
 
     // createConnection for future API calls
     createConnection();
@@ -440,7 +439,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     LOG.debug(errorMessage);
 
     if (shouldRetry(code)) {
-      if (createRetryCount < maxRetryNum) {
+      if (createRetryCount < NUM_RETRIES) {
         LOG.debug("Retrying createNode createRetryCount: " + createRetryCount);
         ++createRetryCount;
         createLockNodeAsync();
@@ -501,7 +500,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     LOG.debug(errorMessage);
 
     if (shouldRetry(code)) {
-      if (statRetryCount < maxRetryNum) {
+      if (statRetryCount < NUM_RETRIES) {
         ++statRetryCount;
         monitorLockNodeAsync();
         return;
@@ -736,7 +735,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private boolean reEstablishSession() {
     int connectionRetryCount = 0;
     boolean success = false;
-    while(!success && connectionRetryCount < maxRetryNum) {
+    while(!success && connectionRetryCount < NUM_RETRIES) {
       LOG.debug("Establishing zookeeper connection for " + this);
       try {
         createConnection();
@@ -973,14 +972,14 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     });
   }
 
-  private <T> T zkDoWithRetries(ZKAction<T> action) throws KeeperException,
-      InterruptedException {
+  private static <T> T zkDoWithRetries(ZKAction<T> action)
+      throws KeeperException, InterruptedException {
     int retry = 0;
     while (true) {
       try {
         return action.run();
       } catch (KeeperException ke) {
-        if (shouldRetry(ke.code()) && ++retry < maxRetryNum) {
+        if (shouldRetry(ke.code()) && ++retry < NUM_RETRIES) {
           continue;
         }
         throw ke;
