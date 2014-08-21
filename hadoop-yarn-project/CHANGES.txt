@@ -24,6 +24,9 @@ Release 2.4.1 - 2014-06-23
 
   BUG FIXES
 
+    YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
+    via aw)
+
     YARN-1898. Made Standby RM links conf, stacks, logLevel, metrics, jmx, logs
     and static not be redirected to Active RM. (Xuan Gong via zjshen)
 

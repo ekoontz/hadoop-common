@@ -56,6 +56,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
+  private boolean containerLimitUsers = YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS;
   
   
   @Override
@@ -79,6 +80,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     nonsecureLocalUserPattern = Pattern.compile(
         conf.get(YarnConfiguration.NM_NONSECURE_MODE_USER_PATTERN_KEY,
             YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_USER_PATTERN));        
+    containerLimitUsers=conf.getBoolean(
+      YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS,
+      YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS);
   }
 
   void verifyUsernamePattern(String user) {
@@ -90,7 +94,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   String getRunAsUser(String user) {
-    return UserGroupInformation.isSecurityEnabled() ? user : nonsecureLocalUser;
+    if (UserGroupInformation.isSecurityEnabled() ||
+       !containerLimitUsers) {
+      return user;
+    } else {
+      return nonsecureLocalUser;
+    }
   }
 
 
