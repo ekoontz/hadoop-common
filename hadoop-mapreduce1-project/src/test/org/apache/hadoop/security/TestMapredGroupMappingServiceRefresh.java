@@ -46,6 +46,7 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.tools.MRAdmin;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -174,8 +175,8 @@ public class TestMapredGroupMappingServiceRefresh {
     final String [] GROUP_NAMES2 = new String [] {"gr3" , "gr4"};
 
     //keys in conf
-    String userKeyGroups = ProxyUsers.getProxySuperuserGroupConfKey(SUPER_USER);
-    String userKeyHosts = ProxyUsers.getProxySuperuserIpConfKey (SUPER_USER);
+    String userKeyGroups = DefaultImpersonationProvider.getProxySuperuserGroupConfKey(SUPER_USER);
+    String userKeyHosts = DefaultImpersonationProvider.getProxySuperuserIpConfKey (SUPER_USER);
 
     config.set(userKeyGroups, "gr3,gr4,gr5"); // superuser can proxy for this group
     config.set(userKeyHosts,"127.0.0.1");

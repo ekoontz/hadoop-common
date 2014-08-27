@@ -196,10 +196,10 @@ public class TestDelegationTokenRenewal {
     public void close() {}
     @Override
     public void initialize(URI uri, Configuration conf) throws IOException {}
-    
-    @Override 
-    public MyToken getDelegationToken(Text renewer) throws IOException {
-      MyToken result = createTokens(renewer);
+
+    @Override
+    public MyToken getDelegationToken(String renewer) throws IOException {
+      MyToken result = createTokens(new Text(renewer));
       LOG.info("Called MYDFS.getdelegationtoken " + result);
       return result;
     }
@@ -281,9 +281,9 @@ public class TestDelegationTokenRenewal {
     
     // get the delegation tokens
     MyToken token1, token2, token3;
-    token1 = dfs.getDelegationToken(new Text("user1"));
-    token2 = dfs.getDelegationToken(new Text("user2"));
-    token3 = dfs.getDelegationToken(new Text("user3"));
+    token1 = dfs.getDelegationToken("user1");
+    token2 = dfs.getDelegationToken("user2");
+    token3 = dfs.getDelegationToken("user3");
 
     //to cause this one to be set for renew in 2 secs
     Renewer.tokenToRenewIn2Sec = token1;
@@ -330,7 +330,7 @@ public class TestDelegationTokenRenewal {
     // time is up.
     // Wait for 3 secs , and make sure no renews were called
     ts = new Credentials();
-    MyToken token4 = dfs.getDelegationToken(new Text("user4"));
+    MyToken token4 = dfs.getDelegationToken("user4");
     
     //to cause this one to be set for renew in 2 secs
     Renewer.tokenToRenewIn2Sec = token4; 

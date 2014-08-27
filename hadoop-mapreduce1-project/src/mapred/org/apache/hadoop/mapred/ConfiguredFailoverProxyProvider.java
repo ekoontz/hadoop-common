@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
+import org.apache.hadoop.io.retry.FailoverProxyProvider.ProxyInfo;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -113,8 +114,8 @@ public class ConfiguredFailoverProxyProvider<T> implements
    */
   @SuppressWarnings("unchecked")
   @Override
-  public synchronized T getProxy() {
-    AddressRpcProxyPair current = proxies.get(currentProxyIndex);
+  public synchronized ProxyInfo<T> getProxy() {
+    AddressRpcProxyPair<T> current = proxies.get(currentProxyIndex);
     if (current.jtHaDaemon == null) {
       try {
         current.jtHaDaemon = JobTrackerProxies.createNonHAProxy(conf,
@@ -124,7 +125,7 @@ public class ConfiguredFailoverProxyProvider<T> implements
         throw new RuntimeException(e);
       }
     }
-    return (T)current.jtHaDaemon;
+    return new ProxyInfo<T>(current.jtHaDaemon, current.address.toString());
   }
 
   @Override
