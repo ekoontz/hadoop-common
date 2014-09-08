@@ -1102,9 +1102,11 @@ public class DistCp implements Tool {
     long fileCount = 0L, byteCount = 0L, cbsyncs = 0L;
     try {
       for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
-        final Path src = srcItr.next();
+        Path src = srcItr.next();
         FileSystem srcfs = src.getFileSystem(conf);
         FileStatus srcfilestat = srcfs.getFileStatus(src);
+        // change src to full path to match child.getPath().
+        src = srcfilestat.getPath();
         Path root = special && srcfilestat.isDir()? src: src.getParent();
         if (srcfilestat.isDir()) {
           ++srcCount;
