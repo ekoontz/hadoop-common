@@ -143,9 +143,19 @@ int main(int argc, char **argv) {
   }
   set_tasktracker_uid(getuid(), group_info->gr_gid);
   // if we are running from a setuid executable, make the real uid root
-  setuid(0);
+  // CDH-20987: To allow compiling on Ubuntu 14.04, we need to add this dummy
+  // variable
+  int dummy1 = setuid(0);
+  if (dummy1 != 0) {
+    dummy1 = 0;
+  }
   // set the real and effective group id to the task tracker group
-  setgid(group_info->gr_gid);
+  // CDH-20987: To allow compiling on Ubuntu 14.04, we need to add this dummy
+  // variable
+  int dummy2 = setgid(group_info->gr_gid);
+  if (dummy2 != 0) {
+    dummy2 = 0;
+  }
 
   if (check_taskcontroller_permissions(executable_file) != 0) {
     fprintf(LOGFILE, "Invalid permissions on task-controller binary.\n");
