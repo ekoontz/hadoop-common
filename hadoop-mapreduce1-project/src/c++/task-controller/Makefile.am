@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-AM_CFLAGS=-I$(srcdir)/impl -Wall -g -Wno-unused-result -Werror
+AM_CFLAGS=-I$(srcdir)/impl -Wall -g -Werror
 
 # Define the programs that need to be built
 bin_PROGRAMS = task-controller
