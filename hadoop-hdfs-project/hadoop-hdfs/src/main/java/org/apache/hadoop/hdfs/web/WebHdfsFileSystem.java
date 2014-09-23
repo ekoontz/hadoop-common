@@ -1294,24 +1294,39 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public Token<DelegationTokenIdentifier> getDelegationToken(
       final String renewer) throws IOException {
-    final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
-    Token<DelegationTokenIdentifier> token =
-        new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
-            op, null, new RenewerParam(renewer)) {
-      @Override
-      Token<DelegationTokenIdentifier> decodeResponse(Map<?,?> json)
-          throws IOException {
-        return JsonUtil.toDelegationToken(json);
+    try {
+      final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
+      Token<DelegationTokenIdentifier> token =
+          new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
+              op, null, new RenewerParam(renewer)) {
+        @Override
+        Token<DelegationTokenIdentifier> decodeResponse(Map<?,?> json)
+            throws IOException {
+          return JsonUtil.toDelegationToken(json);
+        }
+      }.run();
+      if (token != null) {
+        token.setService(tokenServiceName);
+      } else {
+        if (disallowFallbackToInsecureCluster) {
+          throw new AccessControlException(CANT_FALLBACK_TO_INSECURE_MSG);
+        }
       }
-    }.run();
-    if (token != null) {
-      token.setService(tokenServiceName);
-    } else {
-      if (disallowFallbackToInsecureCluster) {
-        throw new AccessControlException(CANT_FALLBACK_TO_INSECURE_MSG);
+      return token;
+    } catch (IOException ioe) {
+      if (ioe.getMessage().startsWith("Failed to get the token for")) {
+        // cluster that is insecure and doesn't have the fix of HDFS-6776
+        // throws IOException with msg that starts with
+        // ""Failed to get the token for" when requested for delegation
+        // token. Catch it here and return null delegation token if 
+        // fallback is allowed
+        if (disallowFallbackToInsecureCluster) {
+          throw new AccessControlException(CANT_FALLBACK_TO_INSECURE_MSG);
+        }
+        return null;
       }
+      throw ioe;
     }
-    return token;
   }
 
   @Override
