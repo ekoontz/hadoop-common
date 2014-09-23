@@ -176,13 +176,25 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     return HeartbeatResponseProto.getDefaultInstance();
   }
 
+  /**
+   * The layout version of CDH5.0 and CDH5.1.  These versions did not pass a
+   * layout version to startLogSegment.  It should be safe to assume that
+   * any NameNode which does not pass a version is one of these two.
+   *
+   * If we used the current layout version here (as trunk does), rolling
+   * upgrade from these versions would become impossible since the journal
+   * nodes would start to write edit log files in the CDH5.0 edit log format,
+   * but with the current version number.
+   */
+  private static final int CDH501_LAYOUT_VERSION = -55;
+
   /** @see JournalProtocol#startLogSegment */
   @Override
   public StartLogSegmentResponseProto startLogSegment(RpcController controller,
       StartLogSegmentRequestProto req) throws ServiceException {
     try {
       int layoutVersion = req.hasLayoutVersion() ? req.getLayoutVersion()
-          : NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+          : CDH501_LAYOUT_VERSION;
       impl.startLogSegment(convert(req.getReqInfo()), req.getTxid(),
           layoutVersion);
     } catch (IOException e) {
