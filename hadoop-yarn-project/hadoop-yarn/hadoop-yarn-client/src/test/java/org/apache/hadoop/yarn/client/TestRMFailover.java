@@ -288,14 +288,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
     String header = getHeader("Refresh", rm2Url);
     assertTrue(header.contains("; url=" + rm1Url));
 
-    header = getHeader("Refresh", rm2Url + "/metrics");
-    assertTrue(header.contains("; url=" + rm1Url));
-
-    header = getHeader("Refresh", rm2Url + "/jmx");
-    assertTrue(header.contains("; url=" + rm1Url));
-
-    // standby RM links /conf, /stacks, /logLevel, /static, /logs,
-    // /cluster/cluster as well as webService
+    // standby RM links /conf, /stacks, /logLevel, /metrics, /jmx,
+    // /static, /logs, /cluster/cluster as well as webService
     // /ws/v1/cluster/info should not be redirected to active RM
     header = getHeader("Refresh", rm2Url + "/cluster/cluster");
     assertEquals(null, header);
@@ -307,6 +301,12 @@ public class TestRMFailover extends ClientBaseWithFixes {
     assertEquals(null, header);
 
     header = getHeader("Refresh", rm2Url + "/logLevel");
+    assertEquals(null, header);
+
+    header = getHeader("Refresh", rm2Url + "/metrics");
+    assertEquals(null, header);
+
+    header = getHeader("Refresh", rm2Url + "/jmx");
     assertEquals(null, header);
 
     header = getHeader("Refresh", rm2Url + "/static");
