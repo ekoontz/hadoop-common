@@ -24,6 +24,9 @@ Release 2.4.1 - 2014-06-23
 
   BUG FIXES
 
+    YARN-2523. ResourceManager UI showing negative value for "Decommissioned
+    Nodes" field (Rohith via jlowe)
+
     YARN-2424. LCE should support non-cgroups, non-secure mode (Chris Douglas 
     via aw)
 
