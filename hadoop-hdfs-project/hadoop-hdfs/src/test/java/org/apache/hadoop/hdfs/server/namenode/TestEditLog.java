@@ -83,6 +83,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.xml.sax.ContentHandler;
@@ -312,14 +313,31 @@ public class TestEditLog {
     }
   }
 
+  private static class AssertingEditLogAuthorizationProvider 
+      extends DefaultAuthorizationProvider {
+
+    @Override
+    public String getUser(INodeAuthorizationInfo node, int snapshotId) {
+      Assert.assertFalse(isClientOp());
+      return super.getUser(node, snapshotId);
+    }
+
+  }
+  
   /**
    * Tests transaction logging in dfs.
    */
   @Test
   public void testMultiThreadedEditLog() throws IOException {
-    testEditLog(2048);
-    // force edit buffer to automatically sync on each log of edit log entry
-    testEditLog(1);
+    try {
+      AuthorizationProvider.set(new AssertingEditLogAuthorizationProvider());
+      testEditLog(2048);
+      // force edit buffer to automatically sync on each log of edit log entry
+      testEditLog(1);
+    } finally {
+      AuthorizationProvider.set(null);
+      
+    }
   }
   
   

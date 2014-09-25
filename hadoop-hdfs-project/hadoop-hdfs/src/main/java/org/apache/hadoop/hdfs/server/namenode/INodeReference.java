@@ -215,7 +215,7 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final AclFeature getAclFeature(int snapshotId) {
+  public final AclFeature getAclFeature(int snapshotId) {
     return referred.getAclFeature(snapshotId);
   }
 

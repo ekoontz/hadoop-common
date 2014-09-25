@@ -389,6 +389,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT = false;
   public static final String  DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY = "dfs.namenode.audit.log.async";
   public static final boolean DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT = false;
+  public static final String DFS_NAMENODE_AUTHORIZATION_PROVIDER_KEY = "dfs.namenode.authorization.provider.class";
 
   // Much code in hdfs is not yet updated to use these keys.
   public static final String  DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY = "dfs.client.block.write.locateFollowingBlock.retries";

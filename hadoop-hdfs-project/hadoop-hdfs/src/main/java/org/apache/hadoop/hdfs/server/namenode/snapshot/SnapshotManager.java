@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
+import org.apache.hadoop.hdfs.server.namenode.AuthorizationProvider;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -75,6 +76,21 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     this.fsdir = fsdir;
   }
 
+  public void initAuthorizationProvider() {
+      Map<AuthorizationProvider.INodeAuthorizationInfo, Integer> map =
+          new HashMap<AuthorizationProvider.INodeAuthorizationInfo, Integer>();
+      for (INodeDirectory dir : getSnapshottableDirs()) {
+        int currentSnapshot = Snapshot.CURRENT_STATE_ID;
+        DirectorySnapshottableFeature sf = 
+            dir.getDirectorySnapshottableFeature();
+        if (sf != null) {
+          currentSnapshot = sf.getLastSnapshotId();
+        }
+        map.put(dir, currentSnapshot);
+      }
+    AuthorizationProvider.get().setSnaphottableDirs(map);
+  }
+  
   /** Used in tests only */
   void setAllowNestedSnapshots(boolean allowNestedSnapshots) {
     this.allowNestedSnapshots = allowNestedSnapshots;
@@ -126,11 +142,13 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   /** Add the given snapshottable directory to {@link #snapshottables}. */
   public void addSnapshottable(INodeDirectory dir) {
     Preconditions.checkArgument(dir.isSnapshottable());
+    AuthorizationProvider.get().addSnapshottable(dir);
     snapshottables.put(dir.getId(), dir);
   }
 
   /** Remove the given snapshottable directory from {@link #snapshottables}. */
   private void removeSnapshottable(INodeDirectory s) {
+    AuthorizationProvider.get().removeSnapshottable(s);
     snapshottables.remove(s.getId());
   }
   
@@ -218,6 +236,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
           "snapshot IDs and ID rollover is not supported.");
     }
 
+    AuthorizationProvider.get().createSnapshot(srcRoot, snapshotCounter);
     srcRoot.addSnapshot(snapshotCounter, snapshotName);
       
     //create success, update id
@@ -240,6 +259,7 @@ public class SnapshotManager implements SnapshotStatsMXBean {
     // the INodeDirectorySnapshottable#valueOf method will throw Exception 
     // if the path is not for a snapshottable directory
     INodeDirectory srcRoot = getSnapshottableRoot(path);
+    AuthorizationProvider.get().removeSnapshot(srcRoot, snapshotCounter);
     srcRoot.removeSnapshot(snapshotName, collectedBlocks, removedINodes);
     numSnapshots.getAndDecrement();
   }

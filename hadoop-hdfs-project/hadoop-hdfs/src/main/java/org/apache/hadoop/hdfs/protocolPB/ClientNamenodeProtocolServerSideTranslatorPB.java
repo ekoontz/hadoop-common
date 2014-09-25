@@ -205,6 +205,7 @@ import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.AuthorizationProviderProxyClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
@@ -351,7 +352,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
    */
   public ClientNamenodeProtocolServerSideTranslatorPB(ClientProtocol server)
       throws IOException {
-    this.server = server;
+    this.server = new AuthorizationProviderProxyClientProtocol(server);
   }
 
   @Override
