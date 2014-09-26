@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
@@ -96,7 +96,7 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
   @Override
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag, boolean createParent,
-      short replication, long blockSize, List<CipherSuite> cipherSuites)
+      short replication, long blockSize, CryptoProtocolVersion[] supportedVersions)
       throws AccessControlException, AlreadyBeingCreatedException,
              DSQuotaExceededException, FileAlreadyExistsException,
              FileNotFoundException, NSQuotaExceededException,
@@ -106,7 +106,7 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
     try {
       AuthorizationProvider.beginClientOp();
       return server.create(src, masked, clientName, flag, createParent,
-          replication, blockSize, cipherSuites);
+          replication, blockSize, supportedVersions);
     } finally {
       AuthorizationProvider.endClientOp();
     }
