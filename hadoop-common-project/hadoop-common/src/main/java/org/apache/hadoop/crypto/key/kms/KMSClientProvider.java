@@ -208,7 +208,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   private static void writeJson(Map map, OutputStream os) throws IOException {
     Writer writer = new OutputStreamWriter(os);
     ObjectMapper jsonMapper = new ObjectMapper();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, map);
+    jsonMapper.defaultPrettyPrintingWriter().writeValue(writer, map);
   }
 
   /**

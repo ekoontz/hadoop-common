@@ -77,7 +77,7 @@ public class TimelineUtils {
   public static String dumpTimelineRecordtoJSON(Object o, boolean pretty)
       throws JsonGenerationException, JsonMappingException, IOException {
     if (pretty) {
-      return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
+      return mapper.defaultPrettyPrintingWriter().writeValueAsString(o);
     } else {
       return mapper.writeValueAsString(o);
     }

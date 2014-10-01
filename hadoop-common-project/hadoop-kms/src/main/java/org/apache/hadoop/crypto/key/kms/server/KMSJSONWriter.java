@@ -64,7 +64,7 @@ public class KMSJSONWriter implements MessageBodyWriter<Object> {
       OutputStream outputStream) throws IOException, WebApplicationException {
     Writer writer = new OutputStreamWriter(outputStream);
     ObjectMapper jsonMapper = new ObjectMapper();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, obj);
+    jsonMapper.defaultPrettyPrintingWriter().writeValue(writer, obj);
   }
 
 }

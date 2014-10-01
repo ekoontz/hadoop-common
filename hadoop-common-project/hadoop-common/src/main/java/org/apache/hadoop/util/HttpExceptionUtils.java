@@ -76,7 +76,7 @@ public class HttpExceptionUtils {
     jsonResponse.put(ERROR_JSON, json);
     ObjectMapper jsonMapper = new ObjectMapper();
     Writer writer = response.getWriter();
-    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, jsonResponse);
+    jsonMapper.defaultPrettyPrintingWriter().writeValue(writer, jsonResponse);
     writer.flush();
   }
 
