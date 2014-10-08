@@ -18,46 +18,45 @@
 
 package org.apache.hadoop.fs.azure;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import org.junit.Ignore;
+import java.io.OutputStream;
 
-public class TestNativeAzureFileSystemMocked extends
-    NativeAzureFileSystemBaseTest {
+import org.apache.hadoop.fs.Syncable;
 
-  @Override
-  protected AzureBlobStorageTestAccount createTestAccount() throws Exception {
-    return AzureBlobStorageTestAccount.createMock();
-  }
+/**
+ * Support the Syncable interface on top of a DataOutputStream.
+ * This allows passing the sync/hflush/hsync calls through to the
+ * wrapped stream passed in to the constructor. This is required
+ * for HBase when wrapping a PageBlobOutputStream used as a write-ahead log.
+ */
+public class SyncableDataOutputStream extends DataOutputStream implements Syncable {
 
-  // Ignore the following tests because taking a lease requires a real
-  // (not mock) file system store. These tests don't work on the mock.
-  @Override
-  @Ignore
-  public void testLeaseAsDistributedLock() {
-  }
-
-  @Override
-  @Ignore
-  public void testSelfRenewingLease() {
+  public SyncableDataOutputStream(OutputStream out) {
+    super(out);
   }
 
   @Override
-  @Ignore
-  public void testRedoFolderRenameAll() {
+  @Deprecated
+  public void sync() throws IOException {
+    hflush();
   }
 
   @Override
-  @Ignore
-  public void testCreateNonRecursive() {
+  public void hflush() throws IOException {
+    if (out instanceof Syncable) {
+      ((Syncable) out).hflush();
+    } else {
+      out.flush();
+    }
   }
 
   @Override
-  @Ignore
-  public void testSelfRenewingLeaseFileDelete() {
-  }
-
-  @Override
-  @Ignore
-  public void testRenameRedoFolderAlreadyDone() throws IOException{
+  public void hsync() throws IOException {
+    if (out instanceof Syncable) {
+      ((Syncable) out).hsync();
+    } else {
+      out.flush();
+    }
   }
 }
