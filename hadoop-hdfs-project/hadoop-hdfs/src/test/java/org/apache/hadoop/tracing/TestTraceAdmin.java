@@ -83,6 +83,14 @@ public class TestTraceAdmin {
               getHostPortForNN(cluster)));
       Assert.assertEquals("ret:0, [no span receivers found]" + NEWLINE,
           runTraceCommand(trace, "-list", "-host", getHostPortForNN(cluster)));
+      Assert.assertEquals("ret:0, Added trace span receiver 2 with " +
+          "configuration local-file-span-receiver.path = " + tracePath + "\n",
+          runTraceCommand(trace, "-add", "-host", getHostPortForNN(cluster),
+              "-class", "LocalFileSpanReceiver",
+              "-Clocal-file-span-receiver.path=" + tracePath));
+      Assert.assertEquals("ret:0, Removed trace span receiver 2\n",
+          runTraceCommand(trace, "-remove", "2", "-host",
+              getHostPortForNN(cluster)));
     } finally {
       cluster.shutdown();
       tempDir.close();
