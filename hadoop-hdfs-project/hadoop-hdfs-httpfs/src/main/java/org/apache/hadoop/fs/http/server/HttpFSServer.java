@@ -54,6 +54,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -200,9 +201,10 @@ public class HttpFSServer {
   @Produces(MediaType.APPLICATION_JSON)
   public Response getRoot(@Context Principal user,
                           @QueryParam(OperationParam.NAME) OperationParam op,
-                          @Context Parameters params)
+                          @Context Parameters params,
+                          @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
-    return get(user, "", op, params);
+    return get(user, "", op, params, request);
   }
 
   private String makeAbsolute(String path) {
@@ -231,11 +233,13 @@ public class HttpFSServer {
   public Response get(@Context Principal user,
                       @PathParam("path") String path,
                       @QueryParam(OperationParam.NAME) OperationParam op,
-                      @Context Parameters params)
+                      @Context Parameters params,
+                      @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case OPEN: {
@@ -343,13 +347,15 @@ public class HttpFSServer {
   @Path("{path:.*}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response delete(@Context Principal user,
-                      @PathParam("path") String path,
-                      @QueryParam(OperationParam.NAME) OperationParam op,
-                      @Context Parameters params)
+                         @PathParam("path") String path,
+                         @QueryParam(OperationParam.NAME) OperationParam op,
+                         @Context Parameters params,
+                         @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case DELETE: {
@@ -398,11 +404,13 @@ public class HttpFSServer {
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
-                       @Context Parameters params)
+                       @Context Parameters params,
+                       @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     switch (op.value()) {
       case APPEND: {
         String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
@@ -484,11 +492,13 @@ public class HttpFSServer {
                        @Context UriInfo uriInfo,
                        @PathParam("path") String path,
                        @QueryParam(OperationParam.NAME) OperationParam op,
-                       @Context Parameters params)
+                       @Context Parameters params,
+                       @Context HttpServletRequest request)
     throws IOException, FileSystemAccessException {
     Response response;
     path = makeAbsolute(path);
     MDC.put(HttpFSFileSystem.OP_PARAM, op.value().name());
+    MDC.put("hostname", request.getRemoteAddr());
     String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case CREATE: {
