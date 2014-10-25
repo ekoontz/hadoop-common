@@ -130,12 +130,42 @@ fi
 
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
+  # Set SENTRY_HOME if possible and add Sentry plugin jars to classpath
+  if [[ -z "$SENTRY_HOME" ]]
+  then
+    # HADOOP_HDFS_HOME should have been set by hadoop-config.sh
+    if [[ -d ${HADOOP_HDFS_HOME}/../sentry ]]
+    then
+      export SENTRY_HOME=`readlink -m ${HADOOP_HDFS_HOME}/../sentry`
+    fi
+  fi
+  if [[ -n "$SENTRY_HOME" ]]
+  then
+    for f in ${SENTRY_HOME}/lib/plugins/*.jar; do
+     CLASSPATH=${CLASSPATH}:${f}
+    done
+  fi
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
 elif [ "$COMMAND" = "zkfc" ] ; then
   CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_ZKFC_OPTS"
 elif [ "$COMMAND" = "secondarynamenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
+  # Set SENTRY_HOME if possible and add Sentry plugin jars to classpath
+  if [[ -z "$SENTRY_HOME" ]]
+  then
+    # HADOOP_HDFS_HOME should have been set by hadoop-config.sh
+    if [[ -d ${HADOOP_HDFS_HOME}/../sentry ]]
+    then
+      export SENTRY_HOME=`readlink -m ${HADOOP_HDFS_HOME}/../sentry`
+    fi
+  fi
+  if [[ -n "$SENTRY_HOME" ]]
+  then
+    for f in ${SENTRY_HOME}/lib/plugins/*.jar; do
+     CLASSPATH=${CLASSPATH}:${f}
+    done
+  fi
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
