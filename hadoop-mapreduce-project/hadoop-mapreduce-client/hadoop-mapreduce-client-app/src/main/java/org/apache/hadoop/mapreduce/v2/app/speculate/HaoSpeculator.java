@@ -39,6 +39,7 @@ public class HaoSpeculator extends DefaultSpeculator {
 
   public HaoSpeculator(Configuration conf, AppContext context) {
     super(conf, context);
+    LOG.info("HAO: HaoSpeculator(CONF, CONTEXT)");
   }
 
   protected static final Log LOG = LogFactory.getLog(HaoSpeculator.class);

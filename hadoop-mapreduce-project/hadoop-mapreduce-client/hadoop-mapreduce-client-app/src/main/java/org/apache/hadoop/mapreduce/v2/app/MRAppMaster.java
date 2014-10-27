@@ -103,6 +103,7 @@ import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.speculate.DefaultSpeculator;
+import org.apache.hadoop.mapreduce.v2.app.speculate.HaoSpeculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.Speculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.SpeculatorEvent;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
@@ -660,12 +661,12 @@ public class MRAppMaster extends CompositeService {
 
   protected Speculator createSpeculator(Configuration conf, AppContext context) {
     Class<? extends Speculator> speculatorClass;
-
+    
     try {
       speculatorClass
           // "yarn.mapreduce.job.speculator.class"
           = conf.getClass(MRJobConfig.MR_AM_JOB_SPECULATOR,
-                          DefaultSpeculator.class,
+                          HaoSpeculator.class,
                           Speculator.class);
       System.out.println("HAO: speculatorClass=" + speculatorClass);
       Constructor<? extends Speculator> speculatorConstructor
