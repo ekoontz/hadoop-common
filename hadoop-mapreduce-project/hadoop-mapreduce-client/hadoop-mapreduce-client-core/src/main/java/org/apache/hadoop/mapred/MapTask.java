@@ -367,9 +367,13 @@ public class MapTask extends Task {
     done(umbilical, reporter);
   }
   
+  private long lastSpillTime = 0L;
+  
   protected void newSpillRecord(long start, long end, int spillIndex) throws IOException
   {
-    MapSpillInfo info = new MapSpillInfo(start, end, spillIndex, this.getTaskID().getId());
+    long now = System.currentTimeMillis() / 1000;
+    MapSpillInfo info = new MapSpillInfo(start, end, spillIndex, this.getTaskID().getId(), Math.max(0, now - lastSpillTime));
+    lastSpillTime = now;
     umbilical.newMapSpill(this.getTaskID(), info);
   }
 
@@ -906,6 +910,7 @@ public class MapTask extends Task {
 
     try {
       input.initialize(split, mapperContext);
+      this.lastSpillTime = System.currentTimeMillis() / 1000;
       mapper.run(mapperContext);
       mapPhase.complete();
       setPhase(TaskStatus.Phase.SORT);

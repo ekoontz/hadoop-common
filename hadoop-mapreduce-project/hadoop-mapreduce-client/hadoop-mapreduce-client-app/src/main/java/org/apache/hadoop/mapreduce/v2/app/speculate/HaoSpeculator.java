@@ -17,9 +17,19 @@ import org.apache.hadoop.mapreduce.v2.app.job.impl.MapTaskImpl;
 import org.apache.hadoop.yarn.util.Clock;
 
 public class HaoSpeculator extends DefaultSpeculator {
+	
+  public static final String HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS = "hao.average.map.spill.duration.seconds";
+  public static final String HAO_PARAM_MINIMUN_SPECULATE_SPILL_COUNT_DELAY = "hao.minimum.speculate.spill.count.delay";
+  public static final String HAO_PARAM_MINIMUN_SPECULATE_SECONDS_DELAY = "hao.minimun.speculate.seconds.delay";
 
+  private int haoMinimunSpeculateSpillCountDelay;
+  private long haoMinumunSpeculateSecondsDelay;
+  
   public HaoSpeculator(Configuration conf, AppContext context, Clock clock) {
     super(conf, context, clock);
+    
+    this.haoMinimunSpeculateSpillCountDelay = conf.getInt(HAO_PARAM_MINIMUN_SPECULATE_SPILL_COUNT_DELAY, 1);
+    this.haoMinumunSpeculateSecondsDelay = conf.getLong(HAO_PARAM_MINIMUN_SPECULATE_SECONDS_DELAY, 15);
   }
 
   public HaoSpeculator(Configuration conf, AppContext context,
@@ -64,7 +74,15 @@ public class HaoSpeculator extends DefaultSpeculator {
 
         long taskAttemptStartTime
             = estimator.attemptEnrolledTime(runningTaskAttemptID);
-        if (taskAttemptStartTime > now) {
+        long averageSpillDuration = conf.getLong(HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS, 0);
+        long haodelay = Math.max(averageSpillDuration * this.haoMinimunSpeculateSpillCountDelay, this.haoMinumunSpeculateSecondsDelay);
+        haodelay *= 1000;
+        
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("HAO-SPECULATOR: averageSpillDuration=" + averageSpillDuration + " haodelay=" + haodelay);
+        }
+        
+        if (taskAttemptStartTime + haodelay > now) {
           // This background process ran before we could process the task
           //  attempt status change that chronicles the attempt start
           return TOO_NEW;
@@ -111,7 +129,7 @@ public class HaoSpeculator extends DefaultSpeculator {
           }
         }
 
-        if (estimatedEndTime < now) {
+        if (estimatedEndTime < now + haodelay) {
           return PROGRESS_IS_GOOD;
         }
 

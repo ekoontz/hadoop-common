@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.mapreduce.v2.app.speculate.HaoSpeculator;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -148,6 +149,14 @@ public class MapTaskImpl extends TaskImpl {
         return;
       }
       
+      this.averageSpillDurationSeconds = (this.averageSpillDurationSeconds * averageSpillDurationCount + newRange.getDurationSeconds()) / (averageSpillDurationCount + 1);
+      averageSpillDurationCount += 1;
+      // hao
+      LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + " spilltime = " + newRange.getDurationSeconds() + ", new average = " + averageSpillDurationSeconds);
+      
+      
+      this.conf.setLong(HaoSpeculator.HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS, averageSpillDurationSeconds);
+      
       finishedRanges.add(mypos, newRange);
       finishedBytes += newRange.getLength();
 //      LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + "-" + event.getSpillMapAttemptID().getId() + " new range: " + mypos + " " + newRange + " after=" + finishedRanges);
@@ -174,6 +183,9 @@ public class MapTaskImpl extends TaskImpl {
   
   private java.util.Set<Integer> faildAttemptSet = new TreeSet<Integer>();
   
+  private long averageSpillDurationSeconds = 0;
+  private int averageSpillDurationCount = 0;
+  
   public void recompute(int attemptIndex) {
     
     if (faildAttemptSet.contains(attemptIndex)) {
@@ -188,7 +200,7 @@ public class MapTaskImpl extends TaskImpl {
         if (finishedRanges.get(i).getAttemptIndex() == attemptIndex) {
           MapSpillInfo toremovestart = finishedRanges.get(i);
           finishedBytes -= toremovestart.getLength();
-          MapSpillInfo toremoveend = new MapSpillInfo(toremovestart.getEnd(), toremovestart.getEnd(), toremovestart.getSpillIndex(), toremovestart.getAttemptIndex());
+          MapSpillInfo toremoveend = new MapSpillInfo(toremovestart.getEnd(), toremovestart.getEnd(), toremovestart.getSpillIndex(), toremovestart.getAttemptIndex(), 0);
           toremovestart.setEnd(toremovestart.getStart());
           finishedRanges.add(i+1, toremoveend);
           i+=2;

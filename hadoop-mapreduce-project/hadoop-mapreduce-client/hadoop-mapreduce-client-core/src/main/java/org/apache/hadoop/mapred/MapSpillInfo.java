@@ -12,7 +12,14 @@ public class MapSpillInfo implements WritableComparable<MapSpillInfo> {
   private long end;
   private int spillIndex;
   private int attemptIndex;
-  public long getStart() {
+  private long durationSeconds;
+  public long getDurationSeconds() {
+	return durationSeconds;
+}
+public void setDurationSeconds(long durationSeconds) {
+	this.durationSeconds = durationSeconds;
+}
+public long getStart() {
     return start;
   }
   public void setStart(long start) {
@@ -40,12 +47,13 @@ public class MapSpillInfo implements WritableComparable<MapSpillInfo> {
   
   public MapSpillInfo() {
   }
-  public MapSpillInfo(long start, long end, int spillIndex, int attemptIndex) {
+  public MapSpillInfo(long start, long end, int spillIndex, int attemptIndex, long durationSeconds) {
     super();
     this.start = start;
     this.end = end;
     this.spillIndex = spillIndex;
     this.attemptIndex = attemptIndex;
+    this.durationSeconds = durationSeconds;
   }
   
   @Override
@@ -54,6 +62,7 @@ public class MapSpillInfo implements WritableComparable<MapSpillInfo> {
     out.writeLong(end);
     WritableUtils.writeVInt(out, spillIndex);
     WritableUtils.writeVInt(out, attemptIndex);
+    WritableUtils.writeVLong(out, this.durationSeconds);
   }
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -61,6 +70,7 @@ public class MapSpillInfo implements WritableComparable<MapSpillInfo> {
     end = in.readLong();
     spillIndex = WritableUtils.readVInt(in);
     attemptIndex = WritableUtils.readVInt(in);
+    this.durationSeconds = WritableUtils.readVLong(in);
   }
   @Override
   public int compareTo(MapSpillInfo other) {
