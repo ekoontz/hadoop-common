@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.hamcrest.core.Is;
+//import org.hamcrest.core.Is;
 
 /**
  * The class that is used by the Job clients to write splits (both the meta

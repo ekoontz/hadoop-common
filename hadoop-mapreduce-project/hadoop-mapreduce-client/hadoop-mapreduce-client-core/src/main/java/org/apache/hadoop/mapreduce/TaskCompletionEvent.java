@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.MapSpillInfo;
-import org.apache.jasper.tagplugins.jstl.core.Out;
+//import org.apache.jasper.tagplugins.jstl.core.Out;
 
 /**
  * This is used to track task completion events on 

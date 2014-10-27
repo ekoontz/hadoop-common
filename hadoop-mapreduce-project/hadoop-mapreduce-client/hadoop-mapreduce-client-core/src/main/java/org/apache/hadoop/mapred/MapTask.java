@@ -1622,7 +1622,7 @@ public class MapTask extends Task {
     }
     
     void haoForceSpill(long newInputStart) throws IOException, ClassNotFoundException {
-//      System.out.println("HAO readerHeadReset: splling");
+      System.out.println("HAO haoForceSpill: newStart=" + newInputStart);
       
       
       if (combiner != null) {
@@ -1668,7 +1668,8 @@ public class MapTask extends Task {
                 + maxRec);
           }
           sortAndSpill(this.haoInputStart, this.haoInputEndPosOfLastKey);
-          this.haoInputEndPosOfLastKey = this.haoInputStart = Math.max(newInputStart, mapTask.recreader.getReaderRawPos());
+          this.haoInputStart = this.haoInputEndPosOfLastKey;
+          this.haoInputEndPosOfLastKey = Math.max(newInputStart, mapTask.recreader.getReaderRawPos());
         } else {
           // TODO create dummy spill
         }
@@ -1706,7 +1707,10 @@ public class MapTask extends Task {
           && System.currentTimeMillis() - haoLastSpillTime > haoSpillIntervalMillisSeconds) {
         timeLongEnoughToSpill = true;
       }
-      
+
+//      LOG.info("haoSpillIntervalInputBytes: " + haoSpillIntervalInputBytes);
+//      LOG.info("bufferRemaining: " + bufferRemaining);
+//      LOG.info("readEnoughToSpill: " + readEnoughToSpill);
       return bufferRemaining <= 0 || timeLongEnoughToSpill || readEnoughToSpill;
     }
     
@@ -1841,10 +1845,6 @@ public class MapTask extends Task {
         spillSingleRecord(key, value, partition);
         mapOutputRecordCounter.increment(1);
       }
-      if (mapTask.recreader.haoBytesReadCompatile()) {
-//        System.out.println("HAO: set end " + haoInputEndPosOfLastKey);
-        this.haoInputEndPosOfLastKey = mapTask.recreader.getReaderRawPos();
-      }
       this.disableSpill();
       return;
     }
@@ -1911,6 +1911,10 @@ public class MapTask extends Task {
         
         doCollect(key, value, partition);
       }
+      if (mapTask.recreader.haoBytesReadCompatile()) {
+//      System.out.println("HAO: set end " + haoInputEndPosOfLastKey);
+      this.haoInputEndPosOfLastKey = mapTask.recreader.getReaderRawPos();
+    }
     }
 
     private TaskAttemptID getTaskID() {
@@ -2182,6 +2186,11 @@ public class MapTask extends Task {
 
     public void flush() throws IOException, ClassNotFoundException,
         InterruptedException {
+      
+      System.out.println("hao.fail = " + mapTask.getConf().getBoolean("hao.fail", false));
+      if (mapTask.getConf().getBoolean("hao.fail", false)) {
+        return;
+      }
 
       if (combiner != null) {
         for (Entry<K, HaoValue<V>> entry : haoCache.entrySet()) {

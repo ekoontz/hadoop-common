@@ -153,10 +153,12 @@ public class Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
     } catch (IOException e) {
       Log.info("run caught ioe: " + e.getMessage());
       e.printStackTrace();
+      context.getConfiguration().setBoolean("hao.fail", true);
       throw e;
     } catch (InterruptedException e) {
       Log.info("run caught ie: " + e.getMessage());
       e.printStackTrace();
+      context.getConfiguration().setBoolean("hao.fail", true);
       throw e;
     } finally {
       cleanup(context);

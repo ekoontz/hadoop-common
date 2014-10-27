@@ -110,10 +110,10 @@ class IndexCache {
           }
         }
       }
-      LOG.debug("IndexCache HIT: MapId " + mapId + " found");
+      //LOG.debug("IndexCache HIT: MapId " + mapId + " found");
       return info;
     }
-    LOG.debug("IndexCache MISS: MapId " + mapId + " not found") ;
+    //LOG.debug("IndexCache MISS: MapId " + mapId + " not found") ;
     SpillRecord tmp = null;
     try { 
       tmp = new SpillRecord(indexFileName, conf, expectedIndexOwner);
