@@ -98,7 +98,8 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
               " no longer exists. New active has started.");
         }
       } catch (Throwable t) {
-        doImmediateShutdown(t);
+        LOG.fatal("Error checking system directory.", t);
+        transitionToStandby(true);
       }
     }
   }
@@ -139,7 +140,9 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
       
       jtRunner.startJobTracker(jtConf);
     } catch (Throwable t) {
-      doImmediateShutdown(t);
+      LOG.fatal("Unable to transition to active", t);
+      transitionToStandby(true);
+      return;
     }
     long activeCheckMillis = conf.getLong(HAUtil.MR_HA_ACTIVE_CHECK_MILLIS,
         HAUtil.MR_HA_ACTIVE_CHECK_MILLIS_DEFAULT);
@@ -217,9 +220,12 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
     return SYSTEM_DIR_SEQUENCE_PREFIX + paddedCounter;
   }
 
-  @Override
-  public void transitionToStandby(StateChangeRequestInfo reqInfo)
-      throws ServiceFailedException, AccessControlException, IOException {
+  /**
+   * Helper method to transition the JT to standby. This is to be invoked
+   * either by {@link #transitionToActive(StateChangeRequestInfo)},
+   * or when we encounter a FATAL issue in an HA setting.
+   */
+  private synchronized void transitionToStandby(boolean startRedirector) {
     if (haState == HAServiceState.STANDBY) {
       LOG.info("Already in standby state.");
       return;
@@ -230,7 +236,9 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
         sysDirMonitorExecutor.shutdownNow();
       }
       jtRunner.stopJobTracker();
-      httpRedirector.start();
+      if (startRedirector) {
+        httpRedirector.start();
+      }
     } catch (Throwable t) {
       doImmediateShutdown(t);
     }
@@ -239,21 +247,21 @@ public class JobTrackerHAServiceProtocol implements HAServiceProtocol {
     haState = HAServiceState.STANDBY;
     LOG.info("Transitioned to standby");
   }
+
+  @Override
+  public void transitionToStandby(StateChangeRequestInfo reqInfo)
+      throws ServiceFailedException, AccessControlException, IOException {
+    transitionToStandby(true);
+  }
   
   public void stop() {
     LOG.info("Stopping");
+    transitionToStandby(false);
     try {
-      if (sysDirMonitorExecutor != null) {
-        sysDirMonitorExecutor.shutdownNow();
-      }
-      jtRunner.stopJobTracker();
       httpRedirector.stop();
-    } catch (Throwable t) {
-      doImmediateShutdown(t);
+    } catch (Exception e) {
+      LOG.fatal("Error stopping HTTP Redirector. Stopping anyway.", e);
     }
-    sysDirMonitorExecutor = null;
-    currentSysDir = null;
-    haState = HAServiceState.STANDBY;
     LOG.info("Stopped");
   }
   
