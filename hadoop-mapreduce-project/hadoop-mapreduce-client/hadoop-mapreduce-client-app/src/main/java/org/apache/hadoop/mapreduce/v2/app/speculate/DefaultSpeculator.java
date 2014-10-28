@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.MapTaskImpl;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -55,6 +56,15 @@ import org.apache.hadoop.yarn.util.Clock;
 
 public class DefaultSpeculator extends AbstractService implements
     Speculator {
+	
+//	  public static final String HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS = "hao.average.map.spill.duration.seconds";
+	  public static final String HAO_PARAM_MINIMUN_SPECULATE_SPILL_COUNT_DELAY = "hao.minimum.speculate.spill.count.delay";
+	  public static final String HAO_PARAM_MINIMUN_SPECULATE_SECONDS_DELAY = "hao.minimun.speculate.seconds.delay";
+
+	  protected float haoMinimunSpeculateSpillCountDelay;
+	  protected long haoMinumunSpeculateSecondsDelay;
+	  protected boolean haoVerbose = true;
+	  public static long averageSpillDuration = 0;
 
   protected static final long ON_SCHEDULE = Long.MIN_VALUE;
   protected static final long ALREADY_SPECULATING = Long.MIN_VALUE + 1;
@@ -114,6 +124,10 @@ public class DefaultSpeculator extends AbstractService implements
 
   public DefaultSpeculator(Configuration conf, AppContext context) {
     this(conf, context, context.getClock());
+    
+    this.haoMinimunSpeculateSpillCountDelay = conf.getFloat(HAO_PARAM_MINIMUN_SPECULATE_SPILL_COUNT_DELAY, 0.1f);
+    this.haoMinumunSpeculateSecondsDelay = conf.getLong(HAO_PARAM_MINIMUN_SPECULATE_SECONDS_DELAY, 15);
+    haoVerbose = conf.getBoolean("hao.verbose", true);
   }
 
   public DefaultSpeculator(Configuration conf, AppContext context, Clock clock) {
@@ -350,17 +364,8 @@ public class DefaultSpeculator extends AbstractService implements
 // This is the code section that runs periodically and adds speculations for
 //  those jobs that need them.
 
-
-  // This can return a few magic values for tasks that shouldn't speculate:
-  //  returns ON_SCHEDULE if thresholdRuntime(taskID) says that we should not
-  //     considering speculating this task
-  //  returns ALREADY_SPECULATING if that is true.  This has priority.
-  //  returns TOO_NEW if our companion task hasn't gotten any information
-  //  returns PROGRESS_IS_GOOD if the task is sailing through
-  //  returns NOT_RUNNING if the task is not running
-  //
-  // All of these values are negative.  Any value that should be allowed to
-  //  speculate is 0 or positive.
+  
+  
   protected long speculationValue(TaskId taskID, long now) {
     Job job = context.getJob(taskID.getJobId());
     Task task = job.getTask(taskID);
@@ -391,7 +396,22 @@ public class DefaultSpeculator extends AbstractService implements
 
         long taskAttemptStartTime
             = estimator.attemptEnrolledTime(runningTaskAttemptID);
-        if (taskAttemptStartTime > now) {
+        taskAttemptStartTime = Math.min(taskAttemptStartTime, now);
+//        long averageSpillDuration = conf.getLong(HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS, 0);
+        long averageSpillDuration = DefaultSpeculator.averageSpillDuration;
+        long haodelay = Math.max((long)(averageSpillDuration * this.haoMinimunSpeculateSpillCountDelay), this.haoMinumunSpeculateSecondsDelay);
+        haodelay *= 1000;
+        
+        if (haoVerbose) {
+        LOG.info(String.format("HaoSpeculator: taskId=%s averageSpillDuration=%d, haoDelay=%d, estimatedRunTime=%d, taskAttemptStartTime=%d, now=%d",
+        		taskAttempt.getID().toString(), averageSpillDuration, haodelay, estimatedRunTime, taskAttemptStartTime, now));
+        }
+        
+//        if (LOG.isDebugEnabled()) {
+            LOG.info("HAO-SPECULATOR: averageSpillDuration=" + averageSpillDuration + " haodelay=" + haodelay);
+//        }
+        
+        if (taskAttemptStartTime + haodelay > now) {
           // This background process ran before we could process the task
           //  attempt status change that chronicles the attempt start
           return TOO_NEW;
@@ -399,8 +419,21 @@ public class DefaultSpeculator extends AbstractService implements
 
         long estimatedEndTime = estimatedRunTime + taskAttemptStartTime;
 
-        long estimatedReplacementEndTime
-            = now + estimator.estimatedNewAttemptRuntime(taskID);
+        // HAO
+        
+        long estimatedReplacementEndTime = 0;
+        if (task instanceof MapTaskImpl) {
+          MapTaskImpl mapTask = (MapTaskImpl)task;
+          System.out.println("HAO: speculate mapRatio=" + mapTask.getFinishedRatio());
+          long estimate = (long)(estimator.estimatedNewAttemptRuntime(taskID) * (1-mapTask.getFinishedRatio()));
+          estimatedReplacementEndTime = now + estimate;
+        } else {
+          estimatedReplacementEndTime = now + estimator.estimatedNewAttemptRuntime(taskID);
+        }
+
+        if (haoVerbose) {
+        LOG.info(String.format("HaoSpeculator: taskId=%s now=%d estimatedReplacementEndTime=%d", taskAttempt.getID().toString(), now, estimatedReplacementEndTime));
+        }
 
         float progress = taskAttempt.getProgress();
         TaskAttemptHistoryStatistics data =
@@ -429,7 +462,7 @@ public class DefaultSpeculator extends AbstractService implements
           }
         }
 
-        if (estimatedEndTime < now) {
+        if (estimatedEndTime < now + haodelay) {
           return PROGRESS_IS_GOOD;
         }
 
@@ -457,6 +490,117 @@ public class DefaultSpeculator extends AbstractService implements
 
     return result;
   }
+  
+  
+  
+  
+
+  // This can return a few magic values for tasks that shouldn't speculate:
+  //  returns ON_SCHEDULE if thresholdRuntime(taskID) says that we should not
+  //     considering speculating this task
+  //  returns ALREADY_SPECULATING if that is true.  This has priority.
+  //  returns TOO_NEW if our companion task hasn't gotten any information
+  //  returns PROGRESS_IS_GOOD if the task is sailing through
+  //  returns NOT_RUNNING if the task is not running
+  //
+  // All of these values are negative.  Any value that should be allowed to
+  //  speculate is 0 or positive.
+//  protected long speculationValue(TaskId taskID, long now) {
+//    Job job = context.getJob(taskID.getJobId());
+//    Task task = job.getTask(taskID);
+//    Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
+//    long acceptableRuntime = Long.MIN_VALUE;
+//    long result = Long.MIN_VALUE;
+//
+//    if (!mayHaveSpeculated.contains(taskID)) {
+//      acceptableRuntime = estimator.thresholdRuntime(taskID);
+//      if (acceptableRuntime == Long.MAX_VALUE) {
+//        return ON_SCHEDULE;
+//      }
+//    }
+//
+//    TaskAttemptId runningTaskAttemptID = null;
+//
+//    int numberRunningAttempts = 0;
+//
+//    for (TaskAttempt taskAttempt : attempts.values()) {
+//      if (taskAttempt.getState() == TaskAttemptState.RUNNING
+//          || taskAttempt.getState() == TaskAttemptState.STARTING) {
+//        if (++numberRunningAttempts > 1) {
+//          return ALREADY_SPECULATING;
+//        }
+//        runningTaskAttemptID = taskAttempt.getID();
+//
+//        long estimatedRunTime = estimator.estimatedRuntime(runningTaskAttemptID);
+//
+//        long taskAttemptStartTime
+//            = estimator.attemptEnrolledTime(runningTaskAttemptID);
+//        if (taskAttemptStartTime > now) {
+//          // This background process ran before we could process the task
+//          //  attempt status change that chronicles the attempt start
+//          return TOO_NEW;
+//        }
+//
+//        long estimatedEndTime = estimatedRunTime + taskAttemptStartTime;
+//
+//        long estimatedReplacementEndTime
+//            = now + estimator.estimatedNewAttemptRuntime(taskID);
+//
+//        float progress = taskAttempt.getProgress();
+//        TaskAttemptHistoryStatistics data =
+//            runningTaskAttemptStatistics.get(runningTaskAttemptID);
+//        if (data == null) {
+//          runningTaskAttemptStatistics.put(runningTaskAttemptID,
+//            new TaskAttemptHistoryStatistics(estimatedRunTime, progress, now));
+//        } else {
+//          if (estimatedRunTime == data.getEstimatedRunTime()
+//              && progress == data.getProgress()) {
+//            // Previous stats are same as same stats
+//            if (data.notHeartbeatedInAWhile(now)) {
+//              // Stats have stagnated for a while, simulate heart-beat.
+//              TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
+//              taskAttemptStatus.id = runningTaskAttemptID;
+//              taskAttemptStatus.progress = progress;
+//              taskAttemptStatus.taskState = taskAttempt.getState();
+//              // Now simulate the heart-beat
+//              handleAttempt(taskAttemptStatus);
+//            }
+//          } else {
+//            // Stats have changed - update our data structure
+//            data.setEstimatedRunTime(estimatedRunTime);
+//            data.setProgress(progress);
+//            data.resetHeartBeatTime(now);
+//          }
+//        }
+//
+//        if (estimatedEndTime < now) {
+//          return PROGRESS_IS_GOOD;
+//        }
+//
+//        if (estimatedReplacementEndTime >= estimatedEndTime) {
+//          return TOO_LATE_TO_SPECULATE;
+//        }
+//
+//        result = estimatedEndTime - estimatedReplacementEndTime;
+//      }
+//    }
+//
+//    // If we are here, there's at most one task attempt.
+//    if (numberRunningAttempts == 0) {
+//      return NOT_RUNNING;
+//    }
+//
+//
+//
+//    if (acceptableRuntime == Long.MIN_VALUE) {
+//      acceptableRuntime = estimator.thresholdRuntime(taskID);
+//      if (acceptableRuntime == Long.MAX_VALUE) {
+//        return ON_SCHEDULE;
+//      }
+//    }
+//
+//    return result;
+//  }
 
   //Add attempt to a given Task.
   protected void addSpeculativeAttempt(TaskId taskID) {

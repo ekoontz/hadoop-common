@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.mapreduce.v2.app.speculate.DefaultSpeculator;
 import org.apache.hadoop.mapreduce.v2.app.speculate.HaoSpeculator;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -155,7 +156,8 @@ public class MapTaskImpl extends TaskImpl {
       LOG.info(" handleNewSpill map " + event.getSpillMapAttemptID().getTaskID().getId() + " spilltime = " + newRange.getDurationSeconds() + ", new average = " + averageSpillDurationSeconds);
       
       
-      this.conf.setLong(HaoSpeculator.HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS, averageSpillDurationSeconds);
+//      this.conf.setLong(HaoSpeculator.HAO_PARAM_AVERAGE_SPILL_DURATION_SECONDS, averageSpillDurationSeconds);
+      DefaultSpeculator.averageSpillDuration = averageSpillDurationSeconds;
       
       finishedRanges.add(mypos, newRange);
       finishedBytes += newRange.getLength();
