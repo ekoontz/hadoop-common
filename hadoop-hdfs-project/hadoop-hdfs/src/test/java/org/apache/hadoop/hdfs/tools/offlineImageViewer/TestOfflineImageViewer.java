@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
@@ -132,6 +133,10 @@ public class TestOfflineImageViewer {
         }
       }
 
+      //Create a directory whose name should be escaped in XML
+      Path invalidXMLDir = new Path("/dirContainingInvalidXMLChar\u0000here");
+      hdfs.mkdirs(invalidXMLDir);
+
       // Get delegation tokens so we log the delegation token op
       Token<?>[] delegationTokens = hdfs
           .addDelegationTokens(TEST_RENEWER, null);
@@ -204,7 +209,7 @@ public class TestOfflineImageViewer {
       }
       ++count;
     }
-    assertEquals(writtenFiles.size() + 1, count);
+    assertEquals(writtenFiles.size() + 2, count);
   }
 
   @Test(expected = IOException.class)
@@ -260,8 +265,8 @@ public class TestOfflineImageViewer {
     matcher = p.matcher(output.getBuffer());
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalDirs = Integer.parseInt(matcher.group(1));
-    // totalDirs includes root directory
-    assertEquals(NUM_DIRS + 1, totalDirs);
+    // totalDirs includes root directory, empty directory, and xattr directory
+    assertEquals(NUM_DIRS + 2, totalDirs);
 
     FileStatus maxFile = Collections.max(writtenFiles.values(),
         new Comparator<FileStatus>() {
