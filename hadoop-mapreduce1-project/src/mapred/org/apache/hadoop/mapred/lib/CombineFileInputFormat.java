@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred.lib;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -141,7 +143,24 @@ public abstract class CombineFileInputFormat<K, V>
     }
     return codec instanceof SplittableCompressionCodec;
   }
-  
+
+  /**
+   * First get "mapred.max.split.size".
+   * If "mapred.max.split.size" is not set,
+   * then get "mapreduce.input.fileinputformat.split.maxsize".
+   * If "mapreduce.input.fileinputformat.split.maxsize" is not set,
+   * then return 0.
+   */
+  @VisibleForTesting
+  long getConfiguredMaxSplitSize(JobConf job) {
+    long maxSize = job.getLong("mapred.max.split.size", -1L);
+    if (maxSize == -1L) {
+      maxSize = job.getLong("mapreduce.input.fileinputformat.split.maxsize",
+          0);
+    }
+    return maxSize;
+  }
+
   /**
    * default constructor
    */
@@ -171,7 +190,7 @@ public abstract class CombineFileInputFormat<K, V>
     if (maxSplitSize != 0) {
       maxSize = maxSplitSize;
     } else {
-      maxSize = job.getLong("mapred.max.split.size", 0);
+      maxSize = getConfiguredMaxSplitSize(job);
     }
     if (minSizeNode != 0 && maxSize != 0 && minSizeNode > maxSize) {
       throw new IOException("Minimum split size pernode " + minSizeNode +
