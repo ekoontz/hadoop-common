@@ -929,11 +929,17 @@
        <version>2.6.0</version>
      </dependency>
       <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk16</artifactId>
+       <version>1.46</version>
+       <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>com.microsoft.windowsazure.storage</groupId>
         <artifactId>microsoft-windowsazure-storage-sdk</artifactId>
         <version>0.6.0</version>
     </dependency>
-
+      
     </dependencies>
   </dependencyManagement>
 
