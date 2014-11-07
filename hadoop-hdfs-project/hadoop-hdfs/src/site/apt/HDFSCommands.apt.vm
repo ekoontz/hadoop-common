@@ -201,7 +201,7 @@ HDFS Commands Guide
           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]
           [-getDatanodeInfo <datanode_host:ipc_port>]
           [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]
-          [-help [cmd]]
+          [-help [cmd]]>>>
 +------------------------------------------+
 
 *-----------------+-----------------------------------------------------------+
