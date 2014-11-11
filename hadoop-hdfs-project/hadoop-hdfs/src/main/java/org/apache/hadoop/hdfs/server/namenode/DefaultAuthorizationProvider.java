@@ -311,6 +311,7 @@ public class DefaultAuthorizationProvider
               return;
             }
             foundMatch = true;
+            break;
           }
         } else if (type == AclEntryType.GROUP) {
           // Use group entry (unnamed or named) with mask from permission bits
