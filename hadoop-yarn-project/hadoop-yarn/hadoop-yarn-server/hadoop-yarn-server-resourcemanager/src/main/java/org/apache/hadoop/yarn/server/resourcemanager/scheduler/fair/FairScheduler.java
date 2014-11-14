@@ -1028,7 +1028,10 @@ public class FairScheduler extends
     FSAppAttempt reservedAppSchedulable = node.getReservedAppSchedulable();
     if (reservedAppSchedulable != null) {
       Priority reservedPriority = node.getReservedContainer().getReservedPriority();
-      if (!reservedAppSchedulable.hasContainerForNode(reservedPriority, node)) {
+      FSQueue queue = reservedAppSchedulable.getQueue();
+
+      if (!reservedAppSchedulable.hasContainerForNode(reservedPriority, node)
+          || !fitInMaxShare(queue)) {
         // Don't hold the reservation if app can no longer use it
         LOG.info("Releasing reservation that cannot be satisfied for application "
             + reservedAppSchedulable.getApplicationAttemptId()
@@ -1042,7 +1045,6 @@ public class FairScheduler extends
               + reservedAppSchedulable.getApplicationAttemptId()
               + " on node: " + node);
         }
-        
         node.getReservedAppSchedulable().assignReservedContainer(node);
       }
     }
@@ -1062,6 +1064,18 @@ public class FairScheduler extends
       }
     }
     updateRootQueueMetrics();
+  }
+
+  private boolean fitInMaxShare(FSQueue queue) {
+    if (Resources.fitsIn(queue.getResourceUsage(), queue.getMaxShare())) {
+      return false;
+    }
+    
+    FSQueue parentQueue = queue.getParent();
+    if (parentQueue != null) {
+      return fitInMaxShare(parentQueue);
+    }
+    return true;
   }
 
   public FSAppAttempt getSchedulerApp(ApplicationAttemptId appAttemptId) {
