@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -97,6 +99,12 @@ public class TestApplicationHistoryClientService {
         clientService.getClientHandler().getApplications(request);
     List<ApplicationReport> appReport = response.getApplicationList();
     Assert.assertNotNull(appReport);
+    Collections.sort(appReport, new Comparator<ApplicationReport>() {
+      @Override
+      public int compare(ApplicationReport o1, ApplicationReport o2) {
+        return o1.getApplicationId().compareTo(o2.getApplicationId());
+      }
+    });
     Assert.assertEquals(appId, appReport.get(0).getApplicationId());
     Assert.assertEquals(appId1, appReport.get(1).getApplicationId());
   }
@@ -131,6 +139,12 @@ public class TestApplicationHistoryClientService {
     List<ApplicationAttemptReport> attemptReports =
         response.getApplicationAttemptList();
     Assert.assertNotNull(attemptReports);
+    Collections.sort(attemptReports, new Comparator<ApplicationAttemptReport>() {
+      @Override
+      public int compare(ApplicationAttemptReport o1, ApplicationAttemptReport o2) {
+        return o1.getApplicationAttemptId().compareTo(o2.getApplicationAttemptId());
+      }
+    });
     Assert.assertEquals(appAttemptId, attemptReports.get(0)
       .getApplicationAttemptId());
     Assert.assertEquals(appAttemptId1, attemptReports.get(1)
@@ -168,7 +182,13 @@ public class TestApplicationHistoryClientService {
         clientService.getClientHandler().getContainers(request);
     List<ContainerReport> containers = response.getContainerList();
     Assert.assertNotNull(containers);
-    Assert.assertEquals(containerId, containers.get(1).getContainerId());
-    Assert.assertEquals(containerId1, containers.get(0).getContainerId());
+    Collections.sort(containers, new Comparator<ContainerReport>() {
+      @Override
+      public int compare(ContainerReport o1, ContainerReport o2) {
+        return o1.getContainerId().compareTo(o2.getContainerId());
+      }
+    });
+    Assert.assertEquals(containerId, containers.get(0).getContainerId());
+    Assert.assertEquals(containerId1, containers.get(1).getContainerId());
   }
 }
