@@ -464,7 +464,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     out.close();
   }
   
-  private void rename(Path src, Path dst, boolean renameSucceeded,
+  protected void rename(Path src, Path dst, boolean renameSucceeded,
       boolean srcExists, boolean dstExists) throws IOException {
     assertEquals("Rename result", renameSucceeded, fs.rename(src, dst));
     assertEquals("Source exists", srcExists, fs.exists(src));
