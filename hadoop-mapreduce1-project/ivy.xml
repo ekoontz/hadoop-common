@@ -127,6 +127,8 @@
                conf="test->default">
      <artifact name="zookeeper" type="test-jar" ext="jar" m:classifier="tests"/>
    </dependency>
+   <dependency org="org.bouncycastle" name="bcprov-jdk16" rev="1.46"
+               conf="test->default"/>
    
    <!-- Exclusions for transitive dependencies pulled in by log4j -->
    <exclude org="com.sun.jdmk"/>
