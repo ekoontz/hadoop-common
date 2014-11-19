@@ -103,7 +103,7 @@ public class HadoopArchives implements Tool {
   short repl = 3;
 
   private static final String usage = "archive"
-  + " -archiveName NAME -p <parent path> [-r <replication factor>]" +
+  + " -archiveName <NAME>.har -p <parent path> [-r <replication factor>]" +
       "<src>* <dest>" +
   "\n";
   
@@ -350,15 +350,10 @@ public class HadoopArchives implements Tool {
    */
   private void writeTopLevelDirs(SequenceFile.Writer srcWriter, 
       List<Path> paths, Path parentPath) throws IOException {
-    //add all the directories 
-    List<Path> justDirs = new ArrayList<Path>();
+    // extract paths from absolute URI's
+    List<Path> justPaths = new ArrayList<Path>();
     for (Path p: paths) {
-      if (!p.getFileSystem(getConf()).isFile(p)) {
-        justDirs.add(new Path(p.toUri().getPath()));
-      }
-      else {
-        justDirs.add(new Path(p.getParent().toUri().getPath()));
-      }
+      justPaths.add(new Path(p.toUri().getPath()));
     }
     /* find all the common parents of paths that are valid archive
      * paths. The below is done so that we do not add a common path
@@ -374,7 +369,7 @@ public class HadoopArchives implements Tool {
     Path root = new Path(Path.SEPARATOR);
     for (int i = parentPath.depth(); i < deepest.depth(); i++) {
       List<Path> parents = new ArrayList<Path>();
-      for (Path p: justDirs) {
+      for (Path p: justPaths) {
         if (p.compareTo(root) == 0){
           //do nothing
         }
@@ -394,7 +389,7 @@ public class HadoopArchives implements Tool {
           }
         }
       }
-      justDirs = parents;
+      justPaths = parents;
     }
     Set<Map.Entry<String, HashSet<String>>> keyVals = allpaths.entrySet();
     for (Map.Entry<String, HashSet<String>> entry : keyVals) {
