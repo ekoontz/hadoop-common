@@ -358,6 +358,9 @@ class Merger {
     }
 
     public boolean next() throws IOException {
+      key = null;
+      value = null;
+
       if (size() == 0)
         return false;
 
