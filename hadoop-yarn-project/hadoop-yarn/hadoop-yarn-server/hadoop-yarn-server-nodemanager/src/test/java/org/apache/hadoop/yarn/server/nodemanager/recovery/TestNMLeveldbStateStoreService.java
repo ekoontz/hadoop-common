@@ -275,7 +275,7 @@ public class TestNMLeveldbStateStoreService {
     assertTrue(rcs.getDiagnostics().isEmpty());
 
     // store a new container record without StartContainerRequest
-    ContainerId containerId1 = ContainerId.newContainerId(appAttemptId, 6);
+    ContainerId containerId1 = ContainerId.newInstance(appAttemptId, 6);
     stateStore.storeContainerLaunched(containerId1);
     recoveredContainers = stateStore.loadContainersState();
     // check whether the new container record is discarded
