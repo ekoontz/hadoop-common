@@ -3559,8 +3559,10 @@ public class BlockManager {
     } finally {
       namesystem.writeUnlock();
     }
-    blockLog.info("BLOCK* {}: ask {} to delete {}", getClass().getSimpleName(),
-        dn, toInvalidate);
+    if (blockLog.isInfoEnabled()) {
+      blockLog.info("BLOCK* " + getClass().getSimpleName()
+          + ": ask " + dn + " to delete " + toInvalidate);
+    }
     return toInvalidate.size();
   }
 
