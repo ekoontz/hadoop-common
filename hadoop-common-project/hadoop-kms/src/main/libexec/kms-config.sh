@@ -151,8 +151,10 @@ else
 fi
 
 if [ "${KMS_SSL_KEYSTORE_PASS}" = "" ]; then
-  export KMS_SSL_KEYSTORE_PASS=password
-  print "Setting KMS_SSL_KEYSTORE_PASS:     ********"
+  if [ -n "${KMS_SSL_KEYSTORE_PASS+1}" ]; then
+    export KMS_SSL_KEYSTORE_PASS=password
+    print "Setting KMS_SSL_KEYSTORE_PASS:     ********"
+  fi
 else
   KMS_SSL_KEYSTORE_PASS_DISP=`echo ${KMS_SSL_KEYSTORE_PASS} | sed 's/./*/g'`
   print "Using   KMS_SSL_KEYSTORE_PASS:     ${KMS_SSL_KEYSTORE_PASS_DISP}"

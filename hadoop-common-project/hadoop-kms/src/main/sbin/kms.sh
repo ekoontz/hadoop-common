@@ -64,9 +64,14 @@ fi
 
 # If ssl, the populate the passwords into ssl-server.xml before starting tomcat
 if [ ! "${KMS_SSL_KEYSTORE_PASS}" = "" ] || [ ! "${KMS_SSL_TRUSTSTORE_PASS}" = "" ]; then
+  # Set a KEYSTORE_PASS if not already set
+  KMS_SSL_KEYSTORE_PASS=${KMS_SSL_KEYSTORE_PASS:-password}
   cat ${CATALINA_BASE}/conf/ssl-server.xml.conf \
     | sed 's/_kms_ssl_keystore_pass_/'${KMS_SSL_KEYSTORE_PASS}'/g' \
     | sed 's/_kms_ssl_truststore_pass_/'${KMS_SSL_TRUSTSTORE_PASS}'/g' > ${CATALINA_BASE}/conf/ssl-server.xml
+  cp ${CATALINA_BASE}/conf/ssl-server.xml ${CATALINA_BASE}/conf/server.xml
+else
+  cp ${CATALINA_BASE}/conf/server.xml.conf ${CATALINA_BASE}/conf/server.xml
 fi 
 
 exec ${KMS_CATALINA_HOME}/bin/catalina.sh "$@"
