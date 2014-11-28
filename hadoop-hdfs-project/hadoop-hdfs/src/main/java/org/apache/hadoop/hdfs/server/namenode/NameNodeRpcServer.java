@@ -86,6 +86,7 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -599,7 +600,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LocatedBlock append(String src, String clientName) 
+  public LastBlockWithStatus append(String src, String clientName) 
       throws IOException {
     checkNNStartup();
     String clientMachine = getClientMachine();
@@ -608,7 +609,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +src+" for "+clientName+" at "+clientMachine);
     }
     namesystem.checkOperation(OperationCategory.WRITE);
-    LocatedBlock info = namesystem.appendFile(src, clientName, clientMachine);
+    LastBlockWithStatus info = namesystem.appendFile(src, clientName, clientMachine);
     metrics.incrFilesAppended();
     return info;
   }

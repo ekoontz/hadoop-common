@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.ipc.ClientId;
 import org.apache.hadoop.ipc.RPC.RpcKind;
 import org.apache.hadoop.ipc.RetryCache.CacheEntry;
@@ -241,7 +241,7 @@ public class TestNamenodeRetryCache {
     
     // Retried append requests succeed
     newCall();
-    LocatedBlock b = namesystem.appendFile(src, "holder", "clientMachine");
+    LastBlockWithStatus b = namesystem.appendFile(src, "holder", "clientMachine");
     Assert.assertEquals(b, namesystem.appendFile(src, "holder", "clientMachine"));
     Assert.assertEquals(b, namesystem.appendFile(src, "holder", "clientMachine"));
     

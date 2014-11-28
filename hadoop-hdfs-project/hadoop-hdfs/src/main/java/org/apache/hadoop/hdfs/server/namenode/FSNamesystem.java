@@ -192,6 +192,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -3133,15 +3134,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Append to an existing file in the namespace.
    */
-  LocatedBlock appendFile(String src, String holder, String clientMachine)
+  LastBlockWithStatus appendFile(String src, String holder, String clientMachine)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
-    LocatedBlock lb = null;
+    LastBlockWithStatus lb = null;
     CacheEntryWithPayload cacheEntry = RetryCache.waitForCompletion(retryCache,
         null);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
-      return (LocatedBlock) cacheEntry.getPayload();
+      return (LastBlockWithStatus) cacheEntry.getPayload();
     }
       
     boolean success = false;
@@ -3157,7 +3158,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  private LocatedBlock appendFileInt(final String srcArg, String holder,
+  private LastBlockWithStatus appendFileInt(final String srcArg, String holder,
       String clientMachine, boolean logRetryCache)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
@@ -3176,6 +3177,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     LocatedBlock lb = null;
+    HdfsFileStatus stat = null;
     FSPermissionChecker pc = getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
@@ -3184,6 +3186,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkNameNodeSafeMode("Cannot append to file" + src);
       src = resolvePath(src, pathComponents);
       lb = appendFileInternal(pc, src, holder, clientMachine, logRetryCache);
+      stat = dir.getFileInfo(src, false, FSDirectory.isReservedRawName(srcArg),
+          true);
     } catch (StandbyException se) {
       skipSync = true;
       throw se;
@@ -3204,7 +3208,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     }
     logAuditEvent(true, "append", srcArg);
-    return lb;
+    return new LastBlockWithStatus(lb, stat);
   }
 
   ExtendedBlock getExtendedBlock(Block blk) {
