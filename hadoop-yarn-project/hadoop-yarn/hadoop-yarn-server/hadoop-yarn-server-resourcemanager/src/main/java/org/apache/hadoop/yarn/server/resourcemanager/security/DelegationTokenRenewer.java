@@ -39,6 +39,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -445,15 +446,15 @@ public class DelegationTokenRenewer extends AbstractService {
    */
   private class RenewalTimerTask extends TimerTask {
     private DelegationTokenToRenew dttr;
-    private boolean cancelled = false;
+    private AtomicBoolean cancelled = new AtomicBoolean(false);
     
     RenewalTimerTask(DelegationTokenToRenew t) {  
       dttr = t;  
     }
     
     @Override
-    public synchronized void run() {
-      if (cancelled) {
+    public void run() {
+      if (cancelled.get()) {
         return;
       }
 
@@ -475,8 +476,8 @@ public class DelegationTokenRenewer extends AbstractService {
     }
 
     @Override
-    public synchronized boolean cancel() {
-      cancelled = true;
+    public boolean cancel() {
+      cancelled.set(true);
       return super.cancel();
     }
   }
