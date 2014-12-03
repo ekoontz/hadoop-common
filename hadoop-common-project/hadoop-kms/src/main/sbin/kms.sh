@@ -54,7 +54,7 @@ catalina_opts="${catalina_opts} -Dkms.ssl.keystore.file=${KMS_SSL_KEYSTORE_FILE}
 print "Adding to CATALINA_OPTS:     ${catalina_opts}"
 print "Found KMS_SSL_KEYSTORE_PASS:     `echo ${KMS_SSL_KEYSTORE_PASS} | sed 's/./*/g'`"
 
-export CATALINA_OPTS="${CATALINA_OPTS_DISP} ${catalina_opts}"
+export CATALINA_OPTS="${CATALINA_OPTS} ${catalina_opts}"
 
 # A bug in catalina.sh script does not use CATALINA_OPTS for stopping the server
 #
