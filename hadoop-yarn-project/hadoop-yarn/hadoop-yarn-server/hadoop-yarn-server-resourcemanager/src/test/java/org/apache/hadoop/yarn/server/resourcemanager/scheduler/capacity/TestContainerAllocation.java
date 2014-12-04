@@ -116,7 +116,7 @@ public class TestContainerAllocation {
     am1.registerAppAttempt();
 
     LOG.info("sending container requests ");
-    am1.addRequests(new String[] {"*"}, 2 * GB, 1, 1);
+    am1.addRequests(new String[] {"*"}, 3 * GB, 1, 1);
     AllocateResponse alloc1Response = am1.schedule(); // send the request
 
     // kick the scheduler
