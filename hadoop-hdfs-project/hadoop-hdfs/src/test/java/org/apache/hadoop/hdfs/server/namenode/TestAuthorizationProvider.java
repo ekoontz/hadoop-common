@@ -201,7 +201,7 @@ public class TestAuthorizationProvider {
       } else {
         AclEntry acl = new AclEntry.Builder().setType(AclEntryType.GROUP).
             setPermission(FsAction.ALL).setName("xxx").build();
-        f = new AclFeature(ImmutableList.of(acl));
+        f = new AclFeature(AclEntryStatusFormat.toInt(ImmutableList.of(acl)));
       }
       return f;
     }

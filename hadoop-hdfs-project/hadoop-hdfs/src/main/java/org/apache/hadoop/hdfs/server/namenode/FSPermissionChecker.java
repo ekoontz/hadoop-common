@@ -40,6 +40,20 @@ import org.apache.hadoop.security.UserGroupInformation;
 class FSPermissionChecker {
   static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
 
+  /** @return a string for throwing {@link AccessControlException} */
+  private String toAccessControlString(INode inode, int snapshotId,
+      FsAction access, FsPermission mode) {
+    StringBuilder sb = new StringBuilder("Permission denied: ")
+      .append("user=").append(user).append(", ")
+      .append("access=").append(access).append(", ")
+      .append("inode=\"").append(inode.getFullPathName()).append("\":")
+      .append(inode.getUserName(snapshotId)).append(':')
+      .append(inode.getGroupName(snapshotId)).append(':')
+      .append(inode.isDirectory() ? 'd' : '-')
+      .append(mode);
+    return sb.toString();
+  }
+
   private final UserGroupInformation ugi;
   private final String user;  
   /** A set with group namess. Not synchronized since it is unmodifiable */
