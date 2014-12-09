@@ -80,9 +80,9 @@ import java.util.UUID;
 /**
  * Mini KDC based on Apache Directory Server that can be embedded in testcases
  * or used from command line as a standalone KDC.
- * <p/>
+ * <p>
  * <b>From within testcases:</b>
- * <p/>
+ * <p>
  * MiniKdc sets 2 System properties when started and un-sets them when stopped:
  * <ul>
  *   <li>java.security.krb5.conf: set to the MiniKDC real/host/port</li>
@@ -93,7 +93,7 @@ import java.util.UUID;
  * For example, running testcases in parallel that start a KDC each. To
  * accomplish this a single MiniKdc should be used for all testcases running
  * in parallel.
- * <p/>
+ * <p>
  * MiniKdc default configuration values are:
  * <ul>
  *   <li>org.name=EXAMPLE (used to create the REALM)</li>
@@ -107,7 +107,6 @@ import java.util.UUID;
  *   <li>debug=false</li>
  * </ul>
  * The generated krb5.conf forces TCP connections.
- * <p/>
  */
 public class MiniKdc {
 
@@ -219,7 +218,7 @@ public class MiniKdc {
 
   /**
    * Convenience method that returns MiniKdc default configuration.
-   * <p/>
+   * <p>
    * The returned configuration is a copy, it can be customized before using
    * it to create a MiniKdc.
    * @return a MiniKdc default configuration.
@@ -512,7 +511,6 @@ public class MiniKdc {
 
   /**
    * Stops the MiniKdc
-   * @throws Exception
    */
   public synchronized void stop() {
     if (kdc != null) {
