@@ -782,7 +782,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private void copyAndConfigureFiles(JobConf job, Path submitJobDir,
       short replication) throws IOException, InterruptedException {
 
-    if (!(job.getBoolean("mapred.used.genericoptionsparser", false))) {
+    if (!(job.getBoolean("mapreduce.client.genericoptionsparser.used", false))) {
       LOG.warn("Use GenericOptionsParser for parsing the arguments. " +
                "Applications should implement Tool for the same.");
     }
