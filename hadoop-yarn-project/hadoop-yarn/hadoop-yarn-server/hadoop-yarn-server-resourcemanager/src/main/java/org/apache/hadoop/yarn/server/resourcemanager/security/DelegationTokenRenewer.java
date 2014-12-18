@@ -151,7 +151,7 @@ public class DelegationTokenRenewer extends AbstractService {
         .setNameFormat("DelegationTokenRenewer #%d")
         .build();
     ThreadPoolExecutor pool =
-        new ThreadPoolExecutor((5 < nThreads ? 5 : nThreads), nThreads, 3L,
+        new ThreadPoolExecutor(nThreads, nThreads, 3L,
             TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
     pool.setThreadFactory(tf);
     pool.allowCoreThreadTimeOut(true);
