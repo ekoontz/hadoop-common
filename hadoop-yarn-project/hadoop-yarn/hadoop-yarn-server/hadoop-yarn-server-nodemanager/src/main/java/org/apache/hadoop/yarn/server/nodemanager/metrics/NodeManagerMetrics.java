@@ -27,6 +27,8 @@ import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @Metrics(about="Metrics for node manager", context="yarn")
 public class NodeManagerMetrics {
   @Metric MutableCounterInt containersLaunched;
@@ -117,5 +119,20 @@ public class NodeManagerMetrics {
 
   public int getRunningContainers() {
     return containersRunning.value();
+  }
+
+  @VisibleForTesting
+  public int getKilledContainers() {
+    return containersKilled.value();
+  }
+
+  @VisibleForTesting
+  public int getFailedContainers() {
+    return containersFailed.value();
+  }
+
+  @VisibleForTesting
+  public int getCompletedContainers() {
+    return containersCompleted.value();
   }
 }
