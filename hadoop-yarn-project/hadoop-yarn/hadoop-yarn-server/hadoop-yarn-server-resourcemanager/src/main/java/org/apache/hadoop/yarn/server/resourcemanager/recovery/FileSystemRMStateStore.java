@@ -473,11 +473,10 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeRMDelegationTokenAndSequenceNumberState(
-      RMDelegationTokenIdentifier identifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
-    storeOrUpdateRMDelegationTokenAndSequenceNumberState(
-        identifier, renewDate,latestSequenceNumber, false);
+  public synchronized void storeRMDelegationTokenState(
+      RMDelegationTokenIdentifier identifier, Long renewDate)
+      throws Exception {
+    storeOrUpdateRMDelegationTokenState(identifier, renewDate, false);
   }
 
   @Override
@@ -490,16 +489,15 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateRMDelegationTokenAndSequenceNumberInternal(
-      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
-      int latestSequenceNumber) throws Exception {
-    storeOrUpdateRMDelegationTokenAndSequenceNumberState(
-        rmDTIdentifier, renewDate,latestSequenceNumber, true);
+  protected void updateRMDelegationTokenState(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate)
+      throws Exception {
+    storeOrUpdateRMDelegationTokenState(rmDTIdentifier, renewDate, true);
   }
 
-  private void storeOrUpdateRMDelegationTokenAndSequenceNumberState(
+  private void storeOrUpdateRMDelegationTokenState(
       RMDelegationTokenIdentifier identifier, Long renewDate,
-      int latestSequenceNumber, boolean isUpdate) throws Exception {
+      boolean isUpdate) throws Exception {
     Path nodeCreatePath =
         getNodePath(rmDTSecretManagerRoot,
           DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
@@ -516,22 +514,23 @@ public class FileSystemRMStateStore extends RMStateStore {
     }
     fsOut.close();
 
-    // store sequence number
-    Path latestSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
-          DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX + latestSequenceNumber);
-    LOG.info("Storing " + DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX
-        + latestSequenceNumber);
-    if (dtSequenceNumberPath == null) {
-      if (!createFile(latestSequenceNumberPath)) {
-        throw new Exception("Failed to create " + latestSequenceNumberPath);
+      // store sequence number
+      Path latestSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
+            DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX
+            + identifier.getSequenceNumber());
+      LOG.info("Storing " + DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX
+          + identifier.getSequenceNumber());
+      if (dtSequenceNumberPath == null) {
+        if (!createFile(latestSequenceNumberPath)) {
+          throw new Exception("Failed to create " + latestSequenceNumberPath);
+        }
+      } else {
+        if (!renameFile(dtSequenceNumberPath, latestSequenceNumberPath)) {
+          throw new Exception("Failed to rename " + dtSequenceNumberPath);
+        }
       }
-    } else {
-      if (!renameFile(dtSequenceNumberPath, latestSequenceNumberPath)) {
-        throw new Exception("Failed to rename " + dtSequenceNumberPath);
-      }
+      dtSequenceNumberPath = latestSequenceNumberPath;
     }
-    dtSequenceNumberPath = latestSequenceNumberPath;
-  }
 
   @Override
   public synchronized void storeRMDTMasterKeyState(DelegationKey masterKey)
