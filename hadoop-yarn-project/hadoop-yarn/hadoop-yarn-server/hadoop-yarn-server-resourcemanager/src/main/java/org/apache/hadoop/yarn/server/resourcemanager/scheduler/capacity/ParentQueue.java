@@ -109,8 +109,6 @@ public class ParentQueue extends AbstractCSQueue {
     Map<QueueACL, AccessControlList> acls = 
       cs.getConfiguration().getAcls(getQueuePath());
 
-    this.queueInfo.setChildQueues(new ArrayList<QueueInfo>());
-
     setupQueueConfigs(cs.getClusterResource(), capacity, absoluteCapacity,
         maximumCapacity, absoluteMaxCapacity, state, acls, accessibleLabels,
         defaultLabelExpression, capacitiyByNodeLabels, maxCapacityByNodeLabels, 
@@ -205,7 +203,7 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public synchronized QueueInfo getQueueInfo( 
       boolean includeChildQueues, boolean recursive) {
-    queueInfo.setCurrentCapacity(usedCapacity);
+    QueueInfo queueInfo = getQueueInfo();
 
     List<QueueInfo> childQueuesInfo = new ArrayList<QueueInfo>();
     if (includeChildQueues) {
