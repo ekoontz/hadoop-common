@@ -3717,4 +3717,9 @@ public class BlockManager {
     stopReplicationInitializer();
     blocksMap.close();
   }
+  
+  public void clear() {
+    clearQueues();
+    blocksMap.clear();
+  }
 }
