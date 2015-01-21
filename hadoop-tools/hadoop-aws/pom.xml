@@ -162,6 +162,12 @@
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk</artifactId>
       <scope>compile</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>joda-time</groupId>
+          <artifactId>joda-time</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
