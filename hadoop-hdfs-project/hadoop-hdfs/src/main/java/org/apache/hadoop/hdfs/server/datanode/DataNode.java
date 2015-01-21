@@ -2195,7 +2195,7 @@ public class DataNode extends ReconfigurableBase
     }
     FsVolumeSpi volume = getFSDataset().getVolume(block);
     if (blockScanner != null && !volume.isTransientStorage()) {
-      blockScanner.addBlock(block);
+      blockScanner.addBlock(block, false);
     }
   }
 
