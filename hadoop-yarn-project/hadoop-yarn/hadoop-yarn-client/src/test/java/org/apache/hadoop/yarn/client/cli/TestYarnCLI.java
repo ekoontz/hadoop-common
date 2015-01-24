@@ -67,7 +67,6 @@ import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.util.Records;
-import org.jboss.netty.logging.CommonsLoggerFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
