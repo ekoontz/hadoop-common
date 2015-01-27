@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.inotify.EventsList;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
@@ -52,6 +53,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -133,6 +135,28 @@ public class AuthorizationProviderProxyClientProtocol implements ClientProtocol 
     try {
       AuthorizationProvider.beginClientOp();
       return server.setReplication(src, replication);
+    } finally {
+      AuthorizationProvider.endClientOp();
+    }
+  }
+
+  @Override
+  public BlockStoragePolicy[] getStoragePolicies() throws IOException {
+    try {
+      AuthorizationProvider.beginClientOp();
+      return server.getStoragePolicies();
+    } finally {
+      AuthorizationProvider.endClientOp();
+    }
+  }
+
+  @Override
+  public void setStoragePolicy(String src, String policyName)
+     throws SnapshotAccessControlException, UnresolvedLinkException,
+     FileNotFoundException, QuotaExceededException, IOException {
+    try {
+      AuthorizationProvider.beginClientOp();
+      server.setStoragePolicy(src, policyName);
     } finally {
       AuthorizationProvider.endClientOp();
     }
