@@ -282,7 +282,6 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   @VisibleForTesting
   KeyProvider provider;
-  private final SpanReceiverHost spanReceiverHost;
   private final Sampler<?> traceSampler;
 
   /**
@@ -635,7 +634,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
-    spanReceiverHost = SpanReceiverHost.getInstance(conf);
+    SpanReceiverHost.getInstance(conf);
     traceSampler = TraceSamplerFactory.createSampler(conf);
     // Copy only the required DFSClient configuration
     this.dfsClientConf = new Conf(conf);
