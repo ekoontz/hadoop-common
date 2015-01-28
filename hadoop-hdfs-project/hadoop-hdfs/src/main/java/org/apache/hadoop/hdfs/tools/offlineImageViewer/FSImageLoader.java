@@ -238,7 +238,7 @@ class FSImageLoader {
     return inodes;
   }
 
-  private static String[] loadStringTable(InputStream in) throws
+  static String[] loadStringTable(InputStream in) throws
   IOException {
     FsImageProto.StringTableSection s = FsImageProto.StringTableSection
         .parseDelimitedFrom(in);
@@ -492,7 +492,7 @@ class FSImageLoader {
     }
   }
 
-  private long getFileSize(FsImageProto.INodeSection.INodeFile f) {
+  static long getFileSize(FsImageProto.INodeSection.INodeFile f) {
     long size = 0;
     for (HdfsProtos.BlockProto p : f.getBlocksList()) {
       size += p.getNumBytes();
