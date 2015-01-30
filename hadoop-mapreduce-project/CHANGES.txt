@@ -31,9 +31,6 @@ Release 2.6.0 - 2014-11-18
     MAPREDUCE-5906. Inconsistent configuration in property 
       "mapreduce.reduce.shuffle.input.buffer.percent" (Akira AJISAKA via aw)
 
-    MAPREDUCE-5974. Allow specifying multiple MapOutputCollectors with 
-    fallback. (Todd Lipcon via kasha)
-
     MAPREDUCE-5130. Add missing job config options to mapred-default.xml
     (Ray Chiang via Sandy Ryza)
 
@@ -54,6 +51,7 @@ Release 2.6.0 - 2014-11-18
 
     MAPREDUCE-6052. Supported overriding the default container-log4j.properties
     file per job. (Junping Du via zjshen)
+
 
   OPTIMIZATIONS
 
