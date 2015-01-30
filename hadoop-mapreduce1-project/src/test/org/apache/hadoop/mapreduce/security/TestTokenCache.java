@@ -140,7 +140,8 @@ public class TestTokenCache {
   private static MiniDFSCluster dfsCluster;
   private static final Path TEST_DIR = 
     new Path(System.getProperty("test.build.data","/tmp"), "sleepTest");
-  private static final Path tokenFileName = new Path(TEST_DIR, "tokenFile.json");
+  private static final Path jsonTokenFile = new Path(TEST_DIR, "tokenFile.json");
+  private static final Path binaryTokenFile = new Path(TEST_DIR, "tokenFile.bin");
   private static int numSlaves = 1;
   private static JobConf jConf;
   private static ObjectMapper mapper = new ObjectMapper();
@@ -158,6 +159,8 @@ public class TestTokenCache {
     
     createTokenFileJson();
     verifySecretKeysInJSONFile();
+    createTokenFileBinary();
+    verifySecretKeysInBinaryFile();
     NameNodeAdapter.getDtSecretManager(dfsCluster.getNamesystem()).startThreads();
     FileSystem fs = dfsCluster.getFileSystem();
     
@@ -193,23 +196,53 @@ public class TestTokenCache {
     }
     
     try {
-      File p  = new File(tokenFileName.getParent().toString());
+      File p  = new File(jsonTokenFile.getParent().toString());
       p.mkdirs();
       // convert to JSON and save to the file
-      mapper.writeValue(new File(tokenFileName.toString()), map);
+      mapper.writeValue(new File(jsonTokenFile.toString()), map);
 
     } catch (Exception e) {
       System.out.println("failed with :" + e.getLocalizedMessage());
     }
   }
-  
+
+  private static void createTokenFileBinary() throws IOException {
+    Credentials creds = new Credentials();
+    try {
+      KeyGenerator kg = KeyGenerator.getInstance("HmacSHA1");
+      for(int i=0; i<NUM_OF_KEYS; i++) {
+        SecretKeySpec key = (SecretKeySpec) kg.generateKey();
+        byte [] enc_key = key.getEncoded();
+        creds.addSecretKey(new Text("alias"+i),
+            Base64.encodeBase64(enc_key));
+      }
+    } catch (NoSuchAlgorithmException e) {
+      throw new IOException(e);
+    }
+
+    try {
+      creds.writeTokenStorageFile(new Path(binaryTokenFile.toUri()),
+          new Configuration());
+    } catch (Exception e) {
+      System.out.println("failed with :" + e.getLocalizedMessage());
+    }
+  }
+
   @SuppressWarnings("unchecked")
   private static void verifySecretKeysInJSONFile() throws IOException {
     Map<String, String> map;
-    map = mapper.readValue(new File(tokenFileName.toString()), Map.class);
+    map = mapper.readValue(new File(jsonTokenFile.toString()), Map.class);
     assertEquals("didn't read JSON correctly", map.size(), NUM_OF_KEYS);
   }
-  
+
+  @SuppressWarnings("unchecked")
+  private static void verifySecretKeysInBinaryFile() throws IOException {
+    Credentials creds = Credentials.readTokenStorageFile(
+        new File(binaryTokenFile.toString()), new Configuration());
+    assertEquals("didn't read JSON correctly", creds.numberOfSecretKeys(),
+        NUM_OF_KEYS);
+  }
+
   /**
    * run a distributed job and verify that TokenCache is available
    * @throws IOException
@@ -229,7 +262,7 @@ public class TestTokenCache {
 
     // using argument to pass the file name
     String[] args = {
-       "-tokenCacheFile", tokenFileName.toString(), 
+        "-tokenCacheFile", binaryTokenFile.toString(),
         "-m", "1", "-r", "1", "-mt", "1", "-rt", "1"
         };
      
@@ -253,7 +286,7 @@ public class TestTokenCache {
   public void testLocalJobTokenCache() throws NoSuchAlgorithmException, IOException {
     // this is local job
     String[] args = {"-m", "1", "-r", "1", "-mt", "1", "-rt", "1"}; 
-    jConf.set("mapreduce.job.credentials.json", tokenFileName.toString());
+    jConf.set("mapreduce.job.credentials.json", jsonTokenFile.toString());
 
     int res = -1;
     try {
