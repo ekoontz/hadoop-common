@@ -255,7 +255,7 @@
     </dependency>
 
     <dependency>
-      <groupId>org.htrace</groupId>
+      <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core</artifactId>
     </dependency>
     <dependency>
