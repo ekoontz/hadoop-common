@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
@@ -173,6 +173,7 @@ import org.apache.hadoop.tracing.TraceAdminProtocolPB;
 import org.apache.hadoop.tracing.TraceAdminProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
+import org.slf4j.Logger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
@@ -183,9 +184,10 @@ import com.google.protobuf.BlockingService;
  */
 class NameNodeRpcServer implements NamenodeProtocols {
   
-  private static final Log LOG = NameNode.LOG;
-  private static final Log stateChangeLog = NameNode.stateChangeLog;
-  private static final Log blockStateChangeLog = NameNode.blockStateChangeLog;
+  private static final Logger LOG = NameNode.LOG;
+  private static final Logger stateChangeLog = NameNode.stateChangeLog;
+  private static final Logger blockStateChangeLog = NameNode
+      .blockStateChangeLog;
   
   // Dependencies from other parts of NN.
   protected final FSNamesystem namesystem;
@@ -1291,7 +1293,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
         IncorrectVersionException ive = new IncorrectVersionException(
             messagePrefix + " and CTime of DN ('" + dnCTime +
             "') does not match CTime of NN ('" + nnCTime + "')");
-        LOG.warn(ive);
+        LOG.warn(ive.toString(), ive);
         throw ive;
       } else {
         LOG.info(messagePrefix +
