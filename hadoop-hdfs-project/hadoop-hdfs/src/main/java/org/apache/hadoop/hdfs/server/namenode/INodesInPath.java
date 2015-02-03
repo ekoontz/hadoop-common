@@ -386,7 +386,11 @@ public class INodesInPath {
   int getNumNonNull() {
     return numNonNull;
   }
-  
+
+  public int length() {
+    return inodes.length;
+  }
+
   private static String toString(INode inode) {
     return inode == null? null: inode.getLocalName();
   }

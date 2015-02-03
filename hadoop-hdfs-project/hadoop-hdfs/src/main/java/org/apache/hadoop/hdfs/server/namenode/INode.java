@@ -98,8 +98,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   abstract void setUser(String user);
 
   /** Set user */
-  final INode setUser(String user, int latestSnapshotId)
-      throws QuotaExceededException {
+  final INode setUser(String user, int latestSnapshotId) {
     recordModification(latestSnapshotId);
     setUser(user);
     return this;
@@ -124,8 +123,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   abstract void setGroup(String group);
 
   /** Set group */
-  final INode setGroup(String group, int latestSnapshotId)
-      throws QuotaExceededException {
+  final INode setGroup(String group, int latestSnapshotId) {
     recordModification(latestSnapshotId);
     setGroup(group);
     return this;
@@ -151,8 +149,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   abstract void setPermission(FsPermission permission);
 
   /** Set the {@link FsPermission} of this {@link INode} */
-  INode setPermission(FsPermission permission, int latestSnapshotId) 
-      throws QuotaExceededException {
+  INode setPermission(FsPermission permission, int latestSnapshotId) {
     recordModification(latestSnapshotId);
     setPermission(permission);
     return this;
@@ -168,8 +165,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
 
   abstract void addAclFeature(AclFeature aclFeature);
 
-  final INode addAclFeature(AclFeature aclFeature, int latestSnapshotId)
-      throws QuotaExceededException {
+  final INode addAclFeature(AclFeature aclFeature, int latestSnapshotId) {
     recordModification(latestSnapshotId);
     addAclFeature(aclFeature);
     return this;
@@ -177,8 +173,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
 
   abstract void removeAclFeature();
 
-  final INode removeAclFeature(int latestSnapshotId)
-      throws QuotaExceededException {
+  final INode removeAclFeature(int latestSnapshotId) {
     recordModification(latestSnapshotId);
     removeAclFeature();
     return this;
@@ -203,8 +198,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    */
   abstract void addXAttrFeature(XAttrFeature xAttrFeature);
   
-  final INode addXAttrFeature(XAttrFeature xAttrFeature, int latestSnapshotId) 
-      throws QuotaExceededException {
+  final INode addXAttrFeature(XAttrFeature xAttrFeature, int latestSnapshotId) {
     recordModification(latestSnapshotId);
     addXAttrFeature(xAttrFeature);
     return this;
@@ -215,8 +209,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    */
   abstract void removeXAttrFeature();
   
-  final INode removeXAttrFeature(int lastestSnapshotId)
-      throws QuotaExceededException {
+  final INode removeXAttrFeature(int lastestSnapshotId) {
     recordModification(lastestSnapshotId);
     removeXAttrFeature();
     return this;
@@ -247,15 +240,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
     if (!parentDir.isInLatestSnapshot(latestSnapshotId)) {
       return false;
     }
-    final INode child = parentDir.getChild(getLocalNameBytes(),
-        latestSnapshotId);
+    final INode child = parentDir.getChild(getLocalNameBytes(), latestSnapshotId);
     if (this == child) {
       return true;
     }
-    if (child == null || !(child.isReference())) {
-      return false;
-    }
-    return this == child.asReference().getReferredINode();
+    return child != null && child.isReference() &&
+        this == child.asReference().getReferredINode();
   }
   
   /** @return true if the given inode is an ancestor directory of this inode. */
@@ -305,8 +295,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    *                         Note that it is {@link Snapshot#CURRENT_STATE_ID} 
    *                         if no snapshots have been taken.
    */
-  abstract void recordModification(final int latestSnapshotId)
-      throws QuotaExceededException;
+  abstract void recordModification(final int latestSnapshotId);
 
   /** Check whether it's a reference. */
   public boolean isReference() {
@@ -420,8 +409,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    */
   public abstract Quota.Counts cleanSubtree(final int snapshotId,
       int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes, boolean countDiffChange)
-      throws QuotaExceededException;
+      List<INode> removedINodes);
   
   /**
    * Destroy self and clear everything! If the INode is a file, this method
@@ -648,15 +636,14 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   }
 
   /** Update modification time if it is larger than the current value. */
-  public abstract INode updateModificationTime(long mtime, int latestSnapshotId) 
-      throws QuotaExceededException;
+  public abstract INode updateModificationTime(long mtime, int latestSnapshotId);
 
   /** Set the last modification time of inode. */
   public abstract void setModificationTime(long modificationTime);
 
   /** Set the last modification time of inode. */
   public final INode setModificationTime(long modificationTime,
-      int latestSnapshotId) throws QuotaExceededException {
+      int latestSnapshotId) {
     recordModification(latestSnapshotId);
     setModificationTime(modificationTime);
     return this;
@@ -685,8 +672,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, int latestSnapshotId)
-      throws QuotaExceededException {
+  public final INode setAccessTime(long accessTime, int latestSnapshotId) {
     recordModification(latestSnapshotId);
     setAccessTime(accessTime);
     return this;

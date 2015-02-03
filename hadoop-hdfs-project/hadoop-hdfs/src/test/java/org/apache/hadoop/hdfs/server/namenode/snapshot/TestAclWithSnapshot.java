@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.AclTestHelpers;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -608,7 +607,6 @@ public class TestAclWithSnapshot {
 
     aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, "bruce", READ));
-    exception.expect(NSQuotaExceededException.class);
     hdfs.modifyAclEntries(filePath, aclSpec);
   }
 
@@ -644,7 +642,6 @@ public class TestAclWithSnapshot {
 
     aclSpec = Lists.newArrayList(
       aclEntry(ACCESS, USER, "bruce", READ));
-    exception.expect(NSQuotaExceededException.class);
     hdfs.removeAcl(filePath);
   }
 
