@@ -127,6 +127,7 @@ import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
@@ -344,6 +345,7 @@ public class DataNode extends ReconfigurableBase
   private Configuration conf;
   private final String confVersion;
   private final long maxNumberOfBlocksToLog;
+  private final boolean pipelineSupportECN;
 
   private final List<String> usersWithLocalPathAccess;
   private final boolean connectToDnViaHostname;
@@ -377,6 +379,7 @@ public class DataNode extends ReconfigurableBase
     this.usersWithLocalPathAccess = null;
     this.connectToDnViaHostname = false;
     this.getHdfsBlockLocationsEnabled = false;
+    this.pipelineSupportECN = false;
   }
 
   /**
@@ -405,6 +408,9 @@ public class DataNode extends ReconfigurableBase
     this.isPermissionEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    this.pipelineSupportECN = conf.getBoolean(
+        DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED,
+        DFSConfigKeys.DFS_PIPELINE_ECN_ENABLED_DEFAULT);
 
     confVersion = "core-" +
         conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
@@ -480,6 +486,19 @@ public class DataNode extends ReconfigurableBase
   @Override // Reconfigurable
   public Collection<String> getReconfigurableProperties() {
     return RECONFIGURABLE_PROPERTIES;
+  }
+
+  /**
+   * The ECN bit for the DataNode. The DataNode should return:
+   * <ul>
+   *   <li>ECN.DISABLED when ECN is disabled.</li>
+   *   <li>ECN.SUPPORTED when ECN is enabled but the DN still has capacity.</li>
+   *   <li>ECN.CONGESTED when ECN is enabled and the DN is congested.</li>
+   * </ul>
+   */
+  public PipelineAck.ECN getECN() {
+    return pipelineSupportECN ? PipelineAck.ECN.SUPPORTED : PipelineAck.ECN
+      .DISABLED;
   }
 
   /**
