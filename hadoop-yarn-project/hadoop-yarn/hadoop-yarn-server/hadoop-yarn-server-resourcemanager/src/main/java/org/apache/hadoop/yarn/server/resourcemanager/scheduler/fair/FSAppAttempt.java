@@ -537,6 +537,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     }
   }
 
+  private boolean hasNodeOrRackLocalRequests(Priority priority) {
+    return getResourceRequests(priority).size() > 1;
+  }
+
   private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Node offered to app: " + getName() + " reserved: " + reserved);
@@ -611,10 +615,13 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
           continue;
         }
 
-        if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
-            && allowedLocality.equals(NodeType.OFF_SWITCH)) {
-          return assignContainer(node, offSwitchRequest,
-              NodeType.OFF_SWITCH, reserved);
+        if (offSwitchRequest != null &&
+            offSwitchRequest.getNumContainers() != 0) {
+          if (!hasNodeOrRackLocalRequests(priority) ||
+              allowedLocality.equals(NodeType.OFF_SWITCH)) {
+            return assignContainer(
+                node, offSwitchRequest, NodeType.OFF_SWITCH, reserved);
+          }
         }
       }
     }
