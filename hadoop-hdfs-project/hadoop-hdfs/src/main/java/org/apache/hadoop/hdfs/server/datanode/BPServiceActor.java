@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
@@ -777,6 +778,10 @@ class BPServiceActor implements Runnable {
         newBpRegistration.setNamespaceInfo(nsInfo);
         bpRegistration = newBpRegistration;
         break;
+      } catch(EOFException e) {  // namenode might have just restarted
+        LOG.info("Problem connecting to server: " + nnAddr + " :"
+            + e.getLocalizedMessage());
+        sleepAndLogInterrupts(1000, "connecting to server");
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);
         sleepAndLogInterrupts(1000, "connecting to server");
