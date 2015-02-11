@@ -131,6 +131,8 @@ class BlockReceiver implements Closeable {
   private long lastResponseTime = 0;
   private boolean isReplaceBlock = false;
   private DataOutputStream replyOut = null;
+  
+  private boolean pinning;
 
   BlockReceiver(final ExtendedBlock block, final StorageType storageType,
       final DataInputStream in,
@@ -140,7 +142,8 @@ class BlockReceiver implements Closeable {
       final String clientname, final DatanodeInfo srcDataNode,
       final DataNode datanode, DataChecksum requestedChecksum,
       CachingStrategy cachingStrategy,
-      final boolean allowLazyPersist) throws IOException {
+      final boolean allowLazyPersist,
+      final boolean pinning) throws IOException {
     try{
       this.block = block;
       this.in = in;
@@ -164,12 +167,14 @@ class BlockReceiver implements Closeable {
       this.isTransfer = stage == BlockConstructionStage.TRANSFER_RBW
           || stage == BlockConstructionStage.TRANSFER_FINALIZED;
 
+      this.pinning = pinning;
       if (LOG.isDebugEnabled()) {
         LOG.debug(getClass().getSimpleName() + ": " + block
             + "\n  isClient  =" + isClient + ", clientname=" + clientname
             + "\n  isDatanode=" + isDatanode + ", srcDataNode=" + srcDataNode
             + "\n  inAddr=" + inAddr + ", myAddr=" + myAddr
             + "\n  cachingStrategy = " + cachingStrategy
+            + "\n  pinning=" + pinning
             );
       }
 
@@ -1355,6 +1360,10 @@ class BlockReceiver implements Closeable {
         endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
         block.setNumBytes(replicaInfo.getNumBytes());
         datanode.data.finalizeBlock(block);
+      }
+
+      if (pinning) {
+        datanode.data.setPinning(block);
       }
 
       datanode.closeBlock(
