@@ -70,56 +70,56 @@ import static org.junit.Assert.assertEquals;
 public class TestNameNodePrunesMissingStorages {
   static final Log LOG = LogFactory.getLog(TestNameNodePrunesMissingStorages.class);
 
+  private static void runTest(final String testCaseName,
+                              final boolean createFiles,
+                              final int numInitialStorages,
+                              final int expectedStoragesAfterTest) throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
 
-      private static void runTest(final String testCaseName,
-      final boolean createFiles,
-      final int numInitialStorages,
-      final int expectedStoragesAfterTest) throws IOException {
-        Configuration conf = new HdfsConfiguration();
-        MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster
+          .Builder(conf)
+          .numDataNodes(1)
+          .storagesPerDatanode(numInitialStorages)
+          .build();
+      cluster.waitActive();
 
-        try {
-          cluster = new MiniDFSCluster
-              .Builder(conf)
-              .numDataNodes(1)
-              .storagesPerDatanode(numInitialStorages)
-              .build();
-          cluster.waitActive();
+      final DataNode dn0 = cluster.getDataNodes().get(0);
 
-          final DataNode dn0 = cluster.getDataNodes().get(0);
+      // Ensure NN knows about the storage.
+      final DatanodeID dnId = dn0.getDatanodeId();
+      final DatanodeDescriptor dnDescriptor =
+          cluster.getNamesystem().getBlockManager().getDatanodeManager().getDatanode(dnId);
+      assertThat(dnDescriptor.getStorageInfos().length, is(numInitialStorages));
 
-          // Ensure NN knows about the storage.
-          final DatanodeID dnId = dn0.getDatanodeId();
-          final DatanodeDescriptor dnDescriptor =
-              cluster.getNamesystem().getBlockManager().getDatanodeManager().getDatanode(dnId);
-          assertThat(dnDescriptor.getStorageInfos().length, is(numInitialStorages));
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
+      final DatanodeRegistration dnReg = dn0.getDNRegistrationForBP(bpid);
+      DataNodeTestUtils.triggerBlockReport(dn0);
 
-          final String bpid = cluster.getNamesystem().getBlockPoolId();
-          final DatanodeRegistration dnReg = dn0.getDNRegistrationForBP(bpid);
-          DataNodeTestUtils.triggerBlockReport(dn0);
+      if (createFiles) {
+        final Path path = new Path("/", testCaseName);
+        DFSTestUtil.createFile(
+            cluster.getFileSystem(), path, 1024, (short) 1, 0x1BAD5EED);
+        DataNodeTestUtils.triggerBlockReport(dn0);
+      }
 
-          if (createFiles) {
-            final Path path = new Path("/", testCaseName);
-            DFSTestUtil.createFile(
-                cluster.getFileSystem(), path, 1024, (short) 1, 0x1BAD5EED);
-            DataNodeTestUtils.triggerBlockReport(dn0);
-          }
+      // Generate a fake StorageReport that is missing one storage.
+      final StorageReport reports[] =
+          dn0.getFSDataset().getStorageReports(bpid);
+      final StorageReport prunedReports[] = new StorageReport[numInitialStorages - 1];
+      System.arraycopy(reports, 0, prunedReports, 0, prunedReports.length);
 
-          // Generate a fake StorageReport that is missing one storage.
-          final StorageReport reports[] =
-              dn0.getFSDataset().getStorageReports(bpid);
-          final StorageReport prunedReports[] = new StorageReport[numInitialStorages - 1];
-          System.arraycopy(reports, 0, prunedReports, 0, prunedReports.length);
+      // Stop the DataNode and send fake heartbeat with missing storage.
+      cluster.stopDataNode(0);
+      cluster.getNameNodeRpc().sendHeartbeat(dnReg, prunedReports, 0L, 0L, 0, 0,
+          0, null);
 
-          // Stop the DataNode and send fake heartbeat with missing storage.
-          cluster.stopDataNode(0);
-          cluster.getNameNodeRpc().sendHeartbeat(dnReg, prunedReports, 0L, 0L, 0, 0, 0);
-
-          // Check that the missing storage was pruned.
-          assertThat(dnDescriptor.getStorageInfos().length, is(expectedStoragesAfterTest));
-        } finally {
-          if (cluster != null) {
-            cluster.shutdown();
+      // Check that the missing storage was pruned.
+      assertThat(dnDescriptor.getStorageInfos().length, is(expectedStoragesAfterTest));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }

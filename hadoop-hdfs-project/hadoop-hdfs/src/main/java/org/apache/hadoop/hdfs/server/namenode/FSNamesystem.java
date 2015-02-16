@@ -263,6 +263,9 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
+import org.apache.hadoop.hdfs.StorageType;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RetriableException;
@@ -5112,8 +5115,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   HeartbeatResponse handleHeartbeat(DatanodeRegistration nodeReg,
       StorageReport[] reports, long cacheCapacity, long cacheUsed,
-      int xceiverCount, int xmitsInProgress, int failedVolumes)
-        throws IOException {
+      int xceiverCount, int xmitsInProgress, int failedVolumes,
+      VolumeFailureSummary volumeFailureSummary) throws IOException {
     readLock();
     try {
       //get datanode commands
@@ -5121,7 +5124,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           - xmitsInProgress;
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, reports, blockPoolId, cacheCapacity, cacheUsed,
-          xceiverCount, maxTransfer, failedVolumes);
+          xceiverCount, maxTransfer, failedVolumes, volumeFailureSummary);
       
       //create ha status
       final NNHAStatusHeartbeat haState = new NNHAStatusHeartbeat(
@@ -6782,6 +6785,32 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @Override // FSNamesystemMBean
+  public int getVolumeFailuresTotal() {
+    List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    int volumeFailuresTotal = 0;
+    for (DatanodeDescriptor node: live) {
+      volumeFailuresTotal += node.getVolumeFailures();
+    }
+    return volumeFailuresTotal;
+  }
+
+  @Override // FSNamesystemMBean
+  public long getEstimatedCapacityLostTotal() {
+    List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    getBlockManager().getDatanodeManager().fetchDatanodes(live, null, true);
+    long estimatedCapacityLostTotal = 0;
+    for (DatanodeDescriptor node: live) {
+      VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
+      if (volumeFailureSummary != null) {
+        estimatedCapacityLostTotal +=
+            volumeFailureSummary.getEstimatedCapacityLostTotal();
+      }
+    }
+    return estimatedCapacityLostTotal;
+  }
+
+  @Override // FSNamesystemMBean
   public int getNumDecommissioningDataNodes() {
     return getBlockManager().getDatanodeManager().getDecommissioningNodes()
         .size();
@@ -7753,7 +7782,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     blockManager.getDatanodeManager().fetchDatanodes(live, null, true);
     for (DatanodeDescriptor node : live) {
-      Map<String, Object> innerinfo = ImmutableMap.<String, Object>builder()
+      ImmutableMap.Builder<String, Object> innerinfo =
+          ImmutableMap.<String,Object>builder();
+      innerinfo
           .put("infoAddr", node.getInfoAddr())
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
@@ -7769,10 +7800,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           .put("blockScheduled", node.getBlocksScheduled())
           .put("blockPoolUsed", node.getBlockPoolUsed())
           .put("blockPoolUsedPercent", node.getBlockPoolUsedPercent())
-          .put("volfails", node.getVolumeFailures())
-          .build();
-
-      info.put(node.getHostName(), innerinfo);
+          .put("volfails", node.getVolumeFailures());
+      VolumeFailureSummary volumeFailureSummary = node.getVolumeFailureSummary();
+      if (volumeFailureSummary != null) {
+        innerinfo
+            .put("failedStorageLocations",
+                volumeFailureSummary.getFailedStorageLocations())
+            .put("lastVolumeFailureDate",
+                volumeFailureSummary.getLastVolumeFailureDate())
+            .put("estimatedCapacityLostTotal",
+                volumeFailureSummary.getEstimatedCapacityLostTotal());
+      }
+      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo.build());
     }
     return JSON.toString(info);
   }

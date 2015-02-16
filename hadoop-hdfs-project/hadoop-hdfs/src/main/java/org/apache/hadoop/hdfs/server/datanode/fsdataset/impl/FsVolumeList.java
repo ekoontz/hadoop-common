@@ -22,11 +22,14 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Lists;
@@ -42,21 +45,23 @@ import org.apache.hadoop.util.Time;
 class FsVolumeList {
   private final AtomicReference<FsVolumeImpl[]> volumes =
       new AtomicReference<>(new FsVolumeImpl[0]);
+  // Tracks volume failures, sorted by volume path.
+  private final Map<String, VolumeFailureInfo> volumeFailureInfos =
+      Collections.synchronizedMap(new TreeMap<String, VolumeFailureInfo>());
   private Object checkDirsMutex = new Object();
 
   private final VolumeChoosingPolicy<FsVolumeImpl> blockChooser;
   private final BlockScanner blockScanner;
-  private volatile int numFailedVolumes;
 
-  FsVolumeList(int failedVols, BlockScanner blockScanner,
+  FsVolumeList(List<VolumeFailureInfo> initialVolumeFailureInfos,
+      BlockScanner blockScanner,
       VolumeChoosingPolicy<FsVolumeImpl> blockChooser) {
     this.blockChooser = blockChooser;
     this.blockScanner = blockScanner;
-    this.numFailedVolumes = failedVols;
-  }
-  
-  int numberOfFailedVolumes() {
-    return numFailedVolumes;
+    for (VolumeFailureInfo volumeFailureInfo: initialVolumeFailureInfos) {
+      volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
+          volumeFailureInfo);
+    }
   }
 
   /**
@@ -239,6 +244,7 @@ class FsVolumeList {
           }
           failedVols.add(new File(fsv.getBasePath()).getAbsoluteFile());
           removeVolume(fsv);
+          addVolumeFailureInfo(fsv);
         } catch (ClosedChannelException e) {
           FsDatasetImpl.LOG.debug("Caught exception when obtaining " +
             "reference count on closed volume", e);
@@ -348,6 +354,26 @@ class FsVolumeList {
         removeVolume(fsVolume);
       }
     }
+    removeVolumeFailureInfo(volume);
+  }
+
+  VolumeFailureInfo[] getVolumeFailureInfos() {
+    Collection<VolumeFailureInfo> infos = volumeFailureInfos.values();
+    return infos.toArray(new VolumeFailureInfo[infos.size()]);
+  }
+
+  void addVolumeFailureInfo(VolumeFailureInfo volumeFailureInfo) {
+    volumeFailureInfos.put(volumeFailureInfo.getFailedStorageLocation(),
+        volumeFailureInfo);
+  }
+
+  private void addVolumeFailureInfo(FsVolumeImpl vol) {
+    addVolumeFailureInfo(new VolumeFailureInfo(vol.getBasePath(), Time.now(),
+        vol.getCapacity()));
+  }
+
+  private void removeVolumeFailureInfo(File vol) {
+    volumeFailureInfos.remove(vol.getAbsolutePath());
   }
 
   void addBlockPool(final String bpid, final Configuration conf) throws IOException {
