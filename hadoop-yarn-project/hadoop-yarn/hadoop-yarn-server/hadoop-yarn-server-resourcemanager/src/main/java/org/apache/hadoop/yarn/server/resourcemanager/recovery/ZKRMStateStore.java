@@ -50,14 +50,13 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.Appl
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
+import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AMRMTokenSecretManagerStatePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -488,10 +487,6 @@ public class ZKRMStateStore extends RMStateStore {
           DelegationKey key = new DelegationKey();
           key.readFields(fsIn);
           rmState.rmSecretManagerState.masterKeyState.add(key);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loaded delegation key: keyId=" + key.getKeyId()
-                + ", expirationDate=" + key.getExpiryDate());
-          }
         }
       } finally {
         is.close();
@@ -531,18 +526,12 @@ public class ZKRMStateStore extends RMStateStore {
 
       try {
         if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
-          RMDelegationTokenIdentifierData identifierData =
-              new RMDelegationTokenIdentifierData();
-          identifierData.readFields(fsIn);
           RMDelegationTokenIdentifier identifier =
-              identifierData.getTokenIdentifier();
-          long renewDate = identifierData.getRenewDate();
+              new RMDelegationTokenIdentifier();
+          identifier.readFields(fsIn);
+          long renewDate = identifier.getRenewDate();
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
               renewDate);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
-                + " renewDate=" + renewDate);
-          }
         }
       } finally {
         is.close();
@@ -780,20 +769,23 @@ public class ZKRMStateStore extends RMStateStore {
     String nodeCreatePath =
         getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
+    ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
+    DataOutputStream tokenOut = new DataOutputStream(tokenOs);
     ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
     DataOutputStream seqOut = new DataOutputStream(seqOs);
-    RMDelegationTokenIdentifierData identifierData =
-        new RMDelegationTokenIdentifierData(rmDTIdentifier, renewDate);
+
     try {
+      rmDTIdentifier.setRenewDate(renewDate);
+      rmDTIdentifier.write(tokenOut);
       if (LOG.isDebugEnabled()) {
         LOG.debug((isUpdate ? "Storing " : "Updating ") + "RMDelegationToken_" +
             rmDTIdentifier.getSequenceNumber());
       }
 
       if (isUpdate) {
-        opList.add(Op.setData(nodeCreatePath, identifierData.toByteArray(), -1));
+        opList.add(Op.setData(nodeCreatePath, tokenOs.toByteArray(), -1));
       } else {
-        opList.add(Op.create(nodeCreatePath, identifierData.toByteArray(), zkAcl,
+        opList.add(Op.create(nodeCreatePath, tokenOs.toByteArray(), zkAcl,
             CreateMode.PERSISTENT));
       }
 
@@ -806,6 +798,7 @@ public class ZKRMStateStore extends RMStateStore {
 
      opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
     } finally {
+      tokenOs.close();
       seqOs.close();
     }
   }

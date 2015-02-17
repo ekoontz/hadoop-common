@@ -20,73 +20,155 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.yarn.proto.YarnSecurityTestClientAMTokenProtos.RMDelegationTokenIdentifierForTestProto;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.proto.YarnSecurityTestClientAMTokenProtos.RMDelegationTokenIdentifierForTestProto;
 
 public class RMDelegationTokenIdentifierForTest extends
     RMDelegationTokenIdentifier {
 
-  private RMDelegationTokenIdentifierForTestProto.Builder builder =
-      RMDelegationTokenIdentifierForTestProto.newBuilder();
+  private RMDelegationTokenIdentifierForTestProto proto;
+  private RMDelegationTokenIdentifierForTestProto.Builder builder;
   
   public RMDelegationTokenIdentifierForTest() {
   }
   
-  public RMDelegationTokenIdentifierForTest(RMDelegationTokenIdentifier token,
-      String message) {
+  public RMDelegationTokenIdentifierForTest(
+      RMDelegationTokenIdentifier token, String message) {
+    builder = RMDelegationTokenIdentifierForTestProto.newBuilder();
     if (token.getOwner() != null) {
-      setOwner(new Text(token.getOwner()));
+      builder.setOwner(token.getOwner().toString());
     }
     if (token.getRenewer() != null) {
-      setRenewer(new Text(token.getRenewer()));
+      builder.setRenewer(token.getRenewer().toString());
     }
     if (token.getRealUser() != null) {
-      setRealUser(new Text(token.getRealUser()));
+      builder.setRealUser(token.getRealUser().toString());
     }
-    setIssueDate(token.getIssueDate());
-    setMaxDate(token.getMaxDate());
-    setSequenceNumber(token.getSequenceNumber());
-    setMasterKeyId(token.getMasterKeyId());
+    builder.setIssueDate(token.getIssueDate());
+    builder.setMaxDate(token.getMaxDate());
+    builder.setSequenceNumber(token.getSequenceNumber());
+    builder.setMasterKeyId(token.getMasterKeyId());
     builder.setMessage(message);
+    proto = builder.build();
+    builder = null;
   }
   
   @Override
   public void write(DataOutput out) throws IOException {
-    builder.setOwner(getOwner().toString());
-    builder.setRenewer(getRenewer().toString());
-    builder.setRealUser(getRealUser().toString());
-    builder.setIssueDate(getIssueDate());
-    builder.setMaxDate(getMaxDate());
-    builder.setSequenceNumber(getSequenceNumber());
-    builder.setMasterKeyId(getMasterKeyId());
-    builder.setMessage(getMessage());
-    builder.build().writeTo((DataOutputStream) out);
+    out.write(proto.toByteArray());
   }
   
   @Override
   public void readFields(DataInput in) throws IOException {
-    builder.mergeFrom((DataInputStream) in);
-    if (builder.getOwner() != null) {
-      setOwner(new Text(builder.getOwner()));
+    DataInputStream dis = (DataInputStream)in;
+    byte[] buffer = IOUtils.toByteArray(dis);
+    proto = RMDelegationTokenIdentifierForTestProto.parseFrom(buffer);
+  }
+  
+  /**
+   * Get the username encoded in the token identifier
+   * 
+   * @return the username or owner
+   */
+  @Override
+  public UserGroupInformation getUser() {
+    String owner = getOwner().toString();
+    String realUser = getRealUser().toString();
+    if ( (owner == null) || (owner.toString().isEmpty())) {
+      return null;
     }
-    if (builder.getRenewer() != null) {
-      setRenewer(new Text(builder.getRenewer()));
+    final UserGroupInformation realUgi;
+    final UserGroupInformation ugi;
+    if ((realUser == null) || (realUser.toString().isEmpty())
+        || realUser.equals(owner)) {
+      ugi = realUgi = UserGroupInformation.createRemoteUser(owner.toString());
+    } else {
+      realUgi = UserGroupInformation.createRemoteUser(realUser.toString());
+      ugi = UserGroupInformation.createProxyUser(owner.toString(), realUgi);
     }
-    if (builder.getRealUser() != null) {
-      setRealUser(new Text(builder.getRealUser()));
+    realUgi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
+    return ugi;
+  }
+
+  public Text getOwner() {
+    String owner = proto.getOwner();
+    if (owner == null) {
+      return null;
+    } else {
+      return new Text(owner);
     }
-    setIssueDate(builder.getIssueDate());
-    setMaxDate(builder.getMaxDate());
-    setSequenceNumber(builder.getSequenceNumber());
-    setMasterKeyId(builder.getMasterKeyId());
+  }
+
+  public Text getRenewer() {
+    String renewer = proto.getRenewer();
+    if (renewer == null) {
+      return null;
+    } else {
+      return new Text(renewer);
+    }
+  }
+  
+  public Text getRealUser() {
+    String realUser = proto.getRealUser();
+    if (realUser == null) {
+      return null;
+    } else {
+      return new Text(realUser);
+    }
+  }
+  
+  public void setIssueDate(long issueDate) {
+    RMDelegationTokenIdentifierForTestProto.Builder builder = 
+        RMDelegationTokenIdentifierForTestProto.newBuilder(proto);
+    builder.setIssueDate(issueDate);
+    proto = builder.build();
+  }
+  
+  public long getIssueDate() {
+    return proto.getIssueDate();
+  }
+  
+  public void setMaxDate(long maxDate) {
+    RMDelegationTokenIdentifierForTestProto.Builder builder = 
+        RMDelegationTokenIdentifierForTestProto.newBuilder(proto);
+    builder.setMaxDate(maxDate);
+    proto = builder.build();
+  }
+  
+  public long getMaxDate() {
+    return proto.getMaxDate();
+  }
+
+  public void setSequenceNumber(int seqNum) {
+    RMDelegationTokenIdentifierForTestProto.Builder builder = 
+        RMDelegationTokenIdentifierForTestProto.newBuilder(proto);
+    builder.setSequenceNumber(seqNum);
+    proto = builder.build();
+  }
+  
+  public int getSequenceNumber() {
+    return proto.getSequenceNumber();
+  }
+
+  public void setMasterKeyId(int newId) {
+    RMDelegationTokenIdentifierForTestProto.Builder builder = 
+        RMDelegationTokenIdentifierForTestProto.newBuilder(proto);
+    builder.setMasterKeyId(newId);
+    proto = builder.build();
+  }
+
+  public int getMasterKeyId() {
+    return proto.getMasterKeyId();
   }
   
   public String getMessage() {
-    return builder.getMessage();
+    return proto.getMessage();
   }
   
   @Override
@@ -107,4 +189,10 @@ public class RMDelegationTokenIdentifierForTest extends
     }
     return false;
   }
+
+  @Override
+  public int hashCode() {
+    return this.getSequenceNumber();
+  }
+
 }

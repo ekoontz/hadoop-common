@@ -261,6 +261,7 @@ public class TestYARNTokenIdentifier {
     long maxDate = 2;
     int sequenceNumber = 3;
     int masterKeyId = 4;
+    long renewDate = 5;
     
     TimelineDelegationTokenIdentifier token = 
         new TimelineDelegationTokenIdentifier(owner, renewer, realUser);
@@ -268,6 +269,7 @@ public class TestYARNTokenIdentifier {
     token.setMaxDate(maxDate);
     token.setSequenceNumber(sequenceNumber);
     token.setMasterKeyId(masterKeyId);
+    token.setRenewDate(renewDate);
     
     TimelineDelegationTokenIdentifier anotherToken = 
         new TimelineDelegationTokenIdentifier();
@@ -301,6 +303,9 @@ public class TestYARNTokenIdentifier {
     
     Assert.assertEquals("masterKeyId from proto is not the same with original token",
         anotherToken.getMasterKeyId(), masterKeyId);
+    
+    Assert.assertEquals("renewDate from proto is not the same with original token",
+            anotherToken.getRenewDate(), renewDate);
   }
 
   @Test

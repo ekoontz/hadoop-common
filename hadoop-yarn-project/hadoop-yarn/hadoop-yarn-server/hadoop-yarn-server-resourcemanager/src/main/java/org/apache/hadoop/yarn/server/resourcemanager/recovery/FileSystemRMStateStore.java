@@ -47,9 +47,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.VersionProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.AMRMTokenSecretManagerStateProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
@@ -57,7 +57,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.AMRMTokenS
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.Epoch;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMDelegationTokenIdentifierData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.AMRMTokenSecretManagerStatePBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -370,24 +369,12 @@ public class FileSystemRMStateStore extends RMStateStore {
         DelegationKey key = new DelegationKey();
         key.readFields(fsIn);
         rmState.rmSecretManagerState.masterKeyState.add(key);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loaded delegation key: keyId=" + key.getKeyId()
-              + ", expirationDate=" + key.getExpiryDate());
-        }
       } else if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
-        RMDelegationTokenIdentifierData identifierData =
-            new RMDelegationTokenIdentifierData();
-        identifierData.readFields(fsIn);
-        RMDelegationTokenIdentifier identifier =
-            identifierData.getTokenIdentifier();
-        long renewDate = identifierData.getRenewDate();
-
+        RMDelegationTokenIdentifier identifier = new RMDelegationTokenIdentifier();
+        identifier.readFields(fsIn);
+        long renewDate = identifier.getRenewDate();
         rmState.rmSecretManagerState.delegationTokenState.put(identifier,
           renewDate);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Loaded RMDelegationTokenIdentifier: " + identifier
-              + " renewDate=" + renewDate);
-        }
       } else {
         LOG.warn("Unknown file for recovering RMDelegationTokenSecretManager");
       }
@@ -516,15 +503,18 @@ public class FileSystemRMStateStore extends RMStateStore {
     Path nodeCreatePath =
         getNodePath(rmDTSecretManagerRoot,
           DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
-    RMDelegationTokenIdentifierData identifierData =
-        new RMDelegationTokenIdentifierData(identifier, renewDate);
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    DataOutputStream fsOut = new DataOutputStream(os);
+    identifier.setRenewDate(renewDate);
+    identifier.write(fsOut);
     if (isUpdate) {
       LOG.info("Updating RMDelegationToken_" + identifier.getSequenceNumber());
-      updateFile(nodeCreatePath, identifierData.toByteArray());
+      updateFile(nodeCreatePath, os.toByteArray());
     } else {
       LOG.info("Storing RMDelegationToken_" + identifier.getSequenceNumber());
-      writeFile(nodeCreatePath, identifierData.toByteArray());
+      writeFile(nodeCreatePath, os.toByteArray());
     }
+    fsOut.close();
 
     // store sequence number
     Path latestSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
