@@ -51,19 +51,3 @@ message ContainerTokenIdentifierProto {
   optional LogAggregationContextProto logAggregationContext = 10;
 }
 
-message ClientToAMTokenIdentifierProto {
-  optional ApplicationAttemptIdProto appAttemptId = 1;
-  optional string clientName = 2;
-}
-
-message YARNDelegationTokenIdentifierProto {
-  optional string owner = 1;
-  optional string renewer = 2;
-  optional string realUser = 3;
-  optional int64 issueDate = 4;
-  optional int64 maxDate = 5;
-  optional int32 sequenceNumber = 6;
-  optional int32 masterKeyId = 7 [default = -1];
-  optional int64 renewDate = 8;
-}
-

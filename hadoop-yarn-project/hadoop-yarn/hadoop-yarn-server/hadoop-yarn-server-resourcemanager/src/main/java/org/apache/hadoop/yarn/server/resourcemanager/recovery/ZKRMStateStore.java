@@ -529,7 +529,7 @@ public class ZKRMStateStore extends RMStateStore {
           RMDelegationTokenIdentifier identifier =
               new RMDelegationTokenIdentifier();
           identifier.readFields(fsIn);
-          long renewDate = identifier.getRenewDate();
+          long renewDate = fsIn.readLong();
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
               renewDate);
         }
@@ -775,8 +775,8 @@ public class ZKRMStateStore extends RMStateStore {
     DataOutputStream seqOut = new DataOutputStream(seqOs);
 
     try {
-      rmDTIdentifier.setRenewDate(renewDate);
       rmDTIdentifier.write(tokenOut);
+      tokenOut.writeLong(renewDate);
       if (LOG.isDebugEnabled()) {
         LOG.debug((isUpdate ? "Storing " : "Updating ") + "RMDelegationToken_" +
             rmDTIdentifier.getSequenceNumber());

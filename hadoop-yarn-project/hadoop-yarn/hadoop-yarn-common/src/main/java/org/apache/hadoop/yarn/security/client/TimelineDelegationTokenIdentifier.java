@@ -27,12 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 @Public
 @Unstable
-public class TimelineDelegationTokenIdentifier extends YARNDelegationTokenIdentifier {
+public class TimelineDelegationTokenIdentifier extends AbstractDelegationTokenIdentifier {
 
   public static final Text KIND_NAME = new Text("TIMELINE_DELEGATION_TOKEN");
 

@@ -292,9 +292,6 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
 
     // Now for an authenticated user
     verifyValidToken(conf, am, token);
-    
-    // Verify for a new version token
-    verifyNewVersionToken(conf, am, token, rm);
 
     am.stop();
     rm.stop();
@@ -369,33 +366,6 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
     }
   }
 
-  private void verifyNewVersionToken(final Configuration conf, final CustomAM am,
-      Token<ClientToAMTokenIdentifier> token, MockRM rm) throws IOException,
-      InterruptedException {
-    UserGroupInformation ugi;
-    ugi = UserGroupInformation.createRemoteUser("me");
-    
-    Token<ClientToAMTokenIdentifier> newToken = 
-        new Token<ClientToAMTokenIdentifier>(
-            new ClientToAMTokenIdentifierForTest(token.decodeIdentifier(), "message"),
-            am.getClientToAMTokenSecretManager());
-    newToken.setService(token.getService());
-    
-    ugi.addToken(newToken);
-
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        CustomProtocol client =
-            (CustomProtocol) RPC.getProxy(CustomProtocol.class, 1L, am.address,
-              conf);
-        client.ping();
-        Assert.assertTrue(am.pinged);
-        return null;
-      }
-    });
-  }
-  
   private void verifyValidToken(final Configuration conf, final CustomAM am,
       Token<ClientToAMTokenIdentifier> token) throws IOException,
       InterruptedException {

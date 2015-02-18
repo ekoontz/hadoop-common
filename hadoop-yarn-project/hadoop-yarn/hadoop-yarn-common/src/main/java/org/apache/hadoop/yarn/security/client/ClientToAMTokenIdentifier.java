@@ -19,21 +19,18 @@
 package org.apache.hadoop.yarn.security.client;
 
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
-import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto;
-
-import com.google.protobuf.TextFormat;
-
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 @Public
 @Evolving
@@ -41,7 +38,8 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
-  private ClientToAMTokenIdentifierProto proto;
+  private ApplicationAttemptId applicationAttemptId;
+  private Text clientName = new Text();
 
   // TODO: Add more information in the tokenID such that it is not
   // transferrable, more secure etc.
@@ -50,40 +48,34 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
   }
 
   public ClientToAMTokenIdentifier(ApplicationAttemptId id, String client) {
-    ClientToAMTokenIdentifierProto.Builder builder = 
-        ClientToAMTokenIdentifierProto.newBuilder();
-    if (id != null) {
-      builder.setAppAttemptId(((ApplicationAttemptIdPBImpl)id).getProto());
-    }
-    if (client != null) {
-      builder.setClientName(client);
-    }
-    proto = builder.build();
+    this();
+    this.applicationAttemptId = id;
+    this.clientName = new Text(client);
   }
 
   public ApplicationAttemptId getApplicationAttemptID() {
-    if (!proto.hasAppAttemptId()) {
-      return null;
-    }
-    return new ApplicationAttemptIdPBImpl(proto.getAppAttemptId());
+    return this.applicationAttemptId;
   }
 
   public String getClientName() {
-    return proto.getClientName();
+    return this.clientName.toString();
   }
 
-  public ClientToAMTokenIdentifierProto getProto() {
-    return proto;
-  }
-  
   @Override
   public void write(DataOutput out) throws IOException {
-    out.write(proto.toByteArray());
+    out.writeLong(this.applicationAttemptId.getApplicationId()
+      .getClusterTimestamp());
+    out.writeInt(this.applicationAttemptId.getApplicationId().getId());
+    out.writeInt(this.applicationAttemptId.getAttemptId());
+    this.clientName.write(out);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    proto = ClientToAMTokenIdentifierProto.parseFrom((DataInputStream)in);
+    this.applicationAttemptId =
+        ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
+    this.clientName.readFields(in);
   }
 
   @Override
@@ -93,30 +85,17 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    String clientName = getClientName();
-    if (clientName == null) {
+    if (this.clientName == null) {
       return null;
     }
-    return UserGroupInformation.createRemoteUser(clientName);
-  }
-  
-  @Override
-  public int hashCode() {
-    return getProto().hashCode();
+    return UserGroupInformation.createRemoteUser(this.clientName.toString());
   }
 
-  @Override
-  public boolean equals(Object other) {
-    if (other == null)
-      return false;
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      return this.getProto().equals(this.getClass().cast(other).getProto());
+  @InterfaceAudience.Private
+  public static class Renewer extends Token.TrivialRenewer {
+    @Override
+    protected Text getKind() {
+      return KIND_NAME;
     }
-    return false;
-  }
-
-  @Override
-  public String toString() {
-    return TextFormat.shortDebugString(getProto());
   }
 }
