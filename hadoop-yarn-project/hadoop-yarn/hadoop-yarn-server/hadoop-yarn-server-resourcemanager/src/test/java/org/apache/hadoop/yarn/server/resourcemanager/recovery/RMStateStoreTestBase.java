@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import org.apache.hadoop.yarn.event.Event;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -78,8 +79,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
   public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
 
-  static class TestDispatcher implements
-      Dispatcher, EventHandler<RMAppAttemptEvent> {
+  static class TestDispatcher implements Dispatcher, EventHandler<Event> {
 
     ApplicationAttemptId attemptId;
 
@@ -92,8 +92,11 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     }
 
     @Override
-    public void handle(RMAppAttemptEvent event) {
-      assertEquals(attemptId, event.getApplicationAttemptId());
+    public void handle(Event event) {
+      if (event instanceof RMAppAttemptEvent) {
+        RMAppAttemptEvent rmAppAttemptEvent = (RMAppAttemptEvent) event;
+        assertEquals(attemptId, rmAppAttemptEvent.getApplicationAttemptId());
+      }
       notified = true;
       synchronized (this) {
         notifyAll();
@@ -133,7 +136,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     dispatcher.notified = false;
   }
 
-  RMApp storeApp(RMStateStore store, ApplicationId appId, long submitTime,
+  protected RMApp storeApp(RMStateStore store, ApplicationId appId,
+      long submitTime,
       long startTime) throws Exception {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
@@ -149,7 +153,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     return mockApp;
   }
 
-  ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
+  protected ContainerId storeAttempt(RMStateStore store,
+      ApplicationAttemptId attemptId,
       String containerIdStr, Token<AMRMTokenIdentifier> appToken,
       SecretKey clientTokenMasterKey, TestDispatcher dispatcher)
       throws Exception {
@@ -469,7 +474,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
 
   }
 
-  private Token<AMRMTokenIdentifier> generateAMRMToken(
+  protected Token<AMRMTokenIdentifier> generateAMRMToken(
       ApplicationAttemptId attemptId,
       AMRMTokenSecretManager appTokenMgr) {
     Token<AMRMTokenIdentifier> appToken =
