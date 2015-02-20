@@ -143,29 +143,14 @@ public class WebAppUtils {
   public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf,
       Policy httpPolicy) {
     InetSocketAddress address = null;
-    String rmId = null;
-    if (HAUtil.isHAEnabled(conf)) {
-      // If HA enabled, pick one of the RM-IDs and rely on redirect to go to
-      // the Active RM
-      rmId = (String) HAUtil.getRMHAIds(conf).toArray()[0];
-    }
-
     if (httpPolicy == Policy.HTTPS_ONLY) {
       address =
-          conf.getSocketAddr(
-              rmId == null
-                  ? YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS
-                  : HAUtil.addSuffix(
-                  YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, rmId),
+          conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT);
     } else {
       address =
-          conf.getSocketAddr(
-              rmId == null
-                  ? YarnConfiguration.RM_WEBAPP_ADDRESS
-                  : HAUtil.addSuffix(
-                  YarnConfiguration.RM_WEBAPP_ADDRESS, rmId),
+          conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);      
     }
