@@ -1845,8 +1845,7 @@ public class JobConf extends Configuration {
   public long getMemoryForMapTask() {
     long value = getDeprecatedMemoryValue();
     if (value < 0) {
-      return getLong(JobConf.MAPRED_JOB_MAP_MEMORY_MB_PROPERTY,
-          JobContext.DEFAULT_MAP_MEMORY_MB);
+      return getMemoryRequired(TaskType.MAP);
     }
     return value;
   }
@@ -1872,8 +1871,7 @@ public class JobConf extends Configuration {
   public long getMemoryForReduceTask() {
     long value = getDeprecatedMemoryValue();
     if (value < 0) {
-      return getLong(JobConf.MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY,
-          JobContext.DEFAULT_REDUCE_MEMORY_MB);
+      return getMemoryRequired(TaskType.REDUCE);
     }
     return value;
   }
