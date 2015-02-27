@@ -294,10 +294,11 @@ public class TestDirectoryScanner {
         .build();
     try {
       cluster.waitActive();
+      DataNode dataNode = cluster.getDataNodes().get(0);
       bpid = cluster.getNamesystem().getBlockPoolId();
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
-      scanner = new DirectoryScanner(fds, CONF);
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
       scanner.setRetainDiffs(true);
       FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
@@ -335,9 +336,10 @@ public class TestDirectoryScanner {
     try {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
+      DataNode dataNode = cluster.getDataNodes().get(0);
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       client = cluster.getFileSystem().getClient();
-      scanner = new DirectoryScanner(fds, CONF);
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
       scanner.setRetainDiffs(true);
       FsDatasetTestUtil.stopLazyWriter(cluster.getDataNodes().get(0));
 
@@ -384,7 +386,8 @@ public class TestDirectoryScanner {
       client = cluster.getFileSystem().getClient();
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
-      scanner = new DirectoryScanner(fds, CONF);
+      DataNode dataNode = cluster.getDataNodes().get(0);
+      scanner = new DirectoryScanner(dataNode, fds, CONF);
       scanner.setRetainDiffs(true);
 
       // Add files with 100 blocks
