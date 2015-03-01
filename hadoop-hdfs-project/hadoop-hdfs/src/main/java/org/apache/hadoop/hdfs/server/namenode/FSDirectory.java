@@ -565,6 +565,10 @@ public class FSDirectory implements Closeable {
             + "failed to rename " + src + " to " + dst
             + " because the source can not be removed");
         return false;
+      } else {
+        INode srcChild = srcIIP.getLastINode();
+        // update the quota count if necessary
+        updateCountForDelete(srcChild, srcIIP);
       }
 
       added = tx.addSourceToDestination();
@@ -689,6 +693,10 @@ public class FSDirectory implements Closeable {
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new IOException(error);
+    } else {
+      INode srcChild = srcIIP.getLastINode();
+      // update the quota count if necessary
+      updateCountForDelete(srcChild, srcIIP);
     }
     
     boolean undoRemoveDst = false;
@@ -698,6 +706,8 @@ public class FSDirectory implements Closeable {
       if (dstInode != null) { // dst exists remove it
         if ((removedNum = removeLastINode(dstIIP)) != -1) {
           removedDst = dstIIP.getLastINode();
+          // update the quota count if necessary
+          updateCountForDelete(removedDst, dstIIP);
           undoRemoveDst = true;
         }
       }
@@ -1346,20 +1356,25 @@ public class FSDirectory implements Closeable {
     // set the parent's modification time
     final INodeDirectory parent = targetNode.getParent();
     parent.updateModificationTime(mtime, latestSnapshot);
+
+    updateCountForDelete(targetNode, iip);
     if (removed == 0) {
       return 0;
     }
     
-    // collect block
+    // collect block and update quota
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
       targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     } else {
       Quota.Counts counts = targetNode.cleanSubtree(Snapshot.CURRENT_STATE_ID,
           latestSnapshot, collectedBlocks, removedINodes, true);
-      parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE), true);
       removed = counts.get(Quota.NAMESPACE);
+      // TODO: quota verification may fail the deletion here. We should not
+      // count the snapshot diff into quota usage in the future.
+      updateCount(iip, -counts.get(Quota.NAMESPACE),
+          -counts.get(Quota.DISKSPACE), true);
     }
+
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
           + targetNode.getFullPathName() + " is removed");
@@ -1701,7 +1716,22 @@ public class FSDirectory implements Closeable {
       writeUnlock();
     }
   }
-  
+
+  /**
+   * Update the quota usage after deletion. The quota update is only necessary
+   * when image/edits have been loaded and the file/dir to be deleted is not
+   * contained in snapshots.
+   */
+  void updateCountForDelete(final INode inode, final INodesInPath iip)
+      throws QuotaExceededException {
+    if (getFSNamesystem().isImageLoaded() &&
+        !inode.isInLatestSnapshot(iip.getLatestSnapshotId())) {
+      Quota.Counts counts = inode.computeQuotaUsage();
+      updateCount(iip, -counts.get(Quota.NAMESPACE),
+          -counts.get(Quota.DISKSPACE), false);
+    }
+  }
+ 
   private void updateCount(INodesInPath iip, long nsDelta, long dsDelta,
       boolean checkQuota) throws QuotaExceededException {
     updateCount(iip, iip.getINodes().length - 1, nsDelta, dsDelta, checkQuota);
@@ -2111,11 +2141,13 @@ public class FSDirectory implements Closeable {
   
   /**
    * Remove the last inode in the path from the namespace.
+   * Note: the caller needs to update the ancestors' quota count.
+   *
    * Count of each ancestor with quota is also updated.
    * @return -1 for failing to remove;
    *          0 for removing a reference whose referred inode has other 
    *            reference nodes;
-   *         >0 otherwise. 
+   *          1 otherwise. 
    */
   private long removeLastINode(final INodesInPath iip)
       throws QuotaExceededException {
@@ -2125,19 +2157,9 @@ public class FSDirectory implements Closeable {
     if (!parent.removeChild(last, latestSnapshot)) {
       return -1;
     }
-    
-    if (!last.isInLatestSnapshot(latestSnapshot)) {
-      final Quota.Counts counts = last.computeQuotaUsage();
-      updateCountNoQuotaCheck(iip, iip.getINodes().length - 1,
-          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
 
-      if (INodeReference.tryRemoveReference(last) > 0) {
-        return 0;
-      } else {
-        return counts.get(Quota.NAMESPACE);
-      }
-    }
-    return 1;
+    return (!last.isInLatestSnapshot(latestSnapshot)
+        && INodeReference.tryRemoveReference(last) > 0) ? 0 : 1;
   }
 
   static String normalizePath(String src) {
