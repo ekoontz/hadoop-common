@@ -36,7 +36,6 @@ import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.util.LineReader;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 
@@ -50,7 +49,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
   private long start;
   private long pos;
   private long end;
-  private LineReader in;
+  private SplitLineReader in;
   private int maxLineLength;
   private LongWritable key = null;
   private Text value = null;
@@ -89,18 +88,19 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
           ((SplittableCompressionCodec)codec).createInputStream(
             fileIn, decompressor, start, end,
             SplittableCompressionCodec.READ_MODE.BYBLOCK);
-        in = new LineReader(cIn, job, recordDelimiterBytes);
+        in = new CompressedSplitLineReader(cIn, job,
+            this.recordDelimiterBytes);
         start = cIn.getAdjustedStart();
         end = cIn.getAdjustedEnd();
         filePosition = cIn;
       } else {
-        in = new LineReader(codec.createInputStream(fileIn, decompressor), job,
-            recordDelimiterBytes);
+        in = new SplitLineReader(codec.createInputStream(fileIn,
+            decompressor), job, this.recordDelimiterBytes);
         filePosition = fileIn;
       }
     } else {
       fileIn.seek(start);
-      in = new LineReader(fileIn, job, recordDelimiterBytes);
+      in = new SplitLineReader(fileIn, job, this.recordDelimiterBytes);
       filePosition = fileIn;
     }
     // If this is not the first split, we always throw away first record
@@ -176,7 +176,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     int newSize = 0;
     // We always read one extra line, which lies outside the upper
     // split limit i.e. (end - 1)
-    while (getFilePosition() <= end) {
+    while (getFilePosition() <= end || in.needAdditionalRecordAfterSplit()) {
       if (pos == 0) {
         newSize = skipUtfByteOrderMark();
       } else {

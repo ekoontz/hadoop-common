@@ -783,6 +783,8 @@
     <mkdir dir="${test.debug.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/testscript.txt" todir="${test.debug.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/testBOM.txt" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/blockEndingInCR.txt.bz2" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/org/apache/hadoop/mapred/blockEndingInCRThenLF.txt.bz2" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.txt" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.jar" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/org/apache/hadoop/mapred/test.zip" todir="${test.cache.data}"/>

@@ -51,6 +51,93 @@ public class TestLineRecordReader extends TestCase {
   private static Path inputDir = new Path(workDir, "input");
   private static Path outputDir = new Path(workDir, "output");
 
+  private void testSplitRecords(String testFileName, long firstSplitLength)
+      throws IOException {
+    Path localCachePath = new Path(System.getProperty("test.cache.data"));
+    Path txtPath = new Path(localCachePath, new Path(testFileName));
+    File testFile = new File(txtPath.toString());
+    long testFileSize = testFile.length();
+    Path testFilePath = new Path(testFile.getAbsolutePath());
+    Configuration conf = new Configuration();
+    conf.setInt("mapred.linerecordreader.maxlength", Integer.MAX_VALUE);
+    assertTrue("unexpected test data at " + testFile,
+        testFileSize > firstSplitLength);
+
+    TaskAttemptContext context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
+
+    // read the data without splitting to count the records
+    FileSplit split = new FileSplit(testFilePath, 0, testFileSize,
+        (String[])null);
+    LineRecordReader reader = new LineRecordReader();
+    reader.initialize(split, context);
+    int numRecordsNoSplits = 0;
+    while (reader.nextKeyValue()) {
+      ++numRecordsNoSplits;
+    }
+    reader.close();
+
+    // count the records in the first split
+    split = new FileSplit(testFilePath, 0, firstSplitLength, (String[])null);
+    reader = new LineRecordReader();
+    reader.initialize(split, context);
+    int numRecordsFirstSplit = 0;
+    while (reader.nextKeyValue()) {
+      ++numRecordsFirstSplit;
+    }
+    reader.close();
+
+    // count the records in the second split
+    split = new FileSplit(testFilePath, firstSplitLength,
+        testFileSize - firstSplitLength, (String[])null);
+    reader = new LineRecordReader();
+    reader.initialize(split, context);
+    int numRecordsRemainingSplits = 0;
+    while (reader.nextKeyValue()) {
+      ++numRecordsRemainingSplits;
+    }
+    reader.close();
+
+    assertEquals("Unexpected number of records in bzip2 compressed split",
+        numRecordsNoSplits, numRecordsFirstSplit + numRecordsRemainingSplits);
+  }
+
+  @Test
+  public void testBzip2SplitEndsAtCR() throws IOException {
+    // the test data contains a carriage-return at the end of the first
+    // split which ends at compressed offset 136498 and the next
+    // character is not a linefeed
+    testSplitRecords("blockEndingInCR.txt.bz2", 136498);
+  }
+
+  @Test
+  public void testBzip2SplitEndsAtCRThenLF() throws IOException {
+    // the test data contains a carriage-return at the end of the first
+    // split which ends at compressed offset 136498 and the next
+    // character is a linefeed
+    testSplitRecords("blockEndingInCRThenLF.txt.bz2", 136498);
+  }
+
+  //This test ensures record reader doesn't lose records when it starts
+  //exactly at the starting byte of a bz2 compressed block
+  @Test
+  public void testBzip2SplitStartAtBlockMarker() throws IOException {
+    //136504 in blockEndingInCR.txt.bz2 is the byte at which the bz2 block ends
+    //In the following test cases record readers should iterate over all the records
+    //and should not miss any record.
+
+    //Start next split at just the start of the block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136504);
+
+    //Start next split a byte forward in next block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136505);
+
+    //Start next split 3 bytes forward in next block.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136508);
+
+    //Start next split 10 bytes from behind the end marker.
+    testSplitRecords("blockEndingInCR.txt.bz2", 136494);
+  }
+
   /**
    * Writes the input test file
    *

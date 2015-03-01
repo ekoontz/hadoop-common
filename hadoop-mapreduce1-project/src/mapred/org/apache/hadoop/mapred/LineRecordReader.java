@@ -34,6 +34,8 @@ import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.SplitCompressionInputStream;
 import org.apache.hadoop.io.compress.SplittableCompressionCodec;
+import org.apache.hadoop.mapreduce.lib.input.CompressedSplitLineReader;
+import org.apache.hadoop.mapreduce.lib.input.SplitLineReader;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 
@@ -48,7 +50,7 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
   private long start;
   private long pos;
   private long end;
-  private LineReader in;
+  private SplitLineReader in;
   int maxLineLength;
   private Seekable filePosition;
   private CompressionCodec codec;
@@ -107,18 +109,18 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
           ((SplittableCompressionCodec)codec).createInputStream(
             fileIn, decompressor, start, end,
             SplittableCompressionCodec.READ_MODE.BYBLOCK);
-        in = new LineReader(cIn, job, recordDelimiter);
+        in = new CompressedSplitLineReader(cIn, job, recordDelimiter);
         start = cIn.getAdjustedStart();
         end = cIn.getAdjustedEnd();
         filePosition = cIn; // take pos from compressed stream
       } else {
-        in = new LineReader(codec.createInputStream(fileIn, decompressor), job,
-            recordDelimiter);
+        in = new SplitLineReader(codec.createInputStream(fileIn,
+            decompressor), job, recordDelimiter);
         filePosition = fileIn;
       }
     } else {
       fileIn.seek(start);
-      in = new LineReader(fileIn, job, recordDelimiter);
+      in = new SplitLineReader(fileIn, job, recordDelimiter);
       filePosition = fileIn;
     }
     // If this is not the first split, we always throw away first record
@@ -191,7 +193,7 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
   public LineRecordReader(InputStream in, long offset, long endOffset,
       int maxLineLength, byte[] recordDelimiter) {
     this.maxLineLength = maxLineLength;
-    this.in = new LineReader(in, recordDelimiter);
+    this.in = new SplitLineReader(in, recordDelimiter);
     this.start = offset;
     this.pos = offset;
     this.end = endOffset;
@@ -209,7 +211,7 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
     throws IOException{
     this.maxLineLength = job.getInt("mapred.linerecordreader.maxlength",
                                     Integer.MAX_VALUE);
-    this.in = new LineReader(in, job, recordDelimiter);
+    this.in = new SplitLineReader(in, job, recordDelimiter);
     this.start = offset;
     this.pos = offset;
     this.end = endOffset;    
@@ -230,7 +232,7 @@ public class LineRecordReader implements RecordReader<LongWritable, Text> {
 
     // We always read one extra line, which lies outside the upper
     // split limit i.e. (end - 1)
-    while (getFilePosition() <= end) {
+    while (getFilePosition() <= end || in.needAdditionalRecordAfterSplit()) {
       key.set(pos);
 
       int newSize = 0;
