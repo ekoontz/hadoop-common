@@ -30,7 +30,7 @@ if [ -z "$HADOOP_HOME" ]; then
   export HADOOP_HOME=`dirname "$this"`/..
 fi
 
-if [ -f $HADOOP_HOME/hadoop-core-*.jar ]; then
+if ls $HADOOP_HOME/hadoop-core-*.jar; then
   HADOOP_MR1_HOME=$HADOOP_HOME
 else
   HADOOP_MR1_HOME=$HADOOP_HOME/share/hadoop/mapreduce1
