@@ -1418,6 +1418,7 @@ public class FairScheduler extends
         allocConf = queueInfo;
         allocConf.getDefaultSchedulingPolicy().initialize(clusterResource);
         queueMgr.updateAllocationConfiguration(allocConf);
+        maxRunningEnforcer.updateRunnabilityOnReload();
       }
     }
   }
