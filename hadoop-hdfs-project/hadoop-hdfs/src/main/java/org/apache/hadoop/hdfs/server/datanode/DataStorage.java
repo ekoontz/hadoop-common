@@ -83,6 +83,7 @@ public class DataStorage extends Storage {
 
   public final static String BLOCK_SUBDIR_PREFIX = "subdir";
   final static String BLOCK_FILE_PREFIX = "blk_";
+  final static String COPY_FILE_PREFIX = "dncp_";
   final static String STORAGE_DIR_DETACHED = "detach";
   public final static String STORAGE_DIR_RBW = "rbw";
   public final static String STORAGE_DIR_FINALIZED = "finalized";
@@ -1230,7 +1231,7 @@ public class DataStorage extends Storage {
     String[] blockNames = from.list(new java.io.FilenameFilter() {
       @Override
       public boolean accept(File dir, String name) {
-        return name.startsWith(BLOCK_FILE_PREFIX);
+        return name.startsWith(Block.BLOCK_FILE_PREFIX);
       }
     });
 

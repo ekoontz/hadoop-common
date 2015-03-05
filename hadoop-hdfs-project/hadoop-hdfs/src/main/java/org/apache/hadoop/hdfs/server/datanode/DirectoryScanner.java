@@ -626,7 +626,7 @@ public class DirectoryScanner implements Runnable {
           continue;
         }
         if (!Block.isBlockFilename(files[i])) {
-          if (isBlockMetaFile("blk_", files[i].getName())) {
+          if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, files[i].getName())) {
             long blockId = Block.getBlockId(files[i].getName());
             report.add(new ScanInfo(blockId, null, files[i], vol));
           }
