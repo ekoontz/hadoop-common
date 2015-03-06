@@ -117,6 +117,21 @@ HDFS NFS Gateway
    consistent results, and that all data sent to the NFS server can be assured to
    have been committed.
 
+   HDFS super-user is the user with the same identity as NameNode process itself and
+   the super-user can do anything in that permissions checks never fail for the super-user. 
+   If the following property is configured, the superuser on NFS client can access any file
+   on HDFS. By default, the super user is not configured in the gateway.
+   Note that, even the the superuser is configured, "nfs.exports.allowed.hosts" still takes effect. 
+   For example, the superuser will not have write access to HDFS files through the gateway if
+   the NFS client host is not allowed to have write access in "nfs.exports.allowed.hosts".
+
+----
+  <property>
+     <name>nfs.superuser</name>
+     <value>the_name_of_hdfs_superuser</value>
+  </property>
+----
+
    It's strongly recommended for the users to update a few configuration properties based on their use
    cases. All the following configuration properties can be added or updated in hdfs-site.xml.
   
