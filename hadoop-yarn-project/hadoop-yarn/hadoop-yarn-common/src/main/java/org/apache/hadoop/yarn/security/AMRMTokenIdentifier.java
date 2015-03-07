@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.security;
 
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -34,10 +32,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
-import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.AMRMTokenIdentifierProto;
-
-import com.google.protobuf.TextFormat;
 
 /**
  * AMRMTokenIdentifier is the TokenIdentifier to be used by
@@ -48,41 +42,49 @@ import com.google.protobuf.TextFormat;
 public class AMRMTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_AM_RM_TOKEN");
-  private AMRMTokenIdentifierProto proto;
+
+  private ApplicationAttemptId applicationAttemptId;
+  private int keyId = Integer.MIN_VALUE;
 
   public AMRMTokenIdentifier() {
   }
-  
+
+  public AMRMTokenIdentifier(ApplicationAttemptId appAttemptId) {
+    this();
+    this.applicationAttemptId = appAttemptId;
+  }
+
   public AMRMTokenIdentifier(ApplicationAttemptId appAttemptId,
       int masterKeyId) {
-    AMRMTokenIdentifierProto.Builder builder = 
-        AMRMTokenIdentifierProto.newBuilder();
-    if (appAttemptId != null) {
-      builder.setAppAttemptId(
-          ((ApplicationAttemptIdPBImpl)appAttemptId).getProto());
-    }
-    builder.setKeyId(masterKeyId);
-    proto = builder.build();
+    this();
+    this.applicationAttemptId = appAttemptId;
+    this.keyId = masterKeyId;
   }
 
   @Private
   public ApplicationAttemptId getApplicationAttemptId() {
-    if (!proto.hasAppAttemptId()) {
-      return null;
-    }
-    return new ApplicationAttemptIdPBImpl(proto.getAppAttemptId());
+    return this.applicationAttemptId;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    out.write(proto.toByteArray());
+    ApplicationId appId = this.applicationAttemptId.getApplicationId();
+    out.writeLong(appId.getClusterTimestamp());
+    out.writeInt(appId.getId());
+    out.writeInt(this.applicationAttemptId.getAttemptId());
+    out.writeInt(this.keyId);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    DataInputStream dis = (DataInputStream)in;
-    byte[] buffer = IOUtils.toByteArray(dis);
-    proto = AMRMTokenIdentifierProto.parseFrom(buffer);
+    long clusterTimeStamp = in.readLong();
+    int appId = in.readInt();
+    int attemptId = in.readInt();
+    ApplicationId applicationId =
+        ApplicationId.newInstance(clusterTimeStamp, appId);
+    this.applicationAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, attemptId);
+    this.keyId = in.readInt();
   }
 
   @Override
@@ -92,20 +94,16 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
 
   @Override
   public UserGroupInformation getUser() {
-    String appAttemptId = null;
-    if (proto.hasAppAttemptId()) {
-      appAttemptId = 
-          new ApplicationAttemptIdPBImpl(proto.getAppAttemptId()).toString();
+    if (this.applicationAttemptId == null
+        || "".equals(this.applicationAttemptId.toString())) {
+      return null;
     }
-    return UserGroupInformation.createRemoteUser(appAttemptId);
+    return UserGroupInformation.createRemoteUser(this.applicationAttemptId
+        .toString());
   }
 
   public int getKeyId() {
-    return proto.getKeyId();
-  }
-  
-  public AMRMTokenIdentifierProto getProto() {
-    return this.proto;
+    return this.keyId;
   }
 
   // TODO: Needed?
@@ -115,25 +113,5 @@ public class AMRMTokenIdentifier extends TokenIdentifier {
     protected Text getKind() {
       return KIND_NAME;
     }
-  }
-  
-  @Override
-  public int hashCode() {
-    return getProto().hashCode();
-  }
-
-  @Override
-  public boolean equals(Object other) {
-    if (other == null)
-      return false;
-    if (other.getClass().isAssignableFrom(this.getClass())) {
-      return this.getProto().equals(this.getClass().cast(other).getProto());
-    }
-    return false;
-  }
-
-  @Override
-  public String toString() {
-    return TextFormat.shortDebugString(getProto());
   }
 }

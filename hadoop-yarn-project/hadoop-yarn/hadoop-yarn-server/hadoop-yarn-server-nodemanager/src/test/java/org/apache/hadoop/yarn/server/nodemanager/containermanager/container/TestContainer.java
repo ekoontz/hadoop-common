@@ -555,7 +555,7 @@ public class TestContainer {
           public boolean matches(Object o) {
             ContainersLauncherEvent evt = (ContainersLauncherEvent) o;
             return evt.getType() == ContainersLauncherEventType.LAUNCH_CONTAINER
-              && wcf.cId.equals(evt.getContainer().getContainerId());
+              && wcf.cId == evt.getContainer().getContainerId();
           }
         };
       verify(wc.launcherBus).handle(argThat(matchesLaunchReq));
@@ -778,7 +778,7 @@ public class TestContainer {
       String host = "127.0.0.1";
       int port = 1234;
       long currentTime = System.currentTimeMillis();
-      ContainerTokenIdentifier identifier = 
+      ContainerTokenIdentifier identifier =
           new ContainerTokenIdentifier(cId, "127.0.0.1", user, resource,
             currentTime + 10000L, 123, currentTime, Priority.newInstance(0), 0);
       Token token =
