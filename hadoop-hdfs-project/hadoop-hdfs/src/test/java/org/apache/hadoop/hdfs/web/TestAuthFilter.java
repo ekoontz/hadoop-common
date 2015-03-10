@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -27,6 +29,7 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.junit.Assert;
@@ -98,4 +101,24 @@ public class TestAuthFilter {
     Assert.assertEquals("true",
         p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
   }
+
+  @Test
+  public void testGetCustomAuthConfiguration() throws ServletException,
+      IOException {
+    AuthFilter filter = new AuthFilter();
+    Map<String, String> m = new HashMap<String,String>();
+
+    File tempSecret = File.createTempFile("secret-file", ".txt");
+    FileUtils.writeStringToFile(tempSecret, "secret string");
+
+    m.put(AuthFilter.CONF_PREFIX + AuthFilter.AUTH_TYPE, "com.yourclass");
+    m.put(AuthFilter.CONF_PREFIX + AuthFilter.SIGNATURE_SECRET + ".file",
+        tempSecret.getAbsolutePath());
+    FilterConfig config = new DummyFilterConfig(m);
+
+    Properties p = filter.getConfiguration("random", config);
+    Assert.assertEquals("secret string", p.getProperty(AuthFilter.SIGNATURE_SECRET));
+    Assert.assertEquals("com.yourclass", p.getProperty(AuthFilter.AUTH_TYPE));
+  }
+
 }
