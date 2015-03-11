@@ -49,6 +49,7 @@ import javax.management.StandardMBean;
 
 import com.google.common.collect.Lists;
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -330,6 +331,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
   }
 
+  @VisibleForTesting
+  public FsVolumeImpl createFsVolume(String storageUuid, File currentDir,
+      StorageType storageType) throws IOException {
+    return new FsVolumeImpl(this, storageUuid, currentDir, conf, storageType);
+  }
+
   @Override
   public void addVolume(final StorageLocation location,
       final List<NamespaceInfo> nsInfos)
@@ -343,8 +350,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final Storage.StorageDirectory sd = builder.getStorageDirectory();
 
     StorageType storageType = location.getStorageType();
-    final FsVolumeImpl fsVolume = new FsVolumeImpl(
-        this, sd.getStorageUuid(), sd.getCurrentDir(), this.conf, storageType);
+    final FsVolumeImpl fsVolume =
+        createFsVolume(sd.getStorageUuid(), sd.getCurrentDir(), storageType);
     final ReplicaMap tempVolumeMap = new ReplicaMap(fsVolume);
     ArrayList<IOException> exceptions = Lists.newArrayList();
 
@@ -360,6 +367,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
     }
     if (!exceptions.isEmpty()) {
+      try {
+        sd.unlock();
+      } catch (IOException e) {
+        exceptions.add(e);
+      }
       throw MultipleIOException.createIOException(exceptions);
     }
 
