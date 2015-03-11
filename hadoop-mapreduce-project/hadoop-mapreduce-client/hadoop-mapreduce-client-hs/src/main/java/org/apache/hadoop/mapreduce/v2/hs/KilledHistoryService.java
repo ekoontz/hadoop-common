@@ -125,20 +125,39 @@ public class KilledHistoryService extends AbstractService {
                 ugi.doAs(new PrivilegedExceptionAction<Void>() {
                   @Override
                   public Void run() throws IOException {
-                    JobIndexInfo jobIndexInfo =
-                        buildJobIndexInfo(inSummaryFile, jobId, user);
-                    String historyFilename =
-                        FileNameIndexUtils.getDoneFileName(jobIndexInfo);
-                    copy(JobHistoryUtils
-                        .getStagingConfFile(stagingDirForJob, jobId, attempt),
-                             new Path(intermediateDir, JobHistoryUtils
-                                 .getIntermediateConfFileName(jobId)));
-                    copy(inSummaryFile, new Path(intermediateDir,
-                        JobHistoryUtils.getIntermediateSummaryFileName(jobId)));
-                    copy(JobHistoryUtils
-                        .getStagingJobHistoryFile(stagingDirForJob, jobId,
-                            attempt), new Path(intermediateDir, historyFilename));
-                    return null;
+                    FileSystem fromFs = null;
+                    FileSystem toFs = null;
+                    try {
+                      fromFs = stagingDirForJob.getFileSystem(conf);
+                      toFs = intermediateDir.getFileSystem(conf);
+                      JobIndexInfo jobIndexInfo =
+                          buildJobIndexInfo(fromFs, inSummaryFile, jobId,
+                              user);
+                      String historyFilename =
+                          FileNameIndexUtils.getDoneFileName(jobIndexInfo);
+                      copy(fromFs, toFs, JobHistoryUtils.getStagingConfFile(
+                          stagingDirForJob, jobId, attempt),
+                          new Path(intermediateDir, JobHistoryUtils
+                              .getIntermediateConfFileName(jobId)));
+                      copy(fromFs, toFs, inSummaryFile,
+                          new Path(intermediateDir, JobHistoryUtils
+                              .getIntermediateSummaryFileName(jobId)));
+                      copy(fromFs, toFs, JobHistoryUtils
+                          .getStagingJobHistoryFile(stagingDirForJob,
+                              jobId, attempt),
+                          new Path(intermediateDir, historyFilename));
+                      return null;
+                    } finally {
+                      // Close the FileSystem created by the new proxy user,
+                      // So that we don't leave an entry in the FileSystem cache.
+                      // Also FileSystem close is idempotent
+                      if (fromFs != null) {
+                        fromFs.close();
+                      }
+                      if (toFs != null) {
+                        toFs.close();
+                      }
+                    }
                   }
                 });
                 failDirFS.delete(flagFileStatus.getPath(), false);
@@ -175,9 +194,8 @@ public class KilledHistoryService extends AbstractService {
       }
     }
 
-    private void copy(Path fromPath, Path toPath) throws IOException {
-      FileSystem fromFs = fromPath.getFileSystem(conf);
-      FileSystem toFs = toPath.getFileSystem(conf);
+    private void copy(FileSystem fromFs, FileSystem toFs, Path fromPath,
+        Path toPath) throws IOException {
       LOG.info("Copying " + fromPath.toString() + " to " + toPath.toString());
       boolean copied = FileUtil.copy(toFs, fromPath, fromFs, toPath,
           false, conf);
@@ -190,9 +208,8 @@ public class KilledHistoryService extends AbstractService {
           JobHistoryUtils.HISTORY_INTERMEDIATE_FILE_PERMISSIONS));
     }
 
-    private JobIndexInfo buildJobIndexInfo(Path summaryFile, JobId jobId,
-        String user) throws IOException {
-      FileSystem fs = summaryFile.getFileSystem(conf);
+    private JobIndexInfo buildJobIndexInfo(FileSystem fs, Path summaryFile,
+        JobId jobId, String user) throws IOException {
       FSDataInputStream in = fs.open(summaryFile);
       String summaryString = in.readUTF();
       in.close();
