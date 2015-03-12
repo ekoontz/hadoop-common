@@ -60,8 +60,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void removeVolumes(Collection<StorageLocation> volumes) {
-
+  public void removeVolumes(Set<File> volumes, boolean clearFailure) {
   }
 
   @Override
@@ -242,8 +241,8 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
-  public void checkDataDir() throws DiskErrorException {
-    throw new DiskChecker.DiskErrorException(null);
+  public Set<File> checkDataDir() {
+    return null;
   }
 
   @Override
