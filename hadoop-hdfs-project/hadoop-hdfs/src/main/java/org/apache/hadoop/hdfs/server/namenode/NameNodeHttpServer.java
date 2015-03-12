@@ -151,7 +151,6 @@ public class NameNodeHttpServer {
   private Map<String, String> getAuthFilterParams(Configuration conf)
       throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-
     // Iterate over keys and pick ones beginning with 'dfs.web.authentication.'
     Iterator<Map.Entry<String, String>> iterator = conf.iterator();
     while (iterator.hasNext()) {
@@ -160,7 +159,6 @@ public class NameNodeHttpServer {
         params.put(kvPair.getKey(), kvPair.getValue());
       }
     }
-
     String principalInConf = conf
         .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
     if (principalInConf != null && !principalInConf.isEmpty()) {

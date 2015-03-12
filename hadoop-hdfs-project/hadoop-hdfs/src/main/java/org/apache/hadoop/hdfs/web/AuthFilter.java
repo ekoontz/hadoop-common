@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -34,6 +37,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
+import org.apache.commons.io.Charsets;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -46,6 +50,8 @@ import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHand
  */
 public class AuthFilter extends AuthenticationFilter {
   public static final String CONF_PREFIX = "dfs.web.authentication.";
+
+  private static final String SIGNATURE_SECRET_FILE = SIGNATURE_SECRET + ".file";
 
   /**
    * Returns the filter configuration properties,
@@ -60,15 +66,30 @@ public class AuthFilter extends AuthenticationFilter {
   @Override
   protected Properties getConfiguration(String prefix, FilterConfig config)
       throws ServletException {
-
     final Properties p = super.getConfiguration(CONF_PREFIX, config);
-
     // if not set, configure based on security enabled
     if (p.getProperty(AUTH_TYPE) == null) {
       p.setProperty(AUTH_TYPE, UserGroupInformation.isSecurityEnabled()?
           KerberosAuthenticationHandler.TYPE: PseudoAuthenticationHandler.TYPE);
     }
-
+    // Read secret file if set, otherwise value defaults to random string
+    String signatureSecretFile = p.getProperty(SIGNATURE_SECRET_FILE, null);
+    if (signatureSecretFile != null) {
+      try {
+        StringBuilder secret = new StringBuilder();
+        Reader reader = new InputStreamReader(new FileInputStream(
+            signatureSecretFile), Charsets.UTF_8);
+        int c = reader.read();
+        while (c > -1) {
+          secret.append((char)c);
+          c = reader.read();
+        }
+        reader.close();
+        p.setProperty(AuthenticationFilter.SIGNATURE_SECRET, secret.toString());
+      } catch (IOException ex) {
+        throw new RuntimeException("Could not read WebHDFS signature secret file: " + signatureSecretFile);
+      }
+    }
     // if not set, enable anonymous for pseudo authentication
     if (p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED) == null) {
       p.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
