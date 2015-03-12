@@ -699,6 +699,7 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
+
   private synchronized void setClusterId(final String nsCid, final String bpid
       ) throws IOException {
     if(clusterId != null && !clusterId.equals(nsCid)) {

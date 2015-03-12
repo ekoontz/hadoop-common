@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Lists;
@@ -243,8 +244,8 @@ class FsVolumeList {
             failedVols = new HashSet<>(1);
           }
           failedVols.add(new File(fsv.getBasePath()).getAbsoluteFile());
-          removeVolume(fsv);
           addVolumeFailureInfo(fsv);
+          removeVolume(fsv);
         } catch (ClosedChannelException e) {
           FsDatasetImpl.LOG.debug("Caught exception when obtaining " +
             "reference count on closed volume", e);
@@ -291,6 +292,9 @@ class FsVolumeList {
     if (blockScanner != null) {
       blockScanner.addVolumeScanner(ref);
     }
+    // If the volume is used to replace a failed volume, it needs to reset the
+    // volume failure info for this volume.
+    removeVolumeFailureInfo(new File(ref.getVolume().getBasePath()));
     FsDatasetImpl.LOG.info("Added new volume: " +
         ref.getVolume().getStorageID());
   }
@@ -354,7 +358,9 @@ class FsVolumeList {
         removeVolume(fsVolume);
       }
     }
-    removeVolumeFailureInfo(volume);
+    if (clearFailure) {
+      removeVolumeFailureInfo(volume);
+    }
   }
 
   VolumeFailureInfo[] getVolumeFailureInfos() {
@@ -368,7 +374,9 @@ class FsVolumeList {
   }
 
   private void addVolumeFailureInfo(FsVolumeImpl vol) {
-    addVolumeFailureInfo(new VolumeFailureInfo(vol.getBasePath(), Time.now(),
+    addVolumeFailureInfo(new VolumeFailureInfo(
+        new File(vol.getBasePath()).getAbsolutePath(),
+        Time.now(),
         vol.getCapacity()));
   }
 
