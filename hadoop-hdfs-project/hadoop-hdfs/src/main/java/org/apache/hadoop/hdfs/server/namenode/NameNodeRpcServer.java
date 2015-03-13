@@ -1168,7 +1168,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
     for (int r = 0; r < reports.length; r++) {
-      final BlockListAsLongs blocks = new BlockListAsLongs(reports[r].getBlocks());
+      final BlockListAsLongs blocks = reports[r].getBlocks();
       //
       // BlockManager.processReport accumulates information of prior calls
       // for the same node and storage, so the value returned by the last

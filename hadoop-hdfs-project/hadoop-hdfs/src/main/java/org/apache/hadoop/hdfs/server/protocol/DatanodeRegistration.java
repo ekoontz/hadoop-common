@@ -38,6 +38,7 @@ public class DatanodeRegistration extends DatanodeID
   private final StorageInfo storageInfo;
   private ExportedBlockKeys exportedKeys;
   private final String softwareVersion;
+  private NamespaceInfo nsInfo;
 
   public DatanodeRegistration(DatanodeID dn, StorageInfo info,
       ExportedBlockKeys keys, String softwareVersion) {
@@ -66,6 +67,14 @@ public class DatanodeRegistration extends DatanodeID
   @Override // NodeRegistration
   public int getVersion() {
     return storageInfo.getLayoutVersion();
+  }
+
+  public void setNamespaceInfo(NamespaceInfo nsInfo) {
+    this.nsInfo = nsInfo;
+  }
+
+  public NamespaceInfo getNamespaceInfo() {
+    return nsInfo;
   }
   
   @Override // NodeRegistration
