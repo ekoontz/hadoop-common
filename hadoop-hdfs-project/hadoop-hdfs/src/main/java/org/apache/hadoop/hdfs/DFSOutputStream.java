@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -782,7 +783,13 @@ public class DFSOutputStream extends FSOutputSummer
         } catch (Throwable e) {
           // Log warning if there was a real error.
           if (restartingNodeIndex == -1) {
-            DFSClient.LOG.warn("DataStreamer Exception", e);
+            // Since their messages are descriptive enough, do not always
+            // log a verbose stack-trace WARN for quota exceptions.
+            if (e instanceof QuotaExceededException) {
+              DFSClient.LOG.debug("DataStreamer Quota Exception", e);
+            } else {
+              DFSClient.LOG.warn("DataStreamer Exception", e);
+            }
           }
           if (e instanceof IOException) {
             setLastException((IOException)e);
