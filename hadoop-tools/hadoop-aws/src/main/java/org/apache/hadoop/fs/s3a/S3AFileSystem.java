@@ -95,6 +95,20 @@ public class S3AFileSystem extends FileSystem {
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
 
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
+
+  // CLOUDERA-BUILD: deprecate access key and secret key introduced in CDH 5.3
+  private static final String DEPRECATED_ACCESS_KEY = "fs.s3a.awsAccessKeyId";
+  private static final String DEPRECATED_SECRET_KEY = "fs.s3a.awsSecretAccessKey";
+
+  static {
+    Configuration.addDeprecation(DEPRECATED_ACCESS_KEY, ACCESS_KEY,
+        String.format("%s is deprecated, use %s instead.",
+            DEPRECATED_ACCESS_KEY, ACCESS_KEY));
+    Configuration.addDeprecation(DEPRECATED_SECRET_KEY, SECRET_KEY,
+        String.format("%s is deprecated, use %s instead.",
+            DEPRECATED_SECRET_KEY, SECRET_KEY));
+  }
+
   /**
    * Returns a {@link java.util.concurrent.ThreadFactory} that names each created thread uniquely,
    * with a common prefix.
@@ -156,8 +170,11 @@ public class S3AFileSystem extends FileSystem {
         this.getWorkingDirectory());
 
     // Try to get our credentials or just connect anonymously
-    String accessKey = conf.get(ACCESS_KEY, null);
-    String secretKey = conf.get(SECRET_KEY, null);
+    // CLOUDERA-BUILD: deprecated keys are alias of supported keys.
+    String accessKey = conf.get(
+        ACCESS_KEY, conf.get(DEPRECATED_ACCESS_KEY, null));
+    String secretKey = conf.get(
+        SECRET_KEY, conf.get(DEPRECATED_SECRET_KEY, null));
 
     String userInfo = name.getUserInfo();
     if (userInfo != null) {
