@@ -24,6 +24,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 
@@ -92,6 +93,8 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
     // and ANY requests
     ApplicationAttemptId appAttemptId =
         createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
+    createMockRMApp(appAttemptId);
+
     scheduler.addApplication(appAttemptId.getApplicationId(), "queue11", "user11", false);
     scheduler.addApplicationAttempt(appAttemptId, false, false);
     List<ResourceRequest> ask = new ArrayList<>();

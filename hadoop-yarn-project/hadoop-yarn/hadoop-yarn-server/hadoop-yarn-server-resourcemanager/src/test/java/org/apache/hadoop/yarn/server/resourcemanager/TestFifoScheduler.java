@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -45,9 +46,11 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
@@ -67,7 +70,9 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestFifoScheduler {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
@@ -373,6 +378,8 @@ public class TestFifoScheduler {
     ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
         appId1, 1);
+    createMockRMApp(appAttemptId1, rm.getRMContext());
+
     SchedulerEvent appEvent =
         new AppAddedSchedulerEvent(appId1, "queue", "user");
     fs.handle(appEvent);
@@ -467,6 +474,7 @@ public class TestFifoScheduler {
     ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
         appId1, 1);
+    createMockRMApp(appAttemptId1, rm.getRMContext());
     SchedulerEvent appEvent =
         new AppAddedSchedulerEvent(appId1, "queue", "user");
     fs.handle(appEvent);
@@ -477,6 +485,7 @@ public class TestFifoScheduler {
     ApplicationId appId2 = BuilderUtils.newApplicationId(200, 2);
     ApplicationAttemptId appAttemptId2 = BuilderUtils.newApplicationAttemptId(
         appId2, 1);
+    createMockRMApp(appAttemptId2, rm.getRMContext());
     SchedulerEvent appEvent2 =
         new AppAddedSchedulerEvent(appId2, "queue", "user");
     fs.handle(appEvent2);
@@ -602,5 +611,21 @@ public class TestFifoScheduler {
     t.testDefaultMinimumAllocation();
     t.testNonDefaultMinimumAllocation();
     t.testReconnectedNode();
+  }
+
+  private RMAppImpl createMockRMApp(ApplicationAttemptId attemptId,
+      RMContext context) {
+    RMAppImpl app = mock(RMAppImpl.class);
+    when(app.getApplicationId()).thenReturn(attemptId.getApplicationId());
+    RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
+    when(attempt.getAppAttemptId()).thenReturn(attemptId);
+    RMAppAttemptMetrics attemptMetric = mock(RMAppAttemptMetrics.class);
+    when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
+    when(app.getCurrentAppAttempt()).thenReturn(attempt);
+    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getUnmanagedAM()).thenReturn(false);
+    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
+    context.getRMApps().putIfAbsent(attemptId.getApplicationId(), app);
+    return app;
   }
 }

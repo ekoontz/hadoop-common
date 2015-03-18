@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -38,6 +39,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
@@ -146,14 +149,21 @@ public class FairSchedulerTestBase {
     ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
         priority, numContainers, true);
     ask.add(request);
-    scheduler.allocate(id, ask,  new ArrayList<ContainerId>(), null, null);
+
     RMApp rmApp = mock(RMApp.class);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
     when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
         new RMAppAttemptMetrics(id, resourceManager.getRMContext()));
+    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getUnmanagedAM()).thenReturn(false);
+    when(rmAppAttempt.getSubmissionContext()).thenReturn(submissionContext);
+    Container container = mock(Container.class);
+    when(rmAppAttempt.getMasterContainer()).thenReturn(container);
     resourceManager.getRMContext().getRMApps()
         .put(id.getApplicationId(), rmApp);
+
+    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
     return id;
   }
   
@@ -167,14 +177,19 @@ public class FairSchedulerTestBase {
     if (scheduler.getSchedulerApplications().containsKey(id.getApplicationId())) {
       scheduler.addApplicationAttempt(id, false, false);
     }
-    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
+
     RMApp rmApp = mock(RMApp.class);
     RMAppAttempt rmAppAttempt = mock(RMAppAttempt.class);
     when(rmApp.getCurrentAppAttempt()).thenReturn(rmAppAttempt);
     when(rmAppAttempt.getRMAppAttemptMetrics()).thenReturn(
         new RMAppAttemptMetrics(id,resourceManager.getRMContext()));
+    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getUnmanagedAM()).thenReturn(false);
+    when(rmAppAttempt.getSubmissionContext()).thenReturn(submissionContext);
     resourceManager.getRMContext().getRMApps()
         .put(id.getApplicationId(), rmApp);
+
+    scheduler.allocate(id, ask, new ArrayList<ContainerId>(), null, null);
     return id;
   }
 
@@ -209,7 +224,7 @@ public class FairSchedulerTestBase {
         0, null, null, null);
     rmContext.getRMApps().put(attId.getApplicationId(), rmApp);
     AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-        attId.getApplicationId(), queue, user);
+        appId, queue, user);
     scheduler.handle(appAddedEvent);
     AppAttemptAddedSchedulerEvent attempAddedEvent =
         new AppAttemptAddedSchedulerEvent(attId, false);
@@ -224,6 +239,9 @@ public class FairSchedulerTestBase {
     RMAppAttemptMetrics attemptMetric = mock(RMAppAttemptMetrics.class);
     when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
     when(app.getCurrentAppAttempt()).thenReturn(attempt);
+    ApplicationSubmissionContext submissionContext = mock(ApplicationSubmissionContext.class);
+    when(submissionContext.getUnmanagedAM()).thenReturn(false);
+    when(attempt.getSubmissionContext()).thenReturn(submissionContext);
     resourceManager.getRMContext().getRMApps()
         .put(attemptId.getApplicationId(), app);
     return app;
