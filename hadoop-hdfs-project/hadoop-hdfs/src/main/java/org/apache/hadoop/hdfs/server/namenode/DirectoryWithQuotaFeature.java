@@ -133,6 +133,10 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     return Quota.Counts.newInstance(namespace, diskspace);
   }
 
+  public long getDiskSpaceConsumed() {
+    return diskspace;
+  }
+
   /** Verify if the namespace quota is violated after applying delta. */
   private void verifyNamespaceQuota(long delta) throws NSQuotaExceededException {
     if (Quota.isViolated(nsQuota, namespace, delta)) {

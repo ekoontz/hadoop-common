@@ -277,6 +277,10 @@ public class FSDirectory implements Closeable {
     skipQuotaCheck = true;
   }
 
+  boolean shouldSkipQuotaChecks() {
+    return skipQuotaCheck;
+  }
+
   private static INodeFile newINodeFile(long id, PermissionStatus permissions,
       long mtime, long atime, short replication, long preferredBlockSize) {
     return newINodeFile(id, permissions, mtime, atime, replication, preferredBlockSize,
@@ -1904,7 +1908,7 @@ public class FSDirectory implements Closeable {
    *          Pass null if a node is not being moved.
    * @throws QuotaExceededException if quota limit is exceeded.
    */
-  private static void verifyQuota(INode[] inodes, int pos, long nsDelta,
+  static void verifyQuota(INode[] inodes, int pos, long nsDelta,
       long dsDelta, INode commonAncestor) throws QuotaExceededException {
     if (nsDelta <= 0 && dsDelta <= 0) {
       // if quota is being freed or not being consumed
