@@ -695,7 +695,7 @@ public class Balancer {
             // update locations
             for (String datanodeUuid : blk.getDatanodeUuids()) {
               final BalancerDatanode d = datanodeMap.get(datanodeUuid);
-              if (datanode != null) { // not an unknown datanode
+              if (d != null && datanode != null) { // not an unknown datanode
                 block.addLocation(d);
               }
             }
