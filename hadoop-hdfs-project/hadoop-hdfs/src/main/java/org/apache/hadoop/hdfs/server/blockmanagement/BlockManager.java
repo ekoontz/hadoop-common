@@ -392,10 +392,10 @@ public class BlockManager implements BlockStatsMXBean {
 
     if (!isEnabled) {
       if (UserGroupInformation.isSecurityEnabled()) {
-	      LOG.error("Security is enabled but block access tokens " +
-		      "(via " + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY + ") " +
-		      "aren't enabled. This may cause issues " +
-		      "when clients attempt to talk to a DataNode.");
+        LOG.error("Security is enabled but block access tokens " +
+            "(via " + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY + ") " +
+            "aren't enabled. This may cause issues " +
+            "when clients attempt to talk to a DataNode.");
       }
       return null;
     }
@@ -1269,10 +1269,6 @@ public class BlockManager implements BlockStatsMXBean {
     NumberReplicas nr = countNodes(b.stored);
     if (nr.replicasOnStaleNodes() > 0) {
       blockLog.info("BLOCK* invalidateBlocks: postponing " +
-          "invalidation of " + b + " on " + dn + " because " +
-          nr.replicasOnStaleNodes() + " replica(s) are located on nodes " +
-          "with potentially out-of-date block reports");
-      blockLog.info("BLOCK* invalidateBlocks: postponing " +
           "invalidation of {} on {} because {} replica(s) are located on " +
           "nodes with potentially out-of-date block reports", b, dn,
           nr.replicasOnStaleNodes());
@@ -1545,8 +1541,10 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     }
-    blockLog.debug("BLOCK* neededReplications = {} pendingReplications = {}",
-        neededReplications.size(), pendingReplications.size());
+    if (blockLog.isDebugEnabled()) {
+      blockLog.debug("BLOCK* neededReplications = {} pendingReplications = {}",
+          neededReplications.size(), pendingReplications.size());
+    }
 
     return scheduledWork;
   }
@@ -2616,9 +2614,6 @@ public class BlockManager implements BlockStatsMXBean {
       }
     } else if (result == AddBlockResult.REPLACED) {
       curReplicaDelta = 0;
-      blockLog.warn("BLOCK* addStoredBlock: " + "block " + storedBlock
-          + " moved to storageType " + storageInfo.getStorageType()
-          + " on node " + node);
       blockLog.warn("BLOCK* addStoredBlock: block {} moved to storageType " +
           "{} on node {}", storedBlock, storageInfo.getStorageType(), node);
     } else {
