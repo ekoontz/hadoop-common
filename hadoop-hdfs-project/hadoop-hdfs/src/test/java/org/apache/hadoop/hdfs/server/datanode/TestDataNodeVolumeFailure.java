@@ -125,10 +125,6 @@ public class TestDataNodeVolumeFailure {
     if(cluster != null) {
       cluster.shutdown();
     }
-    for (int i = 0; i < 3; i++) {
-      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+1)), true);
-      FileUtil.setExecutable(new File(dataDir, "data"+(2*i+2)), true);
-    }
   }
   
   /*
@@ -163,7 +159,7 @@ public class TestDataNodeVolumeFailure {
         !deteteBlocks(failedDir)
         ) {
       throw new IOException("Could not delete hdfs directory '" + failedDir + "'");
-    }    
+    }
     data_fail.setReadOnly();
     failedDir.setReadOnly();
     System.out.println("Deleteing " + failedDir.getPath() + "; exist=" + failedDir.exists());
@@ -221,7 +217,7 @@ public class TestDataNodeVolumeFailure {
     DFSTestUtil.waitReplication(fs, file1, (short) 2);
 
     File dn0Vol1 = new File(dataDir, "data" + (2 * 0 + 1));
-    assertTrue(FileUtil.setExecutable(dn0Vol1, false));
+    DataNodeTestUtils.injectDataDirFailure(dn0Vol1);
     DataNode dn0 = cluster.getDataNodes().get(0);
     checkDiskErrorSync(dn0);
 
@@ -386,8 +382,7 @@ public class TestDataNodeVolumeFailure {
     // Fail the first volume on both datanodes
     File dn1Vol1 = new File(dataDir, "data"+(2*0+1));
     File dn2Vol1 = new File(dataDir, "data"+(2*1+1));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn1Vol1, false));
-    assertTrue("Couldn't chmod local vol", FileUtil.setExecutable(dn2Vol1, false));
+    DataNodeTestUtils.injectDataDirFailure(dn1Vol1, dn2Vol1);
 
     Path file2 = new Path("/test2");
     DFSTestUtil.createFile(fs, file2, 1024, (short)3, 1L);
