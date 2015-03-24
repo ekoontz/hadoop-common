@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -214,7 +215,8 @@ public class TestBPOfferService {
         .when(mockNN2).blockReport(
             Mockito.<DatanodeRegistration>anyObject(),  
             Mockito.eq(FAKE_BPID),
-            Mockito.<StorageBlockReport[]>anyObject());
+            Mockito.<StorageBlockReport[]>anyObject(),
+            Mockito.<BlockReportContext>anyObject());
 
     bpos.start();
     try {
@@ -404,7 +406,8 @@ public class TestBPOfferService {
           Mockito.verify(mockNN).blockReport(
               Mockito.<DatanodeRegistration>anyObject(),  
               Mockito.eq(FAKE_BPID),
-              Mockito.<StorageBlockReport[]>anyObject());
+              Mockito.<StorageBlockReport[]>anyObject(),
+              Mockito.<BlockReportContext>anyObject());
           return true;
         } catch (Throwable t) {
           LOG.info("waiting on block report: " + t.getMessage());
@@ -429,7 +432,8 @@ public class TestBPOfferService {
           Mockito.verify(mockNN).blockReport(
                   Mockito.<DatanodeRegistration>anyObject(),
                   Mockito.eq(FAKE_BPID),
-                  Mockito.<StorageBlockReport[]>anyObject());
+                  Mockito.<StorageBlockReport[]>anyObject(),
+                  Mockito.<BlockReportContext>anyObject());
           return true;
         } catch (Throwable t) {
           LOG.info("waiting on block report: " + t.getMessage());
