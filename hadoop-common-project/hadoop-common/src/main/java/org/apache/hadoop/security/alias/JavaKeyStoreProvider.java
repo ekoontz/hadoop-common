@@ -21,6 +21,7 @@ package org.apache.hadoop.security.alias;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -97,11 +98,8 @@ public class JavaKeyStoreProvider extends CredentialProvider {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         URL pwdFile = cl.getResource(pwFile);
         if (pwdFile != null) {
-          InputStream is = pwdFile.openStream();
-          try {
+          try (InputStream is = pwdFile.openStream()) {
             password = IOUtils.toString(is).trim().toCharArray();
-          } finally {
-            is.close();
           }
         }
       }
@@ -109,6 +107,7 @@ public class JavaKeyStoreProvider extends CredentialProvider {
     if (password == null) {
       password = KEYSTORE_PASSWORD_DEFAULT.toCharArray();
     }
+
     try {
       keyStore = KeyStore.getInstance(SCHEME_NAME);
       if (fs.exists(path)) {
@@ -117,7 +116,9 @@ public class JavaKeyStoreProvider extends CredentialProvider {
         FileStatus s = fs.getFileStatus(path);
         permissions = s.getPermission();
 
-        keyStore.load(fs.open(path), password);
+        try (FSDataInputStream in = fs.open(path)) {
+          keyStore.load(in, password);
+        }
       } else {
         permissions = new FsPermission("700");
         // required to create an empty keystore. *sigh*
@@ -256,8 +257,7 @@ public class JavaKeyStoreProvider extends CredentialProvider {
         return;
       }
       // write out the keystore
-      FSDataOutputStream out = FileSystem.create(fs, path, permissions);
-      try {
+      try (FSDataOutputStream out = FileSystem.create(fs, path, permissions)) {
         keyStore.store(out, password);
       } catch (KeyStoreException e) {
         throw new IOException("Can't store keystore " + this, e);
@@ -267,7 +267,6 @@ public class JavaKeyStoreProvider extends CredentialProvider {
         throw new IOException("Certificate exception storing keystore " + this,
             e);
       }
-      out.close();
       changed = false;
     }
     finally {
