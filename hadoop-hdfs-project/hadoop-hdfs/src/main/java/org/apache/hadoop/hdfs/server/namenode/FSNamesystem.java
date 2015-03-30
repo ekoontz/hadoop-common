@@ -8501,7 +8501,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /** Is rolling upgrade in progress? */
   public boolean isRollingUpgrade() {
-    return rollingUpgradeInfo != null;
+    return rollingUpgradeInfo != null && !rollingUpgradeInfo.isFinalized();
   }
 
   void checkRollingUpgrade(String action) throws RollingUpgradeException {
@@ -8516,7 +8516,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
     writeLock();
-    final RollingUpgradeInfo returnInfo;
     try {
       checkOperation(OperationCategory.WRITE);
       if (!isRollingUpgrade()) {
@@ -8524,8 +8523,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       checkNameNodeSafeMode("Failed to finalize rolling upgrade");
 
-      returnInfo = finalizeRollingUpgradeInternal(now());
-      getEditLog().logFinalizeRollingUpgrade(returnInfo.getFinalizeTime());
+      finalizeRollingUpgradeInternal(now());
+      getEditLog().logFinalizeRollingUpgrade(rollingUpgradeInfo.getFinalizeTime());
       if (haEnabled) {
         // roll the edit log to make sure the standby NameNode can tail
         getFSImage().rollEditLog();
@@ -8545,14 +8544,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "finalizeRollingUpgrade", null, null, null);
     }
-    return returnInfo;
+    return rollingUpgradeInfo;
   }
 
-  RollingUpgradeInfo finalizeRollingUpgradeInternal(long finalizeTime)
-      throws RollingUpgradeException {
-    final long startTime = rollingUpgradeInfo.getStartTime();
-    rollingUpgradeInfo = null;
-    return new RollingUpgradeInfo(blockPoolId, false, startTime, finalizeTime);
+  void finalizeRollingUpgradeInternal(long finalizeTime) {
+    // Set the finalize time
+    rollingUpgradeInfo.finalize(finalizeTime);
   }
 
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)
