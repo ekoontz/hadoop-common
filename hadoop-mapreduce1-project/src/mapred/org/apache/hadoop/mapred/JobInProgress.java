@@ -932,7 +932,11 @@ public class JobInProgress {
   long getInputLength() {
     return inputLength;
   }
- 
+
+  void setInputLength(long length) {
+    inputLength = length;
+  }
+
   boolean isCleanupLaunched() {
     return launchedCleanup;
   }
