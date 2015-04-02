@@ -3977,8 +3977,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app3 = scheduler.getSchedulerApp(attId3);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application3's AM requests 1024 MB memory",
-        1024, app3.getAMResource().getMemory());
+    assertEquals("Application3's AM resource shouldn't be updated",
+        0, app3.getAMResource().getMemory());
     assertEquals("Application3's AM should not be running",
         0, app3.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
@@ -4003,6 +4003,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         0, app1.getLiveContainers().size());
     assertEquals("Application3's AM should be running",
         1, app3.getLiveContainers().size());
+    assertEquals("Application3's AM requests 1024 MB memory",
+        1024, app3.getAMResource().getMemory());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
         2048, queue1.getAmResourceUsage().getMemory());
 
@@ -4013,8 +4015,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app4 = scheduler.getSchedulerApp(attId4);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application4's AM requests 2048 MB memory",
-        2048, app4.getAMResource().getMemory());
+    assertEquals("Application4's AM resource shouldn't be updated",
+        0, app4.getAMResource().getMemory());
     assertEquals("Application4's AM should not be running",
         0, app4.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
@@ -4027,8 +4029,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app5 = scheduler.getSchedulerApp(attId5);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application5's AM requests 2048 MB memory",
-        2048, app5.getAMResource().getMemory());
+    assertEquals("Application5's AM resource shouldn't be updated",
+        0, app5.getAMResource().getMemory());
     assertEquals("Application5's AM should not be running",
         0, app5.getLiveContainers().size());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
@@ -4060,6 +4062,33 @@ public class TestFairScheduler extends FairSchedulerTestBase {
         0, app3.getLiveContainers().size());
     assertEquals("Application5's AM should be running",
         1, app5.getLiveContainers().size());
+    assertEquals("Application5's AM requests 2048 MB memory",
+        2048, app5.getAMResource().getMemory());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+
+    // request non-AM container for app5
+    createSchedulingRequestExistingApplication(1024, 1, attId5);
+    assertEquals("Application5's AM should have 1 container",
+        1, app5.getLiveContainers().size());
+    // complete AM container before non-AM container is allocated.
+    // spark application hit this situation.
+    RMContainer amContainer5 = (RMContainer)app5.getLiveContainers().toArray()[0];
+    ContainerExpiredSchedulerEvent containerExpired =
+        new ContainerExpiredSchedulerEvent(amContainer5.getContainerId());
+    scheduler.handle(containerExpired);
+    assertEquals("Application5's AM should have 0 container",
+        0, app5.getLiveContainers().size());
+    assertEquals("Queue1's AM resource usage should be 2048 MB memory",
+        2048, queue1.getAmResourceUsage().getMemory());
+    scheduler.update();
+    scheduler.handle(updateEvent);
+    // non-AM container should be allocated
+    // check non-AM container allocation is not rejected
+    // due to queue MaxAMShare limitation.
+    assertEquals("Application5 should have 1 container",
+        1, app5.getLiveContainers().size());
+    // check non-AM container allocation won't affect queue AmResourceUsage
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
         2048, queue1.getAmResourceUsage().getMemory());
 
@@ -4072,8 +4101,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.handle(updateEvent);
     assertEquals("Application6's AM should not be running",
         0, app6.getLiveContainers().size());
-    assertEquals("Application6's AM requests 2048 MB memory",
-        2048, app6.getAMResource().getMemory());
+    assertEquals("Application6's AM resource shouldn't be updated",
+        0, app6.getAMResource().getMemory());
     assertEquals("Queue1's AM resource usage should be 2048 MB memory",
         2048, queue1.getAmResourceUsage().getMemory());
 
@@ -4177,8 +4206,8 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     FSAppAttempt app2 = scheduler.getSchedulerApp(attId2);
     scheduler.update();
     scheduler.handle(updateEvent);
-    assertEquals("Application2's AM requests 1024 MB memory",
-        1024, app2.getAMResource().getMemory());
+    assertEquals("Application2's AM resource shouldn't be updated",
+        0, app2.getAMResource().getMemory());
     assertEquals("Application2's AM should not be running",
         0, app2.getLiveContainers().size());
     assertEquals("Queue2's AM resource usage should be 0 MB memory",
