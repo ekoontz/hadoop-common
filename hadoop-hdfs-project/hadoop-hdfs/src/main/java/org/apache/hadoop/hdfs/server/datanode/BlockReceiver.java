@@ -275,7 +275,7 @@ class BlockReceiver implements Closeable {
   }
 
   /**
-   * close files.
+   * close files and release volume reference.
    */
   @Override
   public void close() throws IOException {
@@ -791,17 +791,20 @@ class BlockReceiver implements Closeable {
       // then finalize block or convert temporary to RBW.
       // For client-writes, the block is finalized in the PacketResponder.
       if (isDatanode || isTransfer) {
-        // close the block/crc files
-        close();
-        block.setNumBytes(replicaInfo.getNumBytes());
+        // Hold a volume reference to finalize block.
+        try (ReplicaHandler handler = claimReplicaHandler()) {
+          // close the block/crc files
+          close();
+          block.setNumBytes(replicaInfo.getNumBytes());
 
-        if (stage == BlockConstructionStage.TRANSFER_RBW) {
-          // for TRANSFER_RBW, convert temporary to RBW
-          datanode.data.convertTemporaryToRbw(block);
-        } else {
-          // for isDatnode or TRANSFER_FINALIZED
-          // Finalize the block.
-          datanode.data.finalizeBlock(block);
+          if (stage == BlockConstructionStage.TRANSFER_RBW) {
+            // for TRANSFER_RBW, convert temporary to RBW
+            datanode.data.convertTemporaryToRbw(block);
+          } else {
+            // for isDatnode or TRANSFER_FINALIZED
+            // Finalize the block.
+            datanode.data.finalizeBlock(block);
+          }
         }
         datanode.metrics.incrBlocksWritten();
       }
@@ -974,7 +977,14 @@ class BlockReceiver implements Closeable {
     }
     return partialCrc;
   }
-  
+
+  /** The caller claims the ownership of the replica handler. */
+  private ReplicaHandler claimReplicaHandler() {
+    ReplicaHandler handler = replicaHandler;
+    replicaHandler = null;
+    return handler;
+  }
+
   private static enum PacketResponderType {
     NON_PIPELINE, LAST_IN_PIPELINE, HAS_DOWNSTREAM_IN_PIPELINE
   }
@@ -1274,11 +1284,15 @@ class BlockReceiver implements Closeable {
      * @param startTime time when BlockReceiver started receiving the block
      */
     private void finalizeBlock(long startTime) throws IOException {
-      BlockReceiver.this.close();
-      final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime()
-          : 0;
-      block.setNumBytes(replicaInfo.getNumBytes());
-      datanode.data.finalizeBlock(block);
+      long endTime = 0;
+      // Hold a volume reference to finalize block.
+      try (ReplicaHandler handler = BlockReceiver.this.claimReplicaHandler()) {
+        BlockReceiver.this.close();
+        endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
+        block.setNumBytes(replicaInfo.getNumBytes());
+        datanode.data.finalizeBlock(block);
+      }
+
       datanode.closeBlock(
           block, DataNode.EMPTY_DEL_HINT, replicaInfo.getStorageUuid());
       if (ClientTraceLog.isInfoEnabled() && isClient) {
