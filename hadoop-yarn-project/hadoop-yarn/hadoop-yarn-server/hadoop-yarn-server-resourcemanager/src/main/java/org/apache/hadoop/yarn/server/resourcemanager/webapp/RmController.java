@@ -93,4 +93,8 @@ public class RmController extends Controller {
   public void submit() {
     setTitle("Application Submission Not Allowed");
   }
+
+  public void logaggregationstatus() {
+    render(AppLogAggregationStatusPage.class);
+  }
 }

@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.Random;
 import java.util.Set;
 
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.api.ResourceManagerConstants;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.ServerRMProxy;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -70,6 +72,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManag
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -109,6 +112,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   // Duration for which to track recently stopped container.
   private long durationToTrackStoppedContainers;
 
+  private boolean logAggregationEnabled;
+
+  private final List<LogAggregationReport> logAggregationReportForAppsTempList;
+
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
@@ -126,6 +133,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.metrics = metrics;
     this.recentlyStoppedContainers =
         new LinkedHashMap<ContainerId, Long>();
+    this.logAggregationReportForAppsTempList =
+        new ArrayList<LogAggregationReport>();
   }
 
   @Override
@@ -175,6 +184,10 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     LOG.info("Initialized nodemanager for " + nodeId + ":" +
         " physical-memory=" + memoryMb + " virtual-memory=" + virtualMemoryMb +
         " virtual-cores=" + virtualCores);
+
+    this.logAggregationEnabled =
+        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+          YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED);
   }
 
   @Override
@@ -579,6 +592,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                     .getContainerTokenSecretManager().getCurrentKey(),
                   NodeStatusUpdaterImpl.this.context.getNMTokenSecretManager()
                     .getCurrentKey());
+
+            if (logAggregationEnabled) {
+              // pull log aggregation status for application running in this NM
+              Map<ApplicationId, LogAggregationReport> logAggregationReports =
+                  getLogAggregationReportsForApps(context
+                    .getLogAggregationStatusForApps());
+              if (logAggregationReports != null
+                  && !logAggregationReports.isEmpty()) {
+                request.setLogAggregationReportsForApps(logAggregationReports);
+              }
+            }
+
             response = resourceTracker.nodeHeartbeat(request);
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
@@ -616,6 +641,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             removeOrTrackCompletedContainersFromContext(response
                   .getContainersToBeRemovedFromNM());
 
+            logAggregationReportForAppsTempList.clear();
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
                 .getContainersToCleanup();
@@ -683,6 +709,48 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         new Thread(statusUpdaterRunnable, "Node Status Updater");
     statusUpdater.start();
   }
-  
-  
+
+  private Map<ApplicationId, LogAggregationReport>
+      getLogAggregationReportsForApps(
+          ConcurrentLinkedQueue<LogAggregationReport> lastestLogAggregationStatus) {
+    Map<ApplicationId, LogAggregationReport> latestLogAggregationReports =
+        new HashMap<ApplicationId, LogAggregationReport>();
+    LogAggregationReport status;
+    while ((status = lastestLogAggregationStatus.poll()) != null) {
+      this.logAggregationReportForAppsTempList.add(status);
+    }
+    for (LogAggregationReport logAggregationReport
+        : this.logAggregationReportForAppsTempList) {
+      LogAggregationReport report = null;
+      if (latestLogAggregationReports.containsKey(logAggregationReport
+        .getApplicationId())) {
+        report =
+            latestLogAggregationReports.get(logAggregationReport
+              .getApplicationId());
+        report.setLogAggregationStatus(logAggregationReport
+          .getLogAggregationStatus());
+        String message = report.getDiagnosticMessage();
+        if (logAggregationReport.getDiagnosticMessage() != null
+            && !logAggregationReport.getDiagnosticMessage().isEmpty()) {
+          if (message != null) {
+            message += logAggregationReport.getDiagnosticMessage();
+          } else {
+            message = logAggregationReport.getDiagnosticMessage();
+          }
+          report.setDiagnosticMessage(message);
+        }
+      } else {
+        report = Records.newRecord(LogAggregationReport.class);
+        report.setApplicationId(logAggregationReport.getApplicationId());
+        report.setNodeId(this.nodeId);
+        report.setLogAggregationStatus(logAggregationReport
+          .getLogAggregationStatus());
+        report
+          .setDiagnosticMessage(logAggregationReport.getDiagnosticMessage());
+      }
+      latestLogAggregationReports.put(logAggregationReport.getApplicationId(),
+        report);
+    }
+    return latestLogAggregationReports;
+  }
 }

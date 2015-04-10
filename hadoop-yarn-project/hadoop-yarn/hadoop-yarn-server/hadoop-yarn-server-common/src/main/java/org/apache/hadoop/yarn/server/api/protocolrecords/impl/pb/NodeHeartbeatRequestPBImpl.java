@@ -18,10 +18,23 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportProto;
+import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.LogAggregationReportsForAppsProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -36,6 +49,8 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
   private NodeStatus nodeStatus = null;
   private MasterKey lastKnownContainerTokenMasterKey = null;
   private MasterKey lastKnownNMTokenMasterKey = null;
+  private Map<ApplicationId, LogAggregationReport>
+      logAggregationReportsForApps = null;
   
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -80,6 +95,25 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
       builder.setLastKnownNmTokenMasterKey(
           convertToProtoFormat(this.lastKnownNMTokenMasterKey));
     }
+    if (this.logAggregationReportsForApps != null) {
+      addLogAggregationStatusForAppsToProto();
+    }
+  }
+
+  private void addLogAggregationStatusForAppsToProto() {
+    maybeInitBuilder();
+    builder.clearLogAggregationReportsForApps();
+    for (Entry<ApplicationId, LogAggregationReport> entry : logAggregationReportsForApps
+      .entrySet()) {
+      builder.addLogAggregationReportsForApps(LogAggregationReportsForAppsProto
+        .newBuilder().setAppId(convertToProtoFormat(entry.getKey()))
+        .setLogAggregationReport(convertToProtoFormat(entry.getValue())));
+    }
+  }
+
+  private LogAggregationReportProto convertToProtoFormat(
+      LogAggregationReport value) {
+    return ((LogAggregationReportPBImpl) value).getProto();
   }
 
   private void mergeLocalToProto() {
@@ -177,5 +211,55 @@ public class NodeHeartbeatRequestPBImpl extends NodeHeartbeatRequest {
 
   private MasterKeyProto convertToProtoFormat(MasterKey t) {
     return ((MasterKeyPBImpl)t).getProto();
+  }
+
+  private ApplicationIdPBImpl convertFromProtoFormat(ApplicationIdProto p) {
+    return new ApplicationIdPBImpl(p);
+  }
+
+  private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
+    return ((ApplicationIdPBImpl) t).getProto();
+  }
+
+  @Override
+  public Map<ApplicationId, LogAggregationReport>
+      getLogAggregationReportsForApps() {
+    if (this.logAggregationReportsForApps != null) {
+      return this.logAggregationReportsForApps;
+    }
+    initLogAggregationReportsForApps();
+    return logAggregationReportsForApps;
+  }
+
+  private void initLogAggregationReportsForApps() {
+    NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<LogAggregationReportsForAppsProto> list =
+        p.getLogAggregationReportsForAppsList();
+    this.logAggregationReportsForApps =
+        new HashMap<ApplicationId, LogAggregationReport>();
+    for (LogAggregationReportsForAppsProto c : list) {
+      ApplicationId appId = convertFromProtoFormat(c.getAppId());
+      LogAggregationReport report =
+          convertFromProtoFormat(c.getLogAggregationReport());
+      this.logAggregationReportsForApps.put(appId, report);
+    }
+  }
+
+  private LogAggregationReport convertFromProtoFormat(
+      LogAggregationReportProto logAggregationReport) {
+    return new LogAggregationReportPBImpl(logAggregationReport);
+  }
+
+  @Override
+  public void setLogAggregationReportsForApps(
+      Map<ApplicationId, LogAggregationReport> logAggregationStatusForApps) {
+    if (logAggregationStatusForApps == null
+        || logAggregationStatusForApps.isEmpty()) {
+      return;
+    }
+    maybeInitBuilder();
+    this.logAggregationReportsForApps =
+        new HashMap<ApplicationId, LogAggregationReport>();
+    this.logAggregationReportsForApps.putAll(logAggregationStatusForApps);
   }
 }  
