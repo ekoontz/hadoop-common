@@ -1421,7 +1421,7 @@ public class TestEncryptionZones {
   }
 
   private void verifyShellDeleteWithTrash(FsShell shell, Path path)
-      throws Exception{
+      throws Exception {
     try {
       Path trashDir = shell.getCurrentTrashDir(path);
       // Verify that trashDir has a path component named ".Trash"
@@ -1433,7 +1433,7 @@ public class TestEncryptionZones {
           ".Trash", checkTrash.getName());
       final Path trashFile =
           new Path(shell.getCurrentTrashDir(path) + "/" + path);
-      String[] argv = new String[]{"-rm", "-r", path.toString()};
+      String[] argv = new String[] { "-rm", "-r", path.toString() };
       int res = ToolRunner.run(shell, argv);
       assertEquals("rm failed", 0, res);
       assertTrue("File not in trash : " + trashFile, fs.exists(trashFile));
@@ -1444,5 +1444,23 @@ public class TestEncryptionZones {
         fs.delete(path, true);
       }
     }
+  }
+
+  @Test(timeout = 60000)
+  public void testEncryptionZonesOnRelativePath() throws Exception {
+    final int len = 8196;
+    final Path baseDir = new Path("/somewhere/base");
+    final Path zoneDir = new Path("zone");
+    final Path zoneFile = new Path("file");
+    fs.setWorkingDirectory(baseDir);
+    fs.mkdirs(zoneDir);
+    dfsAdmin.createEncryptionZone(zoneDir, TEST_KEY);
+    DFSTestUtil.createFile(fs, zoneFile, len, (short) 1, 0xFEED);
+
+    assertNumZones(1);
+    assertZonePresent(TEST_KEY, "/somewhere/base/zone");
+
+    assertEquals("Got unexpected ez path", "/somewhere/base/zone", dfsAdmin
+        .getEncryptionZoneForPath(zoneDir).getPath().toString());
   }
 }
