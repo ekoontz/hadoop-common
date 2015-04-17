@@ -362,5 +362,17 @@ public abstract class ApplicationReport {
   @Public
   @Stable
   public abstract Token getAMRMToken();
-  
+
+  /**
+   * Get log aggregation status for the application
+   * @return Application's log aggregation status
+   */
+  @Public
+  @Stable
+  public abstract LogAggregationStatus getLogAggregationStatus();
+
+  @Private
+  @Unstable
+  public abstract void setLogAggregationStatus(
+      LogAggregationStatus logAggregationStatus);
 }
