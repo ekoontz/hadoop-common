@@ -1144,7 +1144,7 @@ class CapacitySchedulerQueue {
     
     int queueSlotsOccupied = getNumSlotsOccupied(taskType);
     int currentCapacity;
-    if (queueSlotsOccupied < queueCapacity) {
+    if (queueSlotsOccupied + numSlotsRequested <= queueCapacity) {
       currentCapacity = queueCapacity;
     }
     else {
