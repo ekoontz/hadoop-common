@@ -836,6 +836,7 @@
         <artifactId>zookeeper</artifactId>
         <version>${cdh.zookeeper.version}</version>
         <type>test-jar</type>
+        <scope>test</scope>
         <exclusions>
           <exclusion>
             <groupId>org.jboss.netty</groupId>
