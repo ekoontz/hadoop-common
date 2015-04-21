@@ -88,6 +88,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     this.bc = bc;
   }
 
+  public boolean isDeleted() {
+    return (bc == null);
+  }
+
   public DatanodeDescriptor getDatanode(int index) {
     DatanodeStorageInfo storage = getStorageInfo(index);
     return storage == null ? null : storage.getDatanodeDescriptor();
