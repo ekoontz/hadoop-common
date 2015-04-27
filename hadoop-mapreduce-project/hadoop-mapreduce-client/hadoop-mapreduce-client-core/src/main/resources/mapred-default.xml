@@ -1224,30 +1224,6 @@
   </property>
   
   <property>
-    <name>mapreduce.map.skip.proc.count.autoincr</name>
-    <value>true</value>
-    <description> The flag which if set to true, 
-    SkipBadRecords.COUNTER_MAP_PROCESSED_RECORDS is incremented 
-    by MapRunner after invoking the map function. This value must be set to 
-    false for applications which process the records asynchronously 
-    or buffer the input records. For example streaming. 
-    In such cases applications should increment this counter on their own.
-    </description>
-  </property>
-  
-  <property>
-    <name>mapreduce.reduce.skip.proc.count.autoincr</name>
-    <value>true</value>
-    <description> The flag which if set to true, 
-    SkipBadRecords.COUNTER_REDUCE_PROCESSED_GROUPS is incremented 
-    by framework after invoking the reduce function. This value must be set to 
-    false for applications which process the records asynchronously 
-    or buffer the input records. For example streaming. 
-    In such cases applications should increment this counter on their own.
-    </description>
-  </property>
-  
-  <property>
     <name>mapreduce.job.skip.outdir</name>
     <value></value>
     <description> If no value is specified here, the skipped records are 
