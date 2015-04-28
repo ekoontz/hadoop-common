@@ -188,4 +188,20 @@ public class TestJobConf {
     Assert.assertEquals(2048, configuration.getLong(
         JobConf.MAPREDUCE_JOB_REDUCE_MEMORY_MB_PROPERTY, -1));
   }
+
+  /**
+   * Test parsing various types of Java heap options.
+   */
+  @Test
+  public void testParseMaximumHeapSizeMB() {
+    // happy cases
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4294967296"));
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4194304k"));
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4096m"));
+    Assert.assertEquals(4096, JobConf.parseMaximumHeapSizeMB("-Xmx4g"));
+
+    // sad cases
+    Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB("-Xmx4?"));
+    Assert.assertEquals(-1, JobConf.parseMaximumHeapSizeMB(""));
+  }
 }
