@@ -8637,10 +8637,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     Long result = null;
     try {
       checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot add cache directive", safeMode);
-      }
+      checkNameNodeSafeMode("Cannot add cache directive");
       if (directive.getId() != null) {
         throw new IOException("addDirective: you cannot specify an ID " +
             "for this operation.");
@@ -8681,10 +8678,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot add cache directive", safeMode);
-      }
+      checkNameNodeSafeMode("Cannot add cache directive");
       cacheManager.modifyDirective(directive, pc, flags);
       getEditLog().logModifyCacheDirectiveInfo(directive,
           cacheEntry != null);
@@ -8714,10 +8708,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot remove cache directives", safeMode);
-      }
+      checkNameNodeSafeMode("Cannot remove cache directives");
       cacheManager.removeDirective(id, pc);
       getEditLog().logRemoveCacheDirectiveInfo(id, cacheEntry != null);
       success = true;
@@ -8770,10 +8761,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String poolInfoStr = null;
     try {
       checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot add cache pool " + req.getPoolName(), safeMode);
-      }
+      checkNameNodeSafeMode("Cannot add cache pool"
+          + (req == null ? null : req.getPoolName()));
       if (pc != null) {
         pc.checkSuperuserPrivilege();
       }
@@ -8804,10 +8793,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean success = false;
     try {
       checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot modify cache pool " + req.getPoolName(), safeMode);
-      }
+      checkNameNodeSafeMode("Cannot modify cache pool"
+          + (req == null ? null : req.getPoolName()));
       if (pc != null) {
         pc.checkSuperuserPrivilege();
       }
@@ -8838,10 +8825,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean success = false;
     try {
       checkOperation(OperationCategory.WRITE);
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-            "Cannot remove cache pool " + cachePoolName, safeMode);
-      }
+      checkNameNodeSafeMode("Cannot modify cache pool" + cachePoolName);
       if (pc != null) {
         pc.checkSuperuserPrivilege();
       }
