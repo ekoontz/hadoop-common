@@ -305,14 +305,12 @@ public class TestLazyPersistFiles extends LazyPersistTestCase {
     // Make sure that there is a saved copy of the replica on persistent
     // storage.
     final String bpid = cluster.getNamesystem().getBlockPoolId();
-    List<? extends FsVolumeSpi> volumes =
-        cluster.getDataNodes().get(0).getFSDataset().getVolumes();
 
     final Set<Long> persistedBlockIds = new HashSet<Long>();
 
     // Make sure at least one non-transient volume has a saved copy of
     // the replica.
-    for (FsVolumeSpi v : volumes) {
+    for (FsVolumeSpi v : cluster.getDataNodes().get(0).getFSDataset().getFsVolumeReferences()) {
       if (v.isTransientStorage()) {
         continue;
       }

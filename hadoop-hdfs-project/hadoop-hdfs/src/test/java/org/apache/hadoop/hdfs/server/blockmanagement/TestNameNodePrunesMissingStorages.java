@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -211,15 +212,16 @@ public class TestNameNodePrunesMissingStorages {
         datanodeToRemoveStorageFromIdx++;
       }
       // Find the volume within the datanode which holds that first storage.
-      List<? extends FsVolumeSpi> volumes =
-          datanodeToRemoveStorageFrom.getFSDataset().getVolumes();
-      assertEquals(NUM_STORAGES_PER_DN, volumes.size());
       String volumeDirectoryToRemove = null;
-      for (FsVolumeSpi volume : volumes) {
-        if (volume.getStorageID().equals(storageIdToRemove)) {
-          volumeDirectoryToRemove = volume.getBasePath();
+      try (FsVolumeReferences volumes =
+          datanodeToRemoveStorageFrom.getFSDataset().getFsVolumeReferences()) {
+        assertEquals(NUM_STORAGES_PER_DN, volumes.size());
+        for (FsVolumeSpi volume : volumes) {
+          if (volume.getStorageID().equals(storageIdToRemove)) {
+            volumeDirectoryToRemove = volume.getBasePath();
+          }
         }
-      }
+      };
       // Shut down the datanode and remove the volume.
       // Replace the volume directory with a regular file, which will
       // cause a volume failure.  (If we merely removed the directory,
@@ -316,12 +318,13 @@ public class TestNameNodePrunesMissingStorages {
       DFSTestUtil.createFile(fs, TEST_PATH, 1, (short)1, 0xdeadbeef);
       // Find the volume within the datanode which holds that first storage.
       DataNode dn = cluster.getDataNodes().get(0);
-      FsVolumeSpi volume =
-           dn.getFSDataset().getVolumes().get(0);
       final String newStorageId = DatanodeStorage.generateUuid();
-      File currentDir = new File(volume.getBasePath(), "current");
-      File versionFile = new File(currentDir, "VERSION");
-      rewriteVersionFile(versionFile, newStorageId);
+      try (FsVolumeReferences volumeRefs =
+               dn.getFSDataset().getFsVolumeReferences()) {
+        File currentDir = new File(volumeRefs.get(0).getBasePath(), "current");
+        File versionFile = new File(currentDir, "VERSION");
+        rewriteVersionFile(versionFile, newStorageId);
+      }
       final ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
       cluster.restartDataNodes();
       GenericTestUtils.waitFor(new Supplier<Boolean>() {

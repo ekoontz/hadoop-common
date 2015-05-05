@@ -1252,7 +1252,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public List<FsVolumeSpi> getVolumes() {
+  public FsVolumeReferences getFsVolumeReferences() {
     throw new UnsupportedOperationException();
   }
 
