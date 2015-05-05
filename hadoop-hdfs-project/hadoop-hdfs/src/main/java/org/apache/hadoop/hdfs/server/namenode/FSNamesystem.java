@@ -3878,13 +3878,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String dst, boolean logRetryCache) throws IOException,
       UnresolvedLinkException {
     assert hasWriteLock();
+    String actualdst = dir.isDir(dst)?
+        dst + Path.SEPARATOR + new Path(src).getName(): dst;
     if (isPermissionEnabled) {
       //We should not be doing this.  This is move() not renameTo().
       //but for now,
       //NOTE: yes, this is bad!  it's assuming much lower level behavior
       //      of rewriting the dst
-      String actualdst = dir.isDir(dst)?
-          dst + Path.SEPARATOR + new Path(src).getName(): dst;
       // Rename does not operates on link targets
       // Do not resolveLink when checking permissions of src and dst
       // Check write access to parent of src
@@ -3897,7 +3897,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     long mtime = now();
     if (dir.renameTo(src, dst, mtime)) {
-      getEditLog().logRename(src, dst, mtime, logRetryCache);
+      getEditLog().logRename(src, actualdst, mtime, logRetryCache);
       return true;
     }
     return false;

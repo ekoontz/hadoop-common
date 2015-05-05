@@ -798,7 +798,9 @@ public class FSEditLog implements LogsPurgeable {
   }
   
   /** 
-   * Add rename record to edit log
+   * Add rename record to edit log.
+   *
+   * The destination should be the file name, not the destination directory.
    * TODO: use String parameters until just before writing to disk
    */
   void logRename(String src, String dst, long timestamp, boolean toLogRpcIds) {
@@ -809,9 +811,11 @@ public class FSEditLog implements LogsPurgeable {
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
-  
+
   /** 
-   * Add rename record to edit log
+   * Add rename record to edit log.
+   *
+   * The destination should be the file name, not the destination directory.
    */
   void logRename(String src, String dst, long timestamp, boolean toLogRpcIds,
       Options.Rename... options) {
