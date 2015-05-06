@@ -92,6 +92,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.DirectoryCollection.DirsChangeListener;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
 import org.apache.hadoop.yarn.server.nodemanager.api.ResourceLocalizationSpec;
@@ -161,6 +162,8 @@ public class ResourceLocalizationService extends CompositeService
   private LocalResourcesTracker publicRsrc;
 
   private LocalDirsHandlerService dirsHandler;
+  private DirsChangeListener localDirsChangeListener;
+  private DirsChangeListener logDirsChangeListener;
   private Context nmContext;
 
   /**
@@ -254,6 +257,18 @@ public class ResourceLocalizationService extends CompositeService
     localizerTracker = createLocalizerTracker(conf);
     addService(localizerTracker);
     dispatcher.register(LocalizerEventType.class, localizerTracker);
+    localDirsChangeListener = new DirsChangeListener() {
+      @Override
+      public void onDirsChanged() {
+        checkAndInitializeLocalDirs();
+      }
+    };
+    logDirsChangeListener = new DirsChangeListener() {
+      @Override
+      public void onDirsChanged() {
+        initializeLogDirs(lfs);
+      }
+    };
     super.serviceInit(conf);
   }
 
@@ -343,6 +358,8 @@ public class ResourceLocalizationService extends CompositeService
                                       server.getListenerAddress());
     LOG.info("Localizer started on port " + server.getPort());
     super.serviceStart();
+    dirsHandler.registerLocalDirsChangeListener(localDirsChangeListener);
+    dirsHandler.registerLogDirsChangeListener(logDirsChangeListener);
   }
 
   LocalizerTracker createLocalizerTracker(Configuration conf) {
@@ -373,6 +390,8 @@ public class ResourceLocalizationService extends CompositeService
 
   @Override
   public void serviceStop() throws Exception {
+    dirsHandler.deregisterLocalDirsChangeListener(localDirsChangeListener);
+    dirsHandler.deregisterLogDirsChangeListener(logDirsChangeListener);
     if (server != null) {
       server.stop();
     }
@@ -812,11 +831,6 @@ public class ResourceLocalizationService extends CompositeService
               DiskChecker.checkDir(new File(publicDirDestPath.toUri().getPath()));
             }
 
-            // In case this is not a newly initialized nm state, ensure
-            // initialized local/log dirs similar to LocalizerRunner
-            getInitializedLocalDirs();
-            getInitializedLogDirs();
-
             // explicitly synchronize pending here to avoid future task
             // completing and being dequeued before pending updated
             synchronized (pending) {
@@ -1114,8 +1128,6 @@ public class ResourceLocalizationService extends CompositeService
         // 1) write credentials to private dir
         writeCredentials(nmPrivateCTokensPath);
         // 2) exec initApplication and wait
-        List<String> localDirs = getInitializedLocalDirs();
-        List<String> logDirs = getInitializedLogDirs();
         if (dirsHandler.areDisksHealthy()) {
           exec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
               context.getUser(),
@@ -1381,13 +1393,12 @@ public class ResourceLocalizationService extends CompositeService
   }
   
   /**
-   * Synchronized method to get a list of initialized local dirs. Method will
-   * check each local dir to ensure it has been setup correctly and will attempt
-   * to fix any issues it finds.
-   * 
-   * @return list of initialized local dirs
+   * Check each local dir to ensure it has been setup correctly and will
+   * attempt to fix any issues it finds.
+   * @return void
    */
-  synchronized private List<String> getInitializedLocalDirs() {
+  @VisibleForTesting
+  void checkAndInitializeLocalDirs() {
     List<String> dirs = dirsHandler.getLocalDirs();
     List<String> checkFailedDirs = new ArrayList<String>();
     for (String dir : dirs) {
@@ -1409,7 +1420,6 @@ public class ResourceLocalizationService extends CompositeService
         throw new YarnRuntimeException(msg, e);
       }
     }
-    return dirs;
   }
 
   private boolean checkLocalDir(String localDir) {
@@ -1456,18 +1466,5 @@ public class ResourceLocalizationService extends CompositeService
     localDirPathFsPermissionsMap.put(fileDir, defaultPermission);
     localDirPathFsPermissionsMap.put(sysDir, nmPrivatePermission);
     return localDirPathFsPermissionsMap;
-  }
-  
-  /**
-   * Synchronized method to get a list of initialized log dirs. Method will
-   * check each local dir to ensure it has been setup correctly and will attempt
-   * to fix any issues it finds.
-   * 
-   * @return list of initialized log dirs
-   */
-  synchronized private List<String> getInitializedLogDirs() {
-    List<String> dirs = dirsHandler.getLogDirs();
-    initializeLogDirs(lfs);
-    return dirs;
   }
 }
