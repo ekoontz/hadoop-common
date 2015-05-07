@@ -231,7 +231,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   final Daemon lazyWriter;
   final FsDatasetCache cacheManager;
   private final Configuration conf;
-  private final int validVolsRequired;
+  private final int volFailuresTolerated;
   private volatile boolean fsRunning;
 
   final ReplicaMap volumeMap;
@@ -255,7 +255,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     this.conf = conf;
     // The number of volumes required for operation is the total number 
     // of volumes minus the number of failed volumes we can tolerate.
-    final int volFailuresTolerated =
+    volFailuresTolerated =
       conf.getInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
                   DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
 
@@ -266,7 +266,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     int volsConfigured = (dataDirs == null) ? 0 : dataDirs.length;
     int volsFailed = volumeFailureInfos.size();
-    this.validVolsRequired = volsConfigured - volFailuresTolerated;
 
     if (volFailuresTolerated < 0 || volFailuresTolerated >= volsConfigured) {
       throw new DiskErrorException("Invalid volume failure "
@@ -515,7 +514,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override // FsDatasetSpi
   public boolean hasEnoughResource() {
-    return getVolumes().size() >= validVolsRequired; 
+    return getNumFailedVolumes() <= volFailuresTolerated;
   }
 
   /**
