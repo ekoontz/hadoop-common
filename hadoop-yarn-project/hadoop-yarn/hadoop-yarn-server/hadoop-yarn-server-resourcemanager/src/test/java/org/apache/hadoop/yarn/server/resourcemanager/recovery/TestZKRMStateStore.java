@@ -30,14 +30,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestZKRMStateStore extends RMStateStoreTestBase {
@@ -190,5 +198,37 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     assertEquals("RM should be Active",
         HAServiceProtocol.HAServiceState.ACTIVE,
         rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
+  }
+
+  @Test
+  public void testDuplicateRMAppDeletion() throws Exception {
+    TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
+    long submitTime = System.currentTimeMillis();
+    long startTime = System.currentTimeMillis() + 1234;
+    RMStateStore store = zkTester.getRMStateStore();
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setRMDispatcher(dispatcher);
+
+    ApplicationAttemptId attemptIdRemoved = ConverterUtils
+        .toApplicationAttemptId("appattempt_1352994193343_0002_000001");
+    ApplicationId appIdRemoved = attemptIdRemoved.getApplicationId();
+    storeApp(store, appIdRemoved, submitTime, startTime);
+    storeAttempt(store, attemptIdRemoved,
+        "container_1352994193343_0002_01_000001", null, null, dispatcher);
+
+    ApplicationSubmissionContext context =
+        new ApplicationSubmissionContextPBImpl();
+    context.setApplicationId(appIdRemoved);
+    ApplicationStateData appStateRemoved =
+        ApplicationStateData.newInstance(
+            submitTime, startTime, context, "user1");
+    appStateRemoved.attempts.put(attemptIdRemoved, null);
+    store.removeApplicationStateInternal(appStateRemoved);
+    try {
+      store.removeApplicationStateInternal(appStateRemoved);
+    } catch (KeeperException.NoNodeException nne) {
+      Assert.fail("NoNodeException should not happen.");
+    }
+    store.close();
   }
 }
