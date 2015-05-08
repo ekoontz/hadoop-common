@@ -2354,8 +2354,15 @@ public class BlockManager {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Processing previouly queued message " + rbi);
       }
-      processAndHandleReportedBlock(rbi.getStorageInfo(), 
-          rbi.getBlock(), rbi.getReportedState(), null);
+      if (rbi.getReportedState() == null) {
+        // This is a DELETE_BLOCK request
+        DatanodeStorageInfo storageInfo = rbi.getStorageInfo();
+        removeStoredBlock(rbi.getBlock(),
+            storageInfo.getDatanodeDescriptor());
+      } else {
+        processAndHandleReportedBlock(rbi.getStorageInfo(),
+            rbi.getBlock(), rbi.getReportedState(), null);
+      }
     }
   }
   
@@ -3061,6 +3068,17 @@ public class BlockManager {
     }
   }
 
+  private void removeStoredBlock(DatanodeStorageInfo storageInfo, Block block,
+      DatanodeDescriptor node) {
+    if (shouldPostponeBlocksFromFuture &&
+        namesystem.isGenStampInFuture(block)) {
+      queueReportedBlock(storageInfo, block, null,
+          QUEUE_REASON_FUTURE_GENSTAMP);
+      return;
+    }
+    removeStoredBlock(block, node);
+  }
+
   /**
    * Modify (block-->datanode) map. Possibly generate replication tasks, if the
    * removed block is still valid.
@@ -3251,7 +3269,7 @@ public class BlockManager {
     for (ReceivedDeletedBlockInfo rdbi : srdb.getBlocks()) {
       switch (rdbi.getStatus()) {
       case DELETED_BLOCK:
-        removeStoredBlock(rdbi.getBlock(), node);
+        removeStoredBlock(storageInfo, rdbi.getBlock(), node);
         deleted++;
         break;
       case RECEIVED_BLOCK:
