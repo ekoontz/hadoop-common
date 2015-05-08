@@ -435,7 +435,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         missing++;
         missize += block.getNumBytes();
       } else {
-        report.append(" repl=" + liveReplicas);
+        report.append(" Live_repl=" + liveReplicas);
         if (showLocations || showRacks) {
           StringBuilder sb = new StringBuilder("[");
           for (int j = 0; j < locs.length; j++) {
