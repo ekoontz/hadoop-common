@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+
+import org.apache.hadoop.yarn.util.ControlledClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
@@ -43,7 +45,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   private final static String ALLOC_FILE = new File(TEST_DIR,
       TestFairSchedulerPreemption.class.getName() + ".xml").getAbsolutePath();
 
-  private MockClock clock;
+  private ControlledClock clock;
 
   private static class StubbedFairScheduler extends FairScheduler {
     public int lastPreemptMemory = -1;
@@ -71,7 +73,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
   @Before
   public void setup() throws IOException {
     conf = createConfiguration();
-    clock = new MockClock();
+    clock = new ControlledClock();
   }
 
   @After
@@ -149,7 +151,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
     scheduler.update();
-    clock.tick(6);
+    clock.tickSec(6);
 
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
@@ -165,7 +167,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // Verify submitting another request doesn't trigger preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
     scheduler.update();
-    clock.tick(6);
+    clock.tickSec(6);
 
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
@@ -181,7 +183,7 @@ public class TestFairSchedulerPreemption extends FairSchedulerTestBase {
     // Verify submitting another request triggers preemption
     createSchedulingRequest(1024, "queueB", "user1", 1, 1);
     scheduler.update();
-    clock.tick(6);
+    clock.tickSec(6);
 
     ((StubbedFairScheduler) scheduler).resetLastPreemptResources();
     scheduler.preemptTasksIfNecessary();
