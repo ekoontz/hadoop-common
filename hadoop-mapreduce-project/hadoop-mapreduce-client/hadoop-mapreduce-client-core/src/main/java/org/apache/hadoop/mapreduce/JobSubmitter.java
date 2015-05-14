@@ -52,6 +52,7 @@ import org.apache.hadoop.mapred.QueueACL;
 import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
 
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
+import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -465,19 +466,19 @@ class JobSubmitter {
       if (TokenCache.getShuffleSecretKey(job.getCredentials()) == null) {
         KeyGenerator keyGen;
         try {
-         
-          int keyLen = CryptoUtils.isShuffleEncrypted(conf) 
-              ? conf.getInt(MRJobConfig.MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS, 
-                  MRJobConfig.DEFAULT_MR_ENCRYPTED_INTERMEDIATE_DATA_KEY_SIZE_BITS)
-              : SHUFFLE_KEY_LENGTH;
           keyGen = KeyGenerator.getInstance(SHUFFLE_KEYGEN_ALGORITHM);
-          keyGen.init(keyLen);
+          keyGen.init(SHUFFLE_KEY_LENGTH);
         } catch (NoSuchAlgorithmException e) {
           throw new IOException("Error generating shuffle secret key", e);
         }
         SecretKey shuffleKey = keyGen.generateKey();
         TokenCache.setShuffleSecretKey(shuffleKey.getEncoded(),
             job.getCredentials());
+      }
+      if (CryptoUtils.isEncryptedSpillEnabled(conf)) {
+        conf.setInt(MRJobConfig.MR_AM_MAX_ATTEMPTS, 1);
+        LOG.warn("Max job attempts set to 1 since encrypted intermediate" +
+                "data spill is enabled");
       }
 
       copyAndConfigureFiles(job, submitJobDir);
