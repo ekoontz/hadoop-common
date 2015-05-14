@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.util.Records;
@@ -50,9 +49,9 @@ public abstract class NodeHeartbeatRequest {
   public abstract MasterKey getLastKnownNMTokenMasterKey();
   public abstract void setLastKnownNMTokenMasterKey(MasterKey secretKey);
 
-  public abstract Map<ApplicationId, LogAggregationReport>
+  public abstract List<LogAggregationReport>
       getLogAggregationReportsForApps();
 
   public abstract void setLogAggregationReportsForApps(
-      Map<ApplicationId, LogAggregationReport> logAggregationReportsForApps);
+      List<LogAggregationReport> logAggregationReportsForApps);
 }
