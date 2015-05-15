@@ -352,7 +352,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         finalReport.setApplicationId(appId);
         finalReport.setLogAggregationStatus(renameTemporaryLogFileFailed
             ? LogAggregationStatus.FAILED : LogAggregationStatus.SUCCEEDED);
-        this.context.getLogAggregationStatusForApps().add(report);
+        this.context.getLogAggregationStatusForApps().add(finalReport);
       }
     } finally {
       if (writer != null) {
