@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -207,7 +208,7 @@ public class FairSchedulerTestBase {
       ResourceRequest request, ApplicationAttemptId attId) {
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ask.add(request);
-    scheduler.allocate(attId, ask,  new ArrayList<ContainerId>(), null, null);
+    scheduler.allocate(attId, ask, new ArrayList<ContainerId>(), null, null);
   }
 
   protected void createApplicationWithAMResource(ApplicationAttemptId attId,
@@ -224,5 +225,18 @@ public class FairSchedulerTestBase {
     AppAttemptAddedSchedulerEvent attempAddedEvent =
         new AppAttemptAddedSchedulerEvent(attId, false);
     scheduler.handle(attempAddedEvent);
+  }
+
+  protected RMApp createMockRMApp(ApplicationAttemptId attemptId) {
+    RMApp app = mock(RMAppImpl.class);
+    when(app.getApplicationId()).thenReturn(attemptId.getApplicationId());
+    RMAppAttemptImpl attempt = mock(RMAppAttemptImpl.class);
+    when(attempt.getAppAttemptId()).thenReturn(attemptId);
+    RMAppAttemptMetrics attemptMetric = mock(RMAppAttemptMetrics.class);
+    when(attempt.getRMAppAttemptMetrics()).thenReturn(attemptMetric);
+    when(app.getCurrentAppAttempt()).thenReturn(attempt);
+    resourceManager.getRMContext().getRMApps()
+        .put(attemptId.getApplicationId(), app);
+    return app;
   }
 }
