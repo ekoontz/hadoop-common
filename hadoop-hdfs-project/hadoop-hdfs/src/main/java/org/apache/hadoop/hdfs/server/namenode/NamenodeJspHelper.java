@@ -40,6 +40,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -878,8 +879,21 @@ class NamenodeJspHelper {
       sorterOrder = request.getParameter("sorter/order");
       if (sorterField == null)
         sorterField = "name";
-      if (sorterOrder == null)
-        sorterOrder = "ASC";
+
+      String[] validSortOrders = new String[]{"ASC", "DSC"};
+      String validatedOrder = null;
+      for (String order : validSortOrders) {
+        if (sorterOrder.equals(order)) {
+          validatedOrder = order;
+          break;
+        }
+      }
+      if (validatedOrder == null) {
+        out.print("Invalid order: ");
+        out.print(StringEscapeUtils.escapeHtml(sorterOrder));
+        return;
+      }
+      sorterOrder = validatedOrder;
 
       JspHelper.sortNodeList(live, sorterField, sorterOrder);
 
