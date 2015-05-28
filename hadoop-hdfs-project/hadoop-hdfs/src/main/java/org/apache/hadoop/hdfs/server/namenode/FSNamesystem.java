@@ -7811,7 +7811,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             .put("estimatedCapacityLostTotal",
                 volumeFailureSummary.getEstimatedCapacityLostTotal());
       }
-      info.put(node.getHostName() + ":" + node.getXferPort(), innerinfo.build());
+      // CLOUDERA-BUILD: revert JMX output changes in HDFS-7604
+      info.put(node.getHostName(), innerinfo.build());
     }
     return JSON.toString(info);
   }
