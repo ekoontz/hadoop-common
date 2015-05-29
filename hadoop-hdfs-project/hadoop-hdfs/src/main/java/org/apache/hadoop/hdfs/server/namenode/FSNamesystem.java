@@ -2043,7 +2043,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
     waitForLoadingFSImage();
     writeLock();
     try {
@@ -2603,7 +2602,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     boolean skipSync = false;
     HdfsFileStatus stat = null;
     FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
     if (blockSize < minBlockSize) {
       throw new IOException("Specified block size is less than configured" +
           " minimum value (" + DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY
@@ -3179,7 +3177,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     LocatedBlock lb = null;
     FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
@@ -3848,7 +3845,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new IOException("Invalid name: " + dst);
     }
     FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
     byte[][] srcComponents = FSDirectory.getPathComponentsForReservedPath(src);
     byte[][] dstComponents = FSDirectory.getPathComponentsForReservedPath(dst);
     boolean status = false;
@@ -3921,7 +3917,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     final FSPermissionChecker pc = getPermissionChecker();
     
-    checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
@@ -4045,7 +4040,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     List<INode> removedINodes = new ChunkedArrayList<INode>();
     FSPermissionChecker pc = getPermissionChecker();
-    checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean ret = false;
 
@@ -7151,7 +7145,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void updatePipeline(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException {
-    checkOperation(OperationCategory.WRITE);
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return; // Return previous response
@@ -8261,7 +8254,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void renameSnapshot(String path, String snapshotOldName,
       String snapshotNewName) throws SafeModeException, IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
@@ -8375,7 +8367,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws SafeModeException, IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -8620,7 +8611,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)
       throws IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     CacheEntryWithPayload cacheEntry =
@@ -8664,7 +8654,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   void modifyCacheDirective(CacheDirectiveInfo directive,
       EnumSet<CacheFlag> flags) throws IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     boolean success = false;
@@ -8697,7 +8686,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeCacheDirective(Long id) throws IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -8749,7 +8737,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public void addCachePool(CachePoolInfo req) throws IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -8782,7 +8769,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public void modifyCachePool(CachePoolInfo req) throws IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -8814,7 +8800,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   public void removeCachePool(String cachePoolName) throws IOException {
-    checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
@@ -9080,7 +9065,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     String src = srcArg;
     HdfsFileStatus resultingStat = null;
     checkSuperuserPrivilege();
-    checkOperation(OperationCategory.WRITE);
     final byte[][] pathComponents =
       FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
@@ -9203,7 +9187,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     FSPermissionChecker pc = getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(pc, xAttr,
         FSDirectory.isReservedRawName(src));
-    checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {
@@ -9365,7 +9348,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     FSPermissionChecker pc = getPermissionChecker();
     XAttrPermissionFilter.checkPermissionForApi(pc, xAttr,
         FSDirectory.isReservedRawName(src));
-    checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     writeLock();
     try {

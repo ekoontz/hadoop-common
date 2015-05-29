@@ -583,6 +583,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("create: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     HdfsFileStatus fileStatus = namesystem.startFile(src, new PermissionStatus(
         getRemoteUser().getShortUserName(), null, masked),
         clientName, clientMachine, flag.get(), createParent, replication,
@@ -601,6 +602,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* NameNode.append: file "
           +src+" for "+clientName+" at "+clientMachine);
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     LocatedBlock info = namesystem.appendFile(src, clientName, clientMachine);
     metrics.incrFilesAppended();
     return info;
@@ -756,6 +758,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.updatePipeline(clientName, oldBlock, newBlock, newNodes, newStorageIDs);
   }
   
@@ -788,6 +791,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     boolean ret = namesystem.renameTo(src, dst);
     if (ret) {
       metrics.incrFilesRenamed();
@@ -798,6 +802,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void concat(String trg, String[] src) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.concat(trg, src);
   }
   
@@ -812,6 +817,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("rename: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.renameTo(src, dst, options);
     metrics.incrFilesRenamed();
   }
@@ -823,6 +829,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       stateChangeLog.debug("*DIR* Namenode.delete: src=" + src
           + ", recursive=" + recursive);
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     boolean ret = namesystem.delete(src, recursive);
     if (ret) 
       metrics.incrDeleteFileOps();
@@ -1418,6 +1425,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("createSnapshot: Pathname too long.  Limit "
           + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     metrics.incrCreateSnapshotOps();
     return namesystem.createSnapshot(snapshotRoot, snapshotName);
   }
@@ -1426,6 +1434,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     metrics.incrDeleteSnapshotOps();
     namesystem.deleteSnapshot(snapshotRoot, snapshotName);
   }
@@ -1454,6 +1463,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if (snapshotNewName == null || snapshotNewName.isEmpty()) {
       throw new IOException("The new snapshot name is null or empty.");
     }
+    namesystem.checkOperation(OperationCategory.WRITE);
     metrics.incrRenameSnapshotOps();
     namesystem.renameSnapshot(snapshotRoot, snapshotOldName, snapshotNewName);
   }
@@ -1482,6 +1492,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public long addCacheDirective(
       CacheDirectiveInfo path, EnumSet<CacheFlag> flags) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     return namesystem.addCacheDirective(path, flags);
   }
 
@@ -1489,12 +1500,14 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void modifyCacheDirective(
       CacheDirectiveInfo directive, EnumSet<CacheFlag> flags) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.modifyCacheDirective(directive, flags);
   }
 
   @Override // ClientProtocol
   public void removeCacheDirective(long id) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.removeCacheDirective(id);
   }
 
@@ -1511,18 +1524,21 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override //ClientProtocol
   public void addCachePool(CachePoolInfo info) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.addCachePool(info);
   }
 
   @Override // ClientProtocol
   public void modifyCachePool(CachePoolInfo info) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.modifyCachePool(info);
   }
 
   @Override // ClientProtocol
   public void removeCachePool(String cachePoolName) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.removeCachePool(cachePoolName);
   }
 
@@ -1575,6 +1591,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void createEncryptionZone(String src, String keyName)
     throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.createEncryptionZone(src, keyName);
   }
 
@@ -1596,6 +1613,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.setXAttr(src, xAttr, flag);
   }
   
@@ -1615,6 +1633,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
     checkNNStartup();
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.removeXAttr(src, xAttr);
   }
 
