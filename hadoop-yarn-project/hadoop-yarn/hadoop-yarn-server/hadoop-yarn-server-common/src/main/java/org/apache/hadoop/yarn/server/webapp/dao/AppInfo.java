@@ -49,6 +49,9 @@ public class AppInfo {
   protected long startedTime;
   protected long finishedTime;
   protected long elapsedTime;
+  private int runningContainers;
+  private int allocatedCpuVcores;
+  private int allocatedMemoryMB;
 
   public AppInfo() {
     // JAXB needs this
@@ -74,7 +77,15 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
-    progress = app.getProgress();
+    if (app.getApplicationResourceUsageReport() != null) {
+      runningContainers =
+          app.getApplicationResourceUsageReport().getNumUsedContainers();
+      allocatedCpuVcores = app.getApplicationResourceUsageReport()
+          .getUsedResources().getVirtualCores();
+      allocatedMemoryMB = app.getApplicationResourceUsageReport()
+          .getUsedResources().getMemory();
+    }
+    progress = app.getProgress() * 100; // in percent
   }
 
   public String getAppId() {
@@ -111,6 +122,18 @@ public class AppInfo {
 
   public YarnApplicationState getAppState() {
     return appState;
+  }
+
+  public int getRunningContainers() {
+    return runningContainers;
+  }
+
+  public int getAllocatedCpuVcores() {
+    return allocatedCpuVcores;
+  }
+
+  public int getAllocatedMemoryMB() {
+    return allocatedMemoryMB;
   }
 
   public float getProgress() {

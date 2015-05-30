@@ -66,6 +66,9 @@ class AppsBlock extends HtmlBlock {
             th(".finishtime", "FinishTime").
             th(".state", "State").
             th(".finalstatus", "FinalStatus").
+            th(".runningcontainer", "Running Containers").
+            th(".allocatedCpu", "Allocated CPU VCores").
+            th(".allocatedMemory", "Allocated Memory MB").
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
@@ -101,6 +104,15 @@ class AppsBlock extends HtmlBlock {
       .append(appInfo.getFinishTime()).append("\",\"")
       .append(appInfo.getState()).append("\",\"")
       .append(appInfo.getFinalStatus()).append("\",\"")
+      .append(appInfo.getRunningContainers() == -1 ? "N/A" : String
+          .valueOf(appInfo.getRunningContainers()))
+      .append("\",\"")
+      .append(appInfo.getAllocatedVCores() == -1 ? "N/A" : String
+          .valueOf(appInfo.getAllocatedVCores()))
+      .append("\",\"")
+      .append(appInfo.getAllocatedMB() == -1 ? "N/A" : String
+          .valueOf(appInfo.getAllocatedMB()))
+      .append("\",\"")
       // Progress bar
       .append("<br title='").append(percent)
       .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")

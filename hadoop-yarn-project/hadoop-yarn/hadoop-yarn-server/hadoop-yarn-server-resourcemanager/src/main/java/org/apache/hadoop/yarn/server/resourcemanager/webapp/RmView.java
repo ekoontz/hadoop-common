@@ -83,7 +83,7 @@ public class RmView extends TwoColumnLayout {
       .append("\n, {'sType':'numeric', 'aTargets': [5, 6]")
       .append(", 'mRender': renderHadoopDate }")
 
-      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [9]")
+      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [12]")
       .append(", 'mRender': parseHadoopProgress }]").toString();
   }
 }
