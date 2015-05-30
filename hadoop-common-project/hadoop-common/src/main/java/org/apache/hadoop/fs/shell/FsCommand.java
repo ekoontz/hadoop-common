@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
+import java.util.LinkedList;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -26,8 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShellPermissions;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
+
 /**
- * Base class for all "hadoop fs" commands
+ * Base class for all "hadoop fs" commands.
  */
 
 @InterfaceAudience.Private
@@ -86,5 +92,27 @@ abstract public class FsCommand extends Command {
   @Override
   public int runAll() {
     return run(args);
+  }
+
+  @Override
+  protected void processRawArguments(LinkedList<String> args)
+      throws IOException {
+    LinkedList<PathData> expendedArgs = expandArguments(args);
+    // If "fs.defaultFs" is not set appropriately, it warns the user that the
+    // command is not running against HDFS.
+    final boolean displayWarnings = getConf().getBoolean(
+        HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY,
+        HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT);
+    if (displayWarnings) {
+      final String defaultFs = getConf().get(FS_DEFAULT_NAME_KEY);
+      final boolean missingDefaultFs =
+          defaultFs == null || defaultFs.equals(FS_DEFAULT_NAME_DEFAULT);
+      if (missingDefaultFs) {
+        err.printf(
+            "Warning: fs.defaultFs is not set when running \"%s\" command.%n",
+            getCommandName());
+      }
+    }
+    processArguments(expendedArgs);
   }
 }
