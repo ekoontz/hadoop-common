@@ -1741,6 +1741,6 @@ for ldap providers in the same way as above does.
       is not set.
     </description>
     <name>hadoop.shell.missing.defaultFs.warning</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 </configuration>
