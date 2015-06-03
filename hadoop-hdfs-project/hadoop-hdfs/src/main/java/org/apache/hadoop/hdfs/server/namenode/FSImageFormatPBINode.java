@@ -53,6 +53,11 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatu
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrCompactProto;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.XAttrFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.util.EnumCounters;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
@@ -209,11 +214,15 @@ public final class FSImageFormatPBINode {
       }
     }
 
-    void loadINodeSection(InputStream in) throws IOException {
+    void loadINodeSection(InputStream in, StartupProgress prog,
+        Step currentStep) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
       fsn.resetLastInodeId(s.getLastInodeId());
-      LOG.info("Loading " + s.getNumInodes() + " INodes.");
-      for (int i = 0; i < s.getNumInodes(); ++i) {
+      long numInodes = s.getNumInodes();
+      LOG.info("Loading " + numInodes + " INodes.");
+      prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
+      Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, currentStep);
+      for (int i = 0; i < numInodes; ++i) {
         INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
         if (p.getId() == INodeId.ROOT_INODE_ID) {
           loadRootINode(p);
@@ -221,6 +230,7 @@ public final class FSImageFormatPBINode {
           INode n = loadINode(p);
           dir.addToInodeMap(n);
         }
+        counter.increment();
       }
     }
 
