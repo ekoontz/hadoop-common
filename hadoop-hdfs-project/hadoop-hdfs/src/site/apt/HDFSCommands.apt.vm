@@ -215,7 +215,10 @@ HDFS Commands Guide
 || COMMAND_OPTION || Description
 *-----------------+-----------------------------------------------------------+
 | -report [-live] [-dead] [-decommissioning] | Reports basic filesystem
-                  | information and statistics. Optional flags may be used to
+                  | information and statistics. The dfs usage can be different
+                  | from "du" usage, because it measures raw space used by
+                  | replication, checksums, snapshots and etc. on all the DNs.
+                  | Optional flags may be used to
                   | filter the list of displayed DataNodes.
 *-----------------+-----------------------------------------------------------+
 | -safemode enter\|leave\|get\|wait | Safe mode maintenance command. Safe
