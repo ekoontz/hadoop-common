@@ -507,8 +507,8 @@ abstract public class Task implements Writable, Configurable {
     out.writeBoolean(taskCleanup);
     Text.writeString(out, user);
     out.writeInt(encryptedSpillKey.length);
-    out.write(encryptedSpillKey);
     extraData.write(out);
+    out.write(encryptedSpillKey);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -535,8 +535,8 @@ abstract public class Task implements Writable, Configurable {
     user = StringInterner.weakIntern(Text.readString(in));
     int len = in.readInt();
     encryptedSpillKey = new byte[len];
-    in.readFully(encryptedSpillKey);
     extraData.readFields(in);
+    in.readFully(encryptedSpillKey);
   }
 
   @Override
