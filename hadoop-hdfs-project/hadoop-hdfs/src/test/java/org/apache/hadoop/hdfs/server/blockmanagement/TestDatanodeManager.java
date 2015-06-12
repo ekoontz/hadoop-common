@@ -54,6 +54,15 @@ public class TestDatanodeManager {
   //The number of times the registration / removal of nodes should happen
   final int NUM_ITERATIONS = 500;
 
+  private static DatanodeManager mockDatanodeManager(
+      FSNamesystem fsn, Configuration conf) throws IOException {
+    BlockManager bm = Mockito.mock(BlockManager.class);
+    BlockReportLeaseManager blm = new BlockReportLeaseManager(conf);
+    Mockito.when(bm.getBlockReportLeaseManager()).thenReturn(blm);
+    DatanodeManager dm = new DatanodeManager(bm, fsn, conf);
+    return dm;
+  }
+
   /**
    * This test sends a random sequence of node registrations and node removals
    * to the DatanodeManager (of nodes with different IDs and versions), and
@@ -65,8 +74,7 @@ public class TestDatanodeManager {
     //Create the DatanodeManager which will be tested
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
-    DatanodeManager dm = new DatanodeManager(Mockito.mock(BlockManager.class),
-      fsn, new Configuration());
+    DatanodeManager dm = mockDatanodeManager(fsn, new Configuration());
 
     //Seed the RNG with a known value so test failures are easier to reproduce
     Random rng = new Random();
@@ -177,9 +185,7 @@ public class TestDatanodeManager {
         CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         TestDatanodeManager.MyResolver.class, DNSToSwitchMapping.class);
     
-    //create DatanodeManager
-    DatanodeManager dm = new DatanodeManager(Mockito.mock(BlockManager.class),
-        fsn, conf);
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
     
     //storageID to register.
     String storageID = "someStorageID-123";
@@ -226,10 +232,10 @@ public class TestDatanodeManager {
   @Test
   public void testSortLocatedBlocks() throws IOException {
     // create the DatanodeManager which will be tested
+    Configuration conf = new Configuration();
     FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
     Mockito.when(fsn.hasWriteLock()).thenReturn(true);
-    DatanodeManager dm = new DatanodeManager(Mockito.mock(BlockManager.class),
-        fsn, new Configuration());
+    DatanodeManager dm = mockDatanodeManager(fsn, conf);
 
     // register 5 datanodes, each with different storage ID and type
     DatanodeInfo[] locs = new DatanodeInfo[5];

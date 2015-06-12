@@ -941,7 +941,7 @@ public class NNThroughputBenchmark implements Tool {
       };
       nameNodeProto.blockReport(dnRegistration, 
           nameNode.getNamesystem().getBlockPoolId(), reports,
-              new BlockReportContext(1, 0, System.nanoTime()));
+              new BlockReportContext(1, 0, System.nanoTime(), 0L));
     }
 
     /**
@@ -954,7 +954,7 @@ public class NNThroughputBenchmark implements Tool {
       StorageReport[] rep = { new StorageReport(storage, false,
           DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration, rep,
-          0L, 0L, 0, 0, 0, null).getCommands();
+          0L, 0L, 0, 0, 0, null, true).getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -1003,7 +1003,7 @@ public class NNThroughputBenchmark implements Tool {
       StorageReport[] rep = { new StorageReport(storage,
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0L, 0L, 0, 0, 0, null).getCommands();
+          rep, 0L, 0L, 0, 0, 0, null, true).getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
@@ -1188,7 +1188,7 @@ public class NNThroughputBenchmark implements Tool {
           dn.storage, dn.getBlockReportList()) };
       nameNodeProto.blockReport(dn.dnRegistration,
           nameNode.getNamesystem().getBlockPoolId(), report,
-          new BlockReportContext(1, 0, System.nanoTime()));
+          new BlockReportContext(1, 0, System.nanoTime(), 0L));
       long end = Time.now();
       return end-start;
     }

@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
@@ -124,7 +125,8 @@ public class BlockManager {
   private final AtomicLong excessBlocksCount = new AtomicLong(0L);
   private final AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
   private final long startupDelayBlockDeletionInMs;
-  
+  private final BlockReportLeaseManager blockReportLeaseManager;
+
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
     return pendingReplicationBlocksCount;
@@ -347,7 +349,8 @@ public class BlockManager {
     this.numBlocksPerIteration = conf.getInt(
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT,
         DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT);
-    
+    this.blockReportLeaseManager = new BlockReportLeaseManager(conf);
+
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
     LOG.info("minReplication             = " + minReplication);
@@ -1693,7 +1696,28 @@ public class BlockManager {
        */
     }
   }
-  
+
+  public long requestBlockReportLeaseId(DatanodeRegistration nodeReg) {
+    assert namesystem.hasReadLock();
+    DatanodeDescriptor node = null;
+    try {
+      node = datanodeManager.getDatanode(nodeReg);
+    } catch (UnregisteredNodeException e) {
+      LOG.warn("Unregistered datanode {}", nodeReg);
+      return 0;
+    }
+    if (node == null) {
+      LOG.warn("Failed to find datanode {}", nodeReg);
+      return 0;
+    }
+    // Request a new block report lease.  The BlockReportLeaseManager has
+    // its own internal locking.
+    long leaseId = blockReportLeaseManager.requestLease(node);
+    BlockManagerFaultInjector.getInstance().
+        requestBlockReportLease(node, leaseId);
+    return leaseId;
+  }
+
   /**
    * StatefulBlockInfo is used to build the "toUC" list, which is a list of
    * updates to the information about under-construction blocks.
@@ -1768,7 +1792,7 @@ public class BlockManager {
       final BlockListAsLongs newReport, BlockReportContext context,
       boolean lastStorageInRpc) throws IOException {
     namesystem.writeLock();
-    final long startTime = Time.now(); //after acquiring write lock
+    final long startTime = Time.monotonicNow(); //after acquiring write lock
     final long endTime;
     DatanodeDescriptor node;
     Collection<Block> invalidatedBlocks = null;
@@ -1795,6 +1819,12 @@ public class BlockManager {
             + " because namenode still in startup phase", nodeID);
         return !node.hasStaleStorages();
       }
+      if (context != null) {
+        if (!blockReportLeaseManager.checkLease(node, startTime,
+              context.getLeaseId())) {
+          return false;
+        }
+      }
 
       if (storageInfo.getBlockReportCount() == 0) {
         // The first block report can be processed a lot more efficiently than
@@ -1813,6 +1843,9 @@ public class BlockManager {
         if (lastStorageInRpc) {
           int rpcsSeen = node.updateBlockReportContext(context);
           if (rpcsSeen >= context.getTotalRpcs()) {
+            long leaseId = blockReportLeaseManager.removeLease(node);
+            BlockManagerFaultInjector.getInstance().
+                removeBlockReportLease(node, leaseId);
             List<DatanodeStorageInfo> zombies = node.removeZombieStorages();
             if (zombies.isEmpty()) {
               LOG.debug("processReport 0x{}: no zombie storages found.",
@@ -1832,7 +1865,7 @@ public class BlockManager {
         }
       }
     } finally {
-      endTime = Time.now();
+      endTime = Time.monotonicNow();
       namesystem.writeUnlock();
     }
 
@@ -1888,7 +1921,7 @@ public class BlockManager {
     if (getPostponedMisreplicatedBlocksCount() == 0) {
       return;
     }
-    long startTimeRescanPostponedMisReplicatedBlocks = Time.now();
+    long startTimeRescanPostponedMisReplicatedBlocks = Time.monotonicNow();
     long startPostponedMisReplicatedBlocksCount =
         getPostponedMisreplicatedBlocksCount();
     namesystem.writeLock();
@@ -1948,7 +1981,7 @@ public class BlockManager {
       long endPostponedMisReplicatedBlocksCount =
           getPostponedMisreplicatedBlocksCount();
       LOG.info("Rescan of postponedMisreplicatedBlocks completed in " +
-          (Time.now() - startTimeRescanPostponedMisReplicatedBlocks) +
+          (Time.monotonicNow() - startTimeRescanPostponedMisReplicatedBlocks) +
           " msecs. " + endPostponedMisReplicatedBlocksCount +
           " blocks are left. " + (startPostponedMisReplicatedBlocksCount -
           endPostponedMisReplicatedBlocksCount) + " blocks are removed.");
@@ -2661,7 +2694,7 @@ public class BlockManager {
   private void processMisReplicatesAsync() throws InterruptedException {
     long nrInvalid = 0, nrOverReplicated = 0;
     long nrUnderReplicated = 0, nrPostponed = 0, nrUnderConstruction = 0;
-    long startTimeMisReplicatedScan = Time.now();
+    long startTimeMisReplicatedScan = Time.monotonicNow();
     Iterator<BlockInfo> blocksItr = blocksMap.getBlocks().iterator();
     long totalBlocks = blocksMap.size();
     replicationQueuesInitProgress = 0;
@@ -2719,7 +2752,7 @@ public class BlockManager {
           NameNode.stateChangeLog
               .info("STATE* Replication Queue initialization "
                   + "scan for invalid, over- and under-replicated blocks "
-                  + "completed in " + (Time.now() - startTimeMisReplicatedScan)
+                  + "completed in " + (Time.monotonicNow() - startTimeMisReplicatedScan)
                   + " msec");
           break;
         }
@@ -3792,5 +3825,9 @@ public class BlockManager {
   public void clear() {
     clearQueues();
     blocksMap.clear();
+  }
+
+  public BlockReportLeaseManager getBlockReportLeaseManager() {
+    return blockReportLeaseManager;
   }
 }
