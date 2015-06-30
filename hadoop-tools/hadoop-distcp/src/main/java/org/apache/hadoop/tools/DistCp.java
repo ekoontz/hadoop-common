@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -318,7 +319,7 @@ public class DistCp extends Configured implements Tool {
       workDir = new Path(workDir, WIP_PREFIX + targetPath.getName()
                                 + rand.nextInt());
       FileSystem workFS = workDir.getFileSystem(configuration);
-      if (!DistCpUtils.compareFs(targetFS, workFS)) {
+      if (!FileUtil.compareFs(targetFS, workFS)) {
         throw new IllegalArgumentException("Work path " + workDir +
             " and target path " + targetPath + " are in different file system");
       }
