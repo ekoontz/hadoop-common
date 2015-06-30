@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -335,6 +336,9 @@ public class TestFsShellReturnCode {
   @Test (timeout = 30000)
   public void testRmForceWithNonexistentGlob() throws Exception {
     Configuration conf = new Configuration();
+    // CLOUDERA-BUILD: This test fails in CDH because CDH display warnings by
+    // default. So we should disable warnings in this test.
+    conf.setBoolean(HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_KEY, false);
     FsShell shell = new FsShell();
     shell.setConf(conf);
     final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
