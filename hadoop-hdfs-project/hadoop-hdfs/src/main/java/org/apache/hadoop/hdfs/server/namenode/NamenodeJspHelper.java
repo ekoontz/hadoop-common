@@ -879,6 +879,8 @@ class NamenodeJspHelper {
       sorterOrder = request.getParameter("sorter/order");
       if (sorterField == null)
         sorterField = "name";
+      if (sorterOrder == null)
+        sorterOrder = "ASC";
 
       String[] validSortOrders = new String[]{"ASC", "DSC"};
       String validatedOrder = null;
