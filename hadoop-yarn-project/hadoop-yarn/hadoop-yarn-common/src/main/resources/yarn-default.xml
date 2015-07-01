@@ -256,7 +256,7 @@
     in terms of virtual CPU cores. Requests higher than this won't take effect,
     and will get capped to this value.</description>
     <name>yarn.scheduler.maximum-allocation-vcores</name>
-    <value>32</value>
+    <value>4</value>
   </property>
 
   <property>
