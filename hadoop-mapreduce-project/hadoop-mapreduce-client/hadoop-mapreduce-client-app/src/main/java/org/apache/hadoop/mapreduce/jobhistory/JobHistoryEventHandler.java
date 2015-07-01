@@ -55,6 +55,7 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -102,7 +103,8 @@ public class JobHistoryEventHandler extends AbstractService
 
   private int numUnflushedCompletionEvents = 0;
   private boolean isTimerActive;
-
+  private EventWriter.WriteMode jhistMode =
+      EventWriter.WriteMode.JSON;
 
   protected BlockingQueue<JobHistoryEvent> eventQueue =
     new LinkedBlockingQueue<JobHistoryEvent>();
@@ -249,6 +251,20 @@ public class JobHistoryEventHandler extends AbstractService
       LOG.info("Emitting job history data to the timeline server is enabled");
     } else {
       LOG.info("Emitting job history data to the timeline server is not enabled");
+    }
+
+    // Flag for setting
+    String jhistFormat = conf.get(JHAdminConfig.MR_HS_JHIST_FORMAT,
+        JHAdminConfig.DEFAULT_MR_HS_JHIST_FORMAT);
+    if (jhistFormat.equals("json")) {
+      jhistMode = EventWriter.WriteMode.JSON;
+    } else if (jhistFormat.equals("binary")) {
+      jhistMode = EventWriter.WriteMode.BINARY;
+    } else {
+      LOG.warn("Unrecognized value '" + jhistFormat + "' for property " +
+          JHAdminConfig.MR_HS_JHIST_FORMAT + ".  Valid values are " +
+          "'json' or 'binary'.  Falling back to default value '" +
+          JHAdminConfig.DEFAULT_MR_HS_JHIST_FORMAT + "'.");
     }
 
     super.serviceInit(conf);
@@ -410,7 +426,7 @@ public class JobHistoryEventHandler extends AbstractService
   protected EventWriter createEventWriter(Path historyFilePath)
       throws IOException {
     FSDataOutputStream out = stagingDirFS.create(historyFilePath, true);
-    return new EventWriter(out);
+    return new EventWriter(out, this.jhistMode);
   }
   
   /**
