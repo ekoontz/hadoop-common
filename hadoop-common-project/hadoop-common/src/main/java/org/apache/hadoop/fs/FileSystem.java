@@ -65,6 +65,9 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.htrace.Span;
+import org.apache.htrace.Trace;
+import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -2588,13 +2591,22 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
-    Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
-    if (clazz == null) {
-      throw new IOException("No FileSystem for scheme: " + uri.getScheme());
+    TraceScope scope = Trace.startSpan("FileSystem#createFileSystem");
+    Span span = scope.getSpan();
+    if (span != null) {
+      span.addKVAnnotation("scheme", uri.getScheme());
     }
-    FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
-    fs.initialize(uri, conf);
-    return fs;
+    try {
+      Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
+      if (clazz == null) {
+        throw new IOException("No FileSystem for scheme: " + uri.getScheme());
+      }
+      FileSystem fs = (FileSystem)ReflectionUtils.newInstance(clazz, conf);
+      fs.initialize(uri, conf);
+      return fs;
+    } finally {
+      scope.close();
+    }
   }
 
   /** Caching FileSystem objects */
