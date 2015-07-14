@@ -541,9 +541,10 @@ public class FSLeafQueue extends FSQueue {
   }
 
   private boolean isStarved(Resource share) {
-    Resource desiredShare = Resources.min(FairScheduler.getResourceCalculator(),
-        scheduler.getClusterResource(), share, getDemand());
-    return Resources.lessThan(FairScheduler.getResourceCalculator(),
-        scheduler.getClusterResource(), getResourceUsage(), desiredShare);
+    Resource desiredShare = Resources.min(policy.getResourceCalculator(),
+            scheduler.getClusterResource(), share, getDemand());
+    Resource resourceUsage = getResourceUsage();
+    return Resources.lessThan(policy.getResourceCalculator(),
+            scheduler.getClusterResource(), resourceUsage, desiredShare);
   }
 }
