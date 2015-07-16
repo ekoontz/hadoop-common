@@ -96,7 +96,8 @@
               <createDependencyReducedPom>false</createDependencyReducedPom>
               <artifactSet>
                 <includes>
-                  <include>com.amazonaws:aws-java-sdk:jar:*</include>
+                  <include>com.amazonaws:aws-java-sdk-s3:jar:*</include>
+                  <include>com.amazonaws:aws-java-sdk-core:jar:*</include>
                   <include>com.fasterxml.jackson.*:*</include>
                   <include>joda-time:joda-time:jar:*</include>
                   <include>org.apache.httpcomponents:*:jar:*</include>
@@ -162,12 +163,12 @@
       <groupId>com.amazonaws</groupId>
       <artifactId>aws-java-sdk-s3</artifactId>
       <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>joda-time</groupId>
-          <artifactId>joda-time</artifactId>
-        </exclusion>
-      </exclusions>
+      <!-- If you exclude joda time here, it will *not* be included in the
+	   uber/shaded jar.  It happened to work with older versions of
+	   aws-java-sdk probably because joda time wasn't actually used.
+	   Instead, artifacts that have dependency on this .jar should add
+	   exclusions for joda-time.
+      -->
     </dependency>
 
     <dependency>
