@@ -790,8 +790,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(url,
         mrOwner, "GET"));
     // no access for any other user
-    assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getHttpStatusCode(url,
-        jobSubmitter, "GET"));
+    int result = getHttpStatusCode(url, jobSubmitter, "GET");
+    assertTrue(result == HttpURLConnection.HTTP_FORBIDDEN ||
+        result == HttpURLConnection.HTTP_UNAUTHORIZED);
   }
 
   // validate killJob of jobtracker.jsp

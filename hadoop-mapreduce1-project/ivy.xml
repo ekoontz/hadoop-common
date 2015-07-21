@@ -76,6 +76,10 @@
      <exclude org="commons-daemon" module="commons-daemon"/><!--bad POM-->
      <exclude org="org.apache.commons" module="commons-daemon"/><!--bad POM-->
    </dependency>
+   <dependency org="org.apache.hadoop" name="hadoop-aws" 
+               rev="${hadoop-common.version}" conf="compile->default">
+     <artifact name="hadoop-aws" ext="jar" />
+   </dependency>
    
    <dependency org="commons-logging" name="commons-logging" 
                rev="${commons-logging.version}" conf="compile->master"/>

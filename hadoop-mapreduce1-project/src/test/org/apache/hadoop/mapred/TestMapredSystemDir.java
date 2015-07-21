@@ -84,12 +84,13 @@ public class TestMapredSystemDir extends TestCase {
           JobTracker jobtracker = mr2.getJobTrackerRunner().getJobTracker();
           // add garbage to mapred.system.dir
           Path garbage = new Path(jobtracker.getSystemDir(), "garbage");
-          fs.mkdirs(garbage);
+          Path test = new Path(garbage, "test");
+          fs.mkdirs(test);
           fs.setPermission(garbage, new FsPermission(SYSTEM_DIR_PERMISSION));
           return mr2;
         }
       });
-      
+
       // Drop back to regular user (superuser) to change owner of garbage dir
       final Path garbage = new Path(
           mr.getJobTrackerRunner().getJobTracker().getSystemDir(), "garbage");
