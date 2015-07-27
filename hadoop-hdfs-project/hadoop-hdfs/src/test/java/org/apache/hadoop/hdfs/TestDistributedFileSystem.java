@@ -1104,11 +1104,14 @@ public class TestDistributedFileSystem {
       try {
         byte[] buf = new byte[10 * 1024 * 1024];
         peer.getOutputStream().write(buf);
-        Assert.fail("write should timeout");
+        long delta = Time.now() - start;
+        Assert.fail("write finish in " + delta + " ms" + "but should timedout");
       } catch (SocketTimeoutException ste) {
         long delta = Time.now() - start;
-        Assert.assertTrue("write timedout too soon", delta >= timeout * 0.9);
-        Assert.assertTrue("write timedout too late", delta <= timeout * 1.1);
+        Assert.assertTrue("write timedout too soon in " + delta + " ms",
+            delta >= timeout * 0.9);
+        Assert.assertTrue("write timedout too late in " + delta + " ms",
+            delta <= timeout * 1.2);
       } catch (Throwable t) {
         Assert.fail("wrong exception:" + t);
       }
