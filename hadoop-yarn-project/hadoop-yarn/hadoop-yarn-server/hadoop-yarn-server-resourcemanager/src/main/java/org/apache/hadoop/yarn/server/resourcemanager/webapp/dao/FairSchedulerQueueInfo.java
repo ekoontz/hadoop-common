@@ -57,7 +57,11 @@ public class FairSchedulerQueueInfo {
   private ResourceInfo steadyFairResources;
   private ResourceInfo fairResources;
   private ResourceInfo clusterResources;
-  
+
+  private long pendingContainers;
+  private long allocatedContainers;
+  private long reservedContainers;
+
   private String queueName;
   private String schedulingPolicy;
   
@@ -94,7 +98,11 @@ public class FairSchedulerQueueInfo {
     fractionMemMaxShare = (float)maxResources.getMemory() / clusterResources.getMemory();
     
     maxApps = allocConf.getQueueMaxApps(queueName);
-    
+
+    pendingContainers = queue.getMetrics().getPendingContainers();
+    allocatedContainers = queue.getMetrics().getAllocatedContainers();
+    reservedContainers = queue.getMetrics().getReservedContainers();
+
     Collection<FSQueue> children = queue.getChildQueues();
     childQueues = new ArrayList<FairSchedulerQueueInfo>();
     for (FSQueue child : children) {
@@ -105,7 +113,19 @@ public class FairSchedulerQueueInfo {
       }
     }
   }
-  
+
+  public long getPendingContainers() {
+    return pendingContainers;
+  }
+
+  public long getAllocatedContainers() {
+    return allocatedContainers;
+  }
+
+  public long getReservedContainers() {
+    return reservedContainers;
+  }
+
   /**
    * Returns the steady fair share as a fraction of the entire cluster capacity.
    */
@@ -153,7 +173,7 @@ public class FairSchedulerQueueInfo {
   public ResourceInfo getUsedResources() {
     return usedResources;
   }
-  
+
   /**
    * Returns the queue's min share in as a fraction of the entire
    * cluster capacity.
