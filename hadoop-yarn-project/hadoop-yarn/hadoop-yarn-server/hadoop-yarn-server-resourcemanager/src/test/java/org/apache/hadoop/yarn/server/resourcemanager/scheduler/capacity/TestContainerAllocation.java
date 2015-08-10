@@ -215,7 +215,8 @@ public class TestContainerAllocation {
 
   // This is to test whether LogAggregationContext is passed into
   // container tokens correctly
-  @Test
+  // Disabled due to CDH-30230
+  // @Test
   public void testLogAggregationContextPassedIntoContainerToken()
       throws Exception {
     MockRM rm1 = new MockRM(conf);
