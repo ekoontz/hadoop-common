@@ -245,6 +245,9 @@ Release 2.6.0 - 2014-11-18
     issues with newer versions of guava in applications. (Christopher Tubbs
     via acmurthy)
 
+    HADOOP-12318. Expose underlying LDAP exceptions in SaslPlainServer. (Mike
+    Yoder via atm)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
