@@ -39,8 +39,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -64,7 +66,10 @@ import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -688,7 +693,53 @@ public class TestDistributedFileSystem {
      noXmlDefaults = false; 
     }
   }
-  
+
+  @Test(timeout=120000)
+  public void testLocatedFileStatusStorageIdsTypes() throws Exception {
+    final Configuration conf = getTestConfiguration();
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3).build();
+    try {
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final Path testFile = new Path("/testListLocatedStatus");
+      final int blockSize = 4096;
+      final int numBlocks = 10;
+      // Create a test file
+      final int repl = 2;
+      DFSTestUtil.createFile(fs, testFile, blockSize, numBlocks * blockSize,
+          blockSize, (short) repl, 0xADDED);
+      // Get the listing
+      RemoteIterator<LocatedFileStatus> it = fs.listLocatedStatus(testFile);
+      assertTrue("Expected file to be present", it.hasNext());
+      LocatedFileStatus stat = it.next();
+      BlockLocation[] locs = stat.getBlockLocations();
+      assertEquals("Unexpected number of locations", numBlocks, locs.length);
+
+      Set<String> dnStorageIds = new HashSet<>();
+      for (DataNode d : cluster.getDataNodes()) {
+        for (FsVolumeSpi vol : d.getFSDataset().getVolumes()) {
+          dnStorageIds.add(vol.getStorageID());
+        }
+      }
+
+      for (BlockLocation loc : locs) {
+        String[] ids = loc.getStorageIds();
+        // Run it through a set to deduplicate, since there should be no dupes
+        Set<String> storageIds = new HashSet<>();
+        for (String id: ids) {
+          storageIds.add(id);
+        }
+        assertEquals("Unexpected num storage ids", repl, storageIds.size());
+        // Make sure these are all valid storage IDs
+        assertTrue("Unknown storage IDs found!", dnStorageIds.containsAll
+            (storageIds));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 
   /**
    * Tests the normal path of batching up BlockLocation[]s to be passed to a

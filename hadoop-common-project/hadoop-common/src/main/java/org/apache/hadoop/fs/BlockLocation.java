@@ -34,6 +34,7 @@ public class BlockLocation {
   private String[] cachedHosts; // Datanode hostnames with a cached replica
   private String[] names; // Datanode IP:xferPort for accessing the block
   private String[] topologyPaths; // Full path name in network topology
+  private String[] storageIds; // Storage ID of each replica
   private long offset;  // Offset of the block in the file
   private long length;
   private boolean corrupt;
@@ -58,6 +59,7 @@ public class BlockLocation {
     this.offset = that.offset;
     this.length = that.length;
     this.corrupt = that.corrupt;
+    this.storageIds = that.storageIds;
   }
 
   /**
@@ -95,6 +97,13 @@ public class BlockLocation {
 
   public BlockLocation(String[] names, String[] hosts, String[] cachedHosts,
       String[] topologyPaths, long offset, long length, boolean corrupt) {
+    this(names, hosts, cachedHosts, topologyPaths, null, offset, length,
+        corrupt);
+  }
+
+  public BlockLocation(String[] names, String[] hosts, String[] cachedHosts,
+      String[] topologyPaths, String[] storageIds,
+      long offset, long length, boolean corrupt) {
     if (names == null) {
       this.names = EMPTY_STR_ARRAY;
     } else {
@@ -114,6 +123,11 @@ public class BlockLocation {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
       this.topologyPaths = topologyPaths;
+    }
+    if (storageIds == null) {
+      this.storageIds = EMPTY_STR_ARRAY;
+    } else {
+      this.storageIds = storageIds;
     }
     this.offset = offset;
     this.length = length;
@@ -148,7 +162,14 @@ public class BlockLocation {
   public String[] getTopologyPaths() throws IOException {
     return topologyPaths;
   }
-  
+
+  /**
+   * Get the storageID of each replica of the block.
+   */
+  public String[] getStorageIds() {
+    return storageIds;
+  }
+
   /**
    * Get the start offset of file associated with this block
    */
@@ -232,6 +253,14 @@ public class BlockLocation {
       this.topologyPaths = EMPTY_STR_ARRAY;
     } else {
       this.topologyPaths = topologyPaths;
+    }
+  }
+
+  public void setStorageIds(String[] storageIds) {
+    if (storageIds == null) {
+      this.storageIds = EMPTY_STR_ARRAY;
+    } else {
+      this.storageIds = storageIds;
     }
   }
 
