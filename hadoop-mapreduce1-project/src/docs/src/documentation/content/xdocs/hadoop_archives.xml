@@ -35,7 +35,7 @@
         <section>
         <title>How to Create an Archive</title>
         <p>
-        <code>Usage: hadoop archive -archiveName name -p &lt;parent&gt; &lt;src&gt;* &lt;dest&gt;</code>
+        <code>Usage: hadoop archive -archiveName name -p &lt;parent&gt; &#91;-r &lt;replication factor&gt;&#93; &lt;src&gt;* &lt;dest&gt;</code>
         </p>
         <p>
         -archiveName is the name of the archive you would like to create. 
@@ -46,8 +46,11 @@
         Here /foo/bar is the parent path and a/b/c, e/f/g are relative paths to parent. 
         Note that this is a Map/Reduce job that creates the archives. You would
         need a map reduce cluster to run this. For a detailed example the later sections. </p>
+        <p>
+        -r indicates the desired replication factor; if this optional argument is not specified,
+        a replication factor of 3 will be used. </p>
         <p> If you just want to archive a single directory /foo/bar then you can just use </p>
-        <p><code> hadoop archive -archiveName zoo.har -p /foo/bar /outputdir </code></p>
+        <p><code> hadoop archive -archiveName zoo.har -p /foo/bar -r 3 /outputdir </code></p>
         </section>
         
         <section>
@@ -68,13 +71,14 @@
  		<section>
 	    <title>Creating an Archive</title>
 			
-        <p><code>hadoop archive -archiveName foo.har -p /user/hadoop dir1 dir2 /user/zoo </code></p>
+        <p><code>hadoop archive -archiveName foo.har -p /user/hadoop -r 3 dir1 dir2 /user/zoo </code></p>
         <p>
          The above example is creating an archive using /user/hadoop as the relative archive directory.
          The directories /user/hadoop/dir1 and /user/hadoop/dir2 will be 
         archived in the following file system directory -- /user/zoo/foo.har. Archiving does not delete the input
         files. If you want to delete the input files after creating the archives (to reduce namespace), you
-        will have to do it on your own. 
+        will have to do it on your own. In this example, because `-r 3` is specified, a replication factor of 3
+        will be used.
         </p>
         </section>
         <section>

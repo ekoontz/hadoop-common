@@ -81,12 +81,17 @@ public class HadoopArchives implements Tool {
   static final String TOTAL_SIZE_LABEL = NAME + ".total.size";
   static final String DST_HAR_LABEL = NAME + ".archive.name";
   static final String SRC_PARENT_LABEL = NAME + ".parent.path";
+  static final String HAR_REPLICATION_LABEL = NAME + ".replication.factor";
+
   // size of each part file
   // its fixed for now.
   static final long partSize = 2 * 1024 * 1024 * 1024l;
+  /** the desired replication degree; default is 10 **/
+  short repl = 3;
 
   private static final String usage = "archive"
-  + " -archiveName NAME -p <parent path> <src>* <dest>" +
+  + " -archiveName NAME -p <parent path> [-r <replication factor>]" +
+      " <src>* <dest>" +
   "\n";
   
  
@@ -398,6 +403,7 @@ public class HadoopArchives implements Tool {
     FileSystem fs = parentPath.getFileSystem(conf);
     conf.set(DST_HAR_LABEL, archiveName);
     conf.set(SRC_PARENT_LABEL, parentPath.makeQualified(fs).toString());
+    conf.setInt(HAR_REPLICATION_LABEL, repl);
     Path outputPath = new Path(dest, archiveName);
     FileOutputFormat.setOutputPath(conf, outputPath);
     FileSystem outFs = outputPath.getFileSystem(conf);
@@ -472,8 +478,6 @@ public class HadoopArchives implements Tool {
     } finally {
       srcWriter.close();
     }
-    //increase the replication of src files
-    jobfs.setReplication(srcFiles, (short) 10);
     conf.setInt(SRC_COUNT_LABEL, numFiles);
     conf.setLong(TOTAL_SIZE_LABEL, totalSize);
     int numMaps = (int)(totalSize/partSize);
@@ -511,6 +515,7 @@ public class HadoopArchives implements Tool {
     FileSystem destFs = null;
     byte[] buffer;
     int buf_size = 128 * 1024;
+    private int replication = 3;
     
     // configure the mapper and create 
     // the part file.
@@ -518,6 +523,8 @@ public class HadoopArchives implements Tool {
     // tmp files. 
     public void configure(JobConf conf) {
       this.conf = conf;
+
+      replication = conf.getInt(HAR_REPLICATION_LABEL, 3);
       // this is tightly tied to map reduce
       // since it does not expose an api 
       // to get the partition
@@ -638,6 +645,7 @@ public class HadoopArchives implements Tool {
     public void close() throws IOException {
       // close the part files.
       partStream.close();
+      destFs.setReplication(tmpOutput, (short) replication);
     }
   }
   
@@ -661,6 +669,7 @@ public class HadoopArchives implements Tool {
     private int numIndexes = 1000;
     private Path tmpOutputDir = null;
     private int written = 0;
+    private int replication = 3;
     private int keyVal = 0;
     
     // configure 
@@ -669,6 +678,7 @@ public class HadoopArchives implements Tool {
       tmpOutputDir = FileOutputFormat.getWorkOutputPath(this.conf);
       masterIndex = new Path(tmpOutputDir, "_masterindex");
       index = new Path(tmpOutputDir, "_index");
+      replication = conf.getInt(HAR_REPLICATION_LABEL, 3);
       try {
         fs = masterIndex.getFileSystem(conf);
         if (fs.exists(masterIndex)) {
@@ -727,8 +737,8 @@ public class HadoopArchives implements Tool {
       outStream.close();
       indexStream.close();
       // try increasing the replication 
-      fs.setReplication(index, (short) 5);
-      fs.setReplication(masterIndex, (short) 5);
+      fs.setReplication(index, (short) replication);
+      fs.setReplication(masterIndex, (short) replication);
     }
     
   }
@@ -768,6 +778,12 @@ public class HadoopArchives implements Tool {
       }
       parentPath = new Path(args[i+1]);
       i+=2;
+
+      if ("-r".equals(args[i])) {
+        repl = Short.parseShort(args[i + 1]);
+        i += 2;
+      }
+
       //read the rest of the paths
       for (; i < args.length; i++) {
         if (i == (args.length - 1)) {
