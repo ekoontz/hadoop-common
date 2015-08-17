@@ -81,6 +81,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -90,7 +91,6 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -189,7 +189,8 @@ public class BlockManager {
    * notified of all block deletions that might have been pending
    * when the failover happened.
    */
-  private final Set<Block> postponedMisreplicatedBlocks = Sets.newHashSet();
+  private final LightWeightHashSet<Block> postponedMisreplicatedBlocks =
+      new LightWeightHashSet<>();
 
   /**
    * Maps a StorageID to the set of blocks that are "extra" for this
