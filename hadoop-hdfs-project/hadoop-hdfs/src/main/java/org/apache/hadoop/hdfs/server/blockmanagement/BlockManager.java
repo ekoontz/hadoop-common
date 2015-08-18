@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -197,7 +196,7 @@ public class BlockManager {
    * DataNode. We'll eventually remove these extras.
    */
   public final Map<String, LightWeightLinkedSet<Block>> excessReplicateMap =
-    new TreeMap<String, LightWeightLinkedSet<Block>>();
+    new HashMap<>();
 
   /**
    * Store set of Blocks that need to be replicated 1 or more times.
