@@ -792,4 +792,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // 10 days
   public static final long DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT =
       TimeUnit.DAYS.toMillis(10);
+
+  static final String REPLICA_ACCESSOR_BUILDER_CLASSES_KEY =
+      "dfs.client.replica.accessor.builder.classes";
 }

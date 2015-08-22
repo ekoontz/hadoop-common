@@ -139,6 +139,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.ReplicaAccessorBuilder;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
@@ -158,10 +159,10 @@ import org.apache.hadoop.hdfs.protocol.EncryptionZone;
 import org.apache.hadoop.hdfs.protocol.EncryptionZoneIterator;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -339,6 +340,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     final long keyProviderCacheExpiryMs;
     public BlockReaderFactory.FailureInjector brfFailureInjector =
       new BlockReaderFactory.FailureInjector();
+    private final List<Class<? extends ReplicaAccessorBuilder>>
+      replicaAccessorBuilderClasses;
 
     public Conf(Configuration conf) {
       // The hdfsTimeout is currently the same as the ipc timeout 
@@ -507,6 +510,32 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       keyProviderCacheExpiryMs = conf.getLong(
           DFSConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_MS,
           DFSConfigKeys.DFS_CLIENT_KEY_PROVIDER_CACHE_EXPIRY_DEFAULT);
+      replicaAccessorBuilderClasses = loadReplicaAccessorBuilderClasses(conf);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Class<? extends ReplicaAccessorBuilder>>
+        loadReplicaAccessorBuilderClasses(Configuration conf)
+    {
+      String classNames[] = conf.getTrimmedStrings(
+          DFSConfigKeys.REPLICA_ACCESSOR_BUILDER_CLASSES_KEY);
+      if (classNames.length == 0) {
+        return Collections.emptyList();
+      }
+      ArrayList<Class<? extends ReplicaAccessorBuilder>> classes =
+          new ArrayList<Class<? extends ReplicaAccessorBuilder>>();
+      ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+      for (String className: classNames) {
+        try {
+          Class<? extends ReplicaAccessorBuilder> cls =
+            (Class<? extends ReplicaAccessorBuilder>)
+              classLoader.loadClass(className);
+          classes.add(cls);
+        } catch (Throwable t) {
+          LOG.warn("Unable to load " + className, t);
+        }
+      }
+      return classes;
     }
 
     public boolean isUseLegacyBlockReaderLocal() {
@@ -537,6 +566,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         return DataChecksum.Type.valueOf(
             DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT); 
       }
+    }
+
+    /**
+     * @return the replicaAccessorBuilderClasses
+     */
+    public List<Class<? extends ReplicaAccessorBuilder>>
+          getReplicaAccessorBuilderClasses() {
+      return replicaAccessorBuilderClasses;
     }
 
     // Construct a checksum option from conf
