@@ -1818,6 +1818,7 @@ public class BlockManager {
         blockLog.info("BLOCK* processReport: "
             + "discarded non-initial block report from {}"
             + " because namenode still in startup phase", nodeID);
+        blockReportLeaseManager.removeLease(node);
         return !node.hasStaleStorages();
       }
       if (context != null) {
