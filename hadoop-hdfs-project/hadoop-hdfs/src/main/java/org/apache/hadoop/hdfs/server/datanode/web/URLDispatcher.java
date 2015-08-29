@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpRequest;
+import com.cloudera.io.netty.channel.ChannelHandlerContext;
+import com.cloudera.io.netty.channel.ChannelPipeline;
+import com.cloudera.io.netty.channel.SimpleChannelInboundHandler;
+import com.cloudera.io.netty.handler.codec.http.HttpRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.web.webhdfs.WebHdfsHandler;
 

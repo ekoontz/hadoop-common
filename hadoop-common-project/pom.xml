@@ -38,6 +38,7 @@
     <module>hadoop-nfs</module>
     <module>hadoop-minikdc</module>
     <module>hadoop-kms</module>
+    <module>cloudera-netty</module>
   </modules>
 
   <build>

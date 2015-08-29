@@ -17,31 +17,31 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultFullHttpRequest;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
+import com.cloudera.io.netty.bootstrap.Bootstrap;
+import com.cloudera.io.netty.buffer.Unpooled;
+import com.cloudera.io.netty.channel.Channel;
+import com.cloudera.io.netty.channel.ChannelFuture;
+import com.cloudera.io.netty.channel.ChannelFutureListener;
+import com.cloudera.io.netty.channel.ChannelHandlerContext;
+import com.cloudera.io.netty.channel.ChannelInboundHandlerAdapter;
+import com.cloudera.io.netty.channel.ChannelInitializer;
+import com.cloudera.io.netty.channel.ChannelPipeline;
+import com.cloudera.io.netty.channel.SimpleChannelInboundHandler;
+import com.cloudera.io.netty.channel.socket.SocketChannel;
+import com.cloudera.io.netty.channel.socket.nio.NioSocketChannel;
+import com.cloudera.io.netty.handler.codec.http.DefaultFullHttpRequest;
+import com.cloudera.io.netty.handler.codec.http.DefaultHttpResponse;
+import com.cloudera.io.netty.handler.codec.http.HttpRequest;
+import com.cloudera.io.netty.handler.codec.http.HttpRequestEncoder;
+import com.cloudera.io.netty.handler.codec.http.HttpResponseEncoder;
 import org.apache.commons.logging.Log;
 
 import java.net.InetSocketAddress;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Values;
-import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
+import static com.cloudera.io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static com.cloudera.io.netty.handler.codec.http.HttpHeaders.Values;
+import static com.cloudera.io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
+import static com.cloudera.io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 
 /**
  * Dead simple session-layer HTTP proxy. It gets the HTTP responses

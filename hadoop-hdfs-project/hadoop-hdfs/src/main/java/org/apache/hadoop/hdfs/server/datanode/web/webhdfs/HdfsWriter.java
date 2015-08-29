@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web.webhdfs;
 
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.LastHttpContent;
+import com.cloudera.io.netty.channel.ChannelFutureListener;
+import com.cloudera.io.netty.channel.ChannelHandlerContext;
+import com.cloudera.io.netty.channel.SimpleChannelInboundHandler;
+import com.cloudera.io.netty.handler.codec.http.DefaultHttpResponse;
+import com.cloudera.io.netty.handler.codec.http.HttpContent;
+import com.cloudera.io.netty.handler.codec.http.LastHttpContent;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
@@ -30,8 +30,8 @@ import org.apache.hadoop.io.IOUtils;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
-import static io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
+import static com.cloudera.io.netty.handler.codec.http.HttpHeaders.Names.CONNECTION;
+import static com.cloudera.io.netty.handler.codec.http.HttpHeaders.Values.CLOSE;
 
 class HdfsWriter extends SimpleChannelInboundHandler<HttpContent> {
   private final DFSClient client;
