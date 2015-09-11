@@ -331,7 +331,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       }
     } catch (ResourceHandlerException e) {
       LOG.error("ResourceHandlerChain.preStart() failed!", e);
-      throw new IOException("ResourceHandlerChain.preStart() failed!");
+      throw new IOException("ResourceHandlerChain.preStart() failed!", e);
     }
 
     ShellCommandExecutor shExec = null;
