@@ -27,7 +27,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -4685,7 +4688,7 @@ public class TestFairScheduler extends FairSchedulerTestBase {
   }
 
   @Test
-  public void testDontAllowUndeclaredPools() throws Exception{
+  public void testDontAllowUndeclaredPools() throws Exception {
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
 
@@ -4701,10 +4704,10 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     scheduler.start();
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     QueueManager queueManager = scheduler.getQueueManager();
-    
+
     FSLeafQueue jerryQueue = queueManager.getLeafQueue("jerry", false);
     FSLeafQueue defaultQueue = queueManager.getLeafQueue("default", false);
-    
+
     // Should get put into jerry
     createSchedulingRequest(1024, "jerry", "someuser");
     assertEquals(1, jerryQueue.getNumRunnableApps());
@@ -4713,17 +4716,44 @@ public class TestFairScheduler extends FairSchedulerTestBase {
     createSchedulingRequest(1024, "newqueue", "someuser");
     assertEquals(1, jerryQueue.getNumRunnableApps());
     assertEquals(1, defaultQueue.getNumRunnableApps());
-    
+
     // Would get put into someuser because of user-as-default-queue, but should
     // be forced into default
     createSchedulingRequest(1024, "default", "someuser");
     assertEquals(1, jerryQueue.getNumRunnableApps());
     assertEquals(2, defaultQueue.getNumRunnableApps());
-    
+
     // Should get put into jerry because of user-as-default-queue
     createSchedulingRequest(1024, "default", "jerry");
     assertEquals(2, jerryQueue.getNumRunnableApps());
     assertEquals(2, defaultQueue.getNumRunnableApps());
+  }
+
+  public void testContinuousSchedulingInterruptedException()
+      throws Exception {
+    scheduler.init(conf);
+    scheduler.start();
+    FairScheduler spyScheduler = spy(scheduler);
+    Assert.assertTrue("Continuous scheduling should be disabled.",
+        !spyScheduler.isContinuousSchedulingEnabled());
+    // Add one nodes
+    RMNode node1 =
+        MockNodes.newNodeInfo(1, Resources.createResource(8 * 1024, 8), 1,
+            "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    spyScheduler.handle(nodeEvent1);
+    Assert.assertEquals("We should have one alive node.",
+        1, spyScheduler.getNumClusterNodes());
+    InterruptedException ie = new InterruptedException();
+    doThrow(new YarnRuntimeException(ie)).when(spyScheduler).
+        attemptScheduling(isA(FSSchedulerNode.class));
+    // Invoke the continuous scheduling once
+    try {
+      spyScheduler.continuousSchedulingAttempt();
+      fail("Expected InterruptedException to stop schedulingThread");
+    } catch (InterruptedException e) {
+      Assert.assertEquals(ie, e);
+    }
   }
 
   @Test
