@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEvent;
@@ -473,6 +474,16 @@ public class SchedulerApplicationAttempt {
     return new ContainersAndNMTokensAllocation(returnContainerList, nmTokens);
   }
 
+  public boolean isWaitingForAMContainer(ApplicationId applicationId) {
+    // The working knowledge is that masterContainer for AM is null as it
+    // itself is the master container.
+    RMAppAttempt appAttempt =
+        rmContext.getRMApps().get(applicationId).getCurrentAppAttempt();
+    return (appAttempt != null && appAttempt.getMasterContainer() == null
+        && appAttempt.getSubmissionContext().getUnmanagedAM() == false);
+  }
+
+  // Blacklist used for user containers
   public synchronized void updateBlacklist(
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
     if (!isStopped) {
@@ -480,9 +491,19 @@ public class SchedulerApplicationAttempt {
           blacklistAdditions, blacklistRemovals);
     }
   }
-  
+
+  // Blacklist used for AM containers
+  public synchronized void updateAMBlacklist(
+      List<String> blacklistAdditions, List<String> blacklistRemovals) {
+    if (!isStopped) {
+      this.appSchedulingInfo.updateAMBlacklist(
+          blacklistAdditions, blacklistRemovals);
+    }
+  }
+
   public boolean isBlacklisted(String resourceName) {
-    return this.appSchedulingInfo.isBlacklisted(resourceName);
+    boolean useAMBlacklist = isWaitingForAMContainer(getApplicationId());
+    return this.appSchedulingInfo.isBlacklisted(resourceName, useAMBlacklist);
   }
 
   public synchronized void addSchedulingOpportunity(Priority priority) {

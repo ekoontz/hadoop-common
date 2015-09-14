@@ -69,6 +69,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
+import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistUpdates;
+import org.apache.hadoop.yarn.server.resourcemanager.blacklist.DisabledBlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -179,6 +182,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   
   private RMAppAttemptMetrics attemptMetrics = null;
   private ResourceRequest amReq = null;
+  private BlacklistManager blacklistedNodesForAM = null;
 
   private static final StateMachineFactory<RMAppAttemptImpl,
                                            RMAppAttemptState,
@@ -429,6 +433,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
       Configuration conf, boolean maybeLastAttempt, ResourceRequest amReq) {
+    this(appAttemptId, rmContext, scheduler, masterService, submissionContext,
+        conf, maybeLastAttempt, amReq, new DisabledBlacklistManager());
+  }
+
+  public RMAppAttemptImpl(ApplicationAttemptId appAttemptId,
+      RMContext rmContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService,
+      ApplicationSubmissionContext submissionContext,
+      Configuration conf, boolean maybeLastAttempt, ResourceRequest amReq,
+      BlacklistManager amBlacklist) {
     this.conf = conf;
     this.applicationAttemptId = appAttemptId;
     this.rmContext = rmContext;
@@ -449,6 +463,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         new RMAppAttemptMetrics(applicationAttemptId, rmContext);
     
     this.amReq = amReq;
+    this.blacklistedNodesForAM = amBlacklist;
   }
 
   @Override
@@ -914,13 +929,25 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         appAttempt.amReq.setPriority(AM_CONTAINER_PRIORITY);
         appAttempt.amReq.setResourceName(ResourceRequest.ANY);
         appAttempt.amReq.setRelaxLocality(true);
-        
-        // SchedulerUtils.validateResourceRequests is not necessary because
+
+        appAttempt.getAMBlacklist().refreshNodeHostCount(
+            appAttempt.scheduler.getNumClusterNodes());
+
+        BlacklistUpdates amBlacklist = appAttempt.getAMBlacklist()
+            .getBlacklistUpdates();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Using blacklist for AM: additions(" +
+              amBlacklist.getAdditions() + ") and removals(" +
+              amBlacklist.getRemovals() + ")");
+        }
         // AM resource has been checked when submission
         Allocation amContainerAllocation =
-            appAttempt.scheduler.allocate(appAttempt.applicationAttemptId,
+            appAttempt.scheduler.allocate(
+                appAttempt.applicationAttemptId,
                 Collections.singletonList(appAttempt.amReq),
-                EMPTY_CONTAINER_RELEASE_LIST, null, null);
+                EMPTY_CONTAINER_RELEASE_LIST,
+                amBlacklist.getAdditions(),
+                amBlacklist.getRemovals());
         if (amContainerAllocation != null
             && amContainerAllocation.getContainers() != null) {
           assert (amContainerAllocation.getContainers().size() == 0);
@@ -1298,7 +1325,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private static final class UnmanagedAMAttemptSavedTransition 
+  private boolean shouldCountTowardsNodeBlacklisting(int exitStatus) {
+    return exitStatus == ContainerExitStatus.DISKS_FAILED;
+  }
+
+  private static final class UnmanagedAMAttemptSavedTransition
                                                 extends AMLaunchedTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,
@@ -1654,6 +1685,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private void sendAMContainerToNM(RMAppAttemptImpl appAttempt,
       RMAppAttemptContainerFinishedEvent containerFinishedEvent) {
     NodeId nodeId = containerFinishedEvent.getNodeId();
+    if (containerFinishedEvent.getContainerStatus() != null) {
+      if (shouldCountTowardsNodeBlacklisting(containerFinishedEvent
+          .getContainerStatus().getExitStatus())) {
+        appAttempt.addAMNodeToBlackList(containerFinishedEvent.getNodeId());
+      }
+    } else {
+      LOG.warn("No ContainerStatus in containerFinishedEvent");
+    }
     finishedContainersSentToAM.putIfAbsent(nodeId,
       new ArrayList<ContainerStatus>());
     appAttempt.finishedContainersSentToAM.get(nodeId).add(
@@ -1662,6 +1701,15 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .getKeepContainersAcrossApplicationAttempts()) {
       appAttempt.sendFinishedContainersToNM();
     }
+  }
+
+  private void addAMNodeToBlackList(NodeId nodeId) {
+    blacklistedNodesForAM.addNode(nodeId.getHost().toString());
+  }
+
+  @Override
+  public BlacklistManager getAMBlacklist() {
+    return blacklistedNodesForAM;
   }
 
   private static void addJustFinishedContainer(RMAppAttemptImpl appAttempt,

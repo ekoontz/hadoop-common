@@ -77,6 +77,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.blacklist.BlacklistManager;
+import org.apache.hadoop.yarn.server.resourcemanager.blacklist.DisabledBlacklistManager;
+import org.apache.hadoop.yarn.server.resourcemanager.blacklist.SimpleBlacklistManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
@@ -141,6 +144,8 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final Set<String> applicationTags;
 
   private final long attemptFailuresValidityInterval;
+  private final boolean amBlacklistingEnabled;
+  private final float blacklistDisableThreshold;
 
   private Clock systemClock;
 
@@ -464,6 +469,18 @@ public class RMAppImpl implements RMApp, Recoverable {
     maxLogAggregationDiagnosticsInMemory = conf.getInt(
         YarnConfiguration.RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY,
         YarnConfiguration.DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY);
+
+    amBlacklistingEnabled = conf.getBoolean(
+        YarnConfiguration.AM_BLACKLISTING_ENABLED,
+        YarnConfiguration.DEFAULT_AM_BLACKLISTING_ENABLED);
+
+    if (amBlacklistingEnabled) {
+      blacklistDisableThreshold = conf.getFloat(
+          YarnConfiguration.AM_BLACKLISTING_DISABLE_THRESHOLD,
+          YarnConfiguration.DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD);
+    } else {
+      blacklistDisableThreshold = 0.0f;
+    }
   }
 
   @Override
@@ -803,6 +820,18 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void createNewAttempt() {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(applicationId, attempts.size() + 1);
+
+    BlacklistManager currentAMBlacklist;
+    if (currentAttempt != null) {
+      currentAMBlacklist = currentAttempt.getAMBlacklist();
+    } else {
+      if (amBlacklistingEnabled) {
+        currentAMBlacklist = new SimpleBlacklistManager(
+            scheduler.getNumClusterNodes(), blacklistDisableThreshold);
+      } else {
+        currentAMBlacklist = new DisabledBlacklistManager();
+      }
+    }
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
           submissionContext, conf,
@@ -810,7 +839,8 @@ public class RMAppImpl implements RMApp, Recoverable {
           // previously failed attempts(which should not include Preempted,
           // hardware error and NM resync) + 1) equal to the max-attempt
           // limit.
-          maxAppAttempts == (getNumFailedAppAttempts() + 1), amReq);
+          maxAppAttempts == (getNumFailedAppAttempts() + 1), amReq,
+          currentAMBlacklist);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
   }

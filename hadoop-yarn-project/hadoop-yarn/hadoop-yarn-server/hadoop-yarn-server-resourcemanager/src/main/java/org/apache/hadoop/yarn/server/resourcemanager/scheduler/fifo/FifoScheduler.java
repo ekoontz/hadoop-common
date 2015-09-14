@@ -337,11 +337,18 @@ public class FifoScheduler extends
         application.showRequests();
 
         LOG.debug("allocate:" +
-            " applicationId=" + applicationAttemptId + 
+            " applicationId=" + applicationAttemptId +
             " #ask=" + ask.size());
       }
 
-      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+      if (application.isWaitingForAMContainer(application.getApplicationId())) {
+        // Allocate is for AM and update AM blacklist for this
+        application.updateAMBlacklist(
+            blacklistAdditions, blacklistRemovals);
+      } else {
+        application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+      }
+
       ContainersAndNMTokensAllocation allocation =
           application.pullNewlyAllocatedContainersAndNMTokens();
       return new Allocation(allocation.getContainerList(),

@@ -672,15 +672,42 @@ public class MockRM extends ResourceManager {
     rm.waitForState(rmApp.getApplicationId(), RMAppState.FINISHED);
   }
 
+  @SuppressWarnings("rawtypes")
+  private static void waitForSchedulerAppAttemptAdded(
+      ApplicationAttemptId attemptId, MockRM rm) throws InterruptedException {
+    int tick = 0;
+    // Wait for at most 5 sec
+    while (null == ((AbstractYarnScheduler) rm.getResourceScheduler())
+        .getApplicationAttempt(attemptId) && tick < 50) {
+      Thread.sleep(100);
+      if (tick % 10 == 0) {
+        System.out.println("waiting for SchedulerApplicationAttempt="
+            + attemptId + " added.");
+      }
+      tick++;
+    }
+    Assert.assertNotNull("Timed out waiting for SchedulerApplicationAttempt=" +
+        attemptId + " to be added.", ((AbstractYarnScheduler)
+        rm.getResourceScheduler()).getApplicationAttempt(attemptId));
+  }
+
   public static MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
       throws Exception {
-    rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
-    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    RMAppAttempt attempt = waitForAttemptScheduled(app, rm);
     System.out.println("Launch AM " + attempt.getAppAttemptId());
     nm.nodeHeartbeat(true);
     MockAM am = rm.sendAMLaunched(attempt.getAppAttemptId());
     rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.LAUNCHED);
     return am;
+  }
+
+  public static RMAppAttempt waitForAttemptScheduled(RMApp app, MockRM rm)
+      throws Exception {
+    rm.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    waitForSchedulerAppAttemptAdded(attempt.getAppAttemptId(), rm);
+    rm.waitForState(attempt.getAppAttemptId(), RMAppAttemptState.SCHEDULED);
+    return attempt;
   }
 
   public static MockAM launchAndRegisterAM(RMApp app, MockRM rm, MockNM nm)

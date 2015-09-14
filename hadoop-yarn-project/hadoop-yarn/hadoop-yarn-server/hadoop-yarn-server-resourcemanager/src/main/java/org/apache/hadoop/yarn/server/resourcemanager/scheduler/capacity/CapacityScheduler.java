@@ -889,7 +889,13 @@ public class CapacityScheduler extends
           " #ask=" + ask.size());
       }
 
-      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+      if (application.isWaitingForAMContainer(application.getApplicationId())) {
+        // Allocate is for AM and update AM blacklist for this
+        application.updateAMBlacklist(
+            blacklistAdditions, blacklistRemovals);
+      } else {
+        application.updateBlacklist(blacklistAdditions, blacklistRemovals);
+      }
 
       return application.getAllocation(getResourceCalculator(),
                    clusterResource, getMinimumResourceCapability());

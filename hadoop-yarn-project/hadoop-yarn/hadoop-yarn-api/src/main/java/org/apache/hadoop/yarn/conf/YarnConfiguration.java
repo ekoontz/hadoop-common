@@ -1578,6 +1578,15 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =
       "2000, 500";
 
+  public static final String AM_BLACKLISTING_ENABLED =
+      YARN_PREFIX + "am.blacklisting.enabled";
+  public static final boolean DEFAULT_AM_BLACKLISTING_ENABLED = true;
+
+  public static final String AM_BLACKLISTING_DISABLE_THRESHOLD =
+      YARN_PREFIX + "am.blacklisting.disable-failure-threshold";
+  public static final float DEFAULT_AM_BLACKLISTING_DISABLE_THRESHOLD = 0.8f;
+
+
   public YarnConfiguration() {
     super();
   }
