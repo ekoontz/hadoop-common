@@ -74,6 +74,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.LAZY_PERSIST;
@@ -408,5 +409,10 @@ public abstract class LazyPersistTestCase {
     } catch (Exception e) {
       e.printStackTrace();
     }
+  }
+
+  protected void waitForMetric(final String metricName, final int expectedValue)
+      throws TimeoutException, InterruptedException {
+    DFSTestUtil.waitForMetric(jmx, metricName, expectedValue);
   }
 }
