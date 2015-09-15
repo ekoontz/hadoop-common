@@ -86,6 +86,10 @@
 
     'helper_to_acl_bit': function (v) {
       return v ? '+' : "";
+    },
+
+    'fmt_number': function (v) {
+      return v.toLocaleString();
     }
   };
   $.extend(dust.filters, filters);
