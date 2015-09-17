@@ -562,7 +562,7 @@ public abstract class Event {
     @Override
     @InterfaceStability.Unstable
     public String toString() {
-      return "AppendEvent [path=" + path + ", newBlock=" + newBlock + "]";
+      return "AppendEvent [path=" + path + "]";
     }
 
   }
