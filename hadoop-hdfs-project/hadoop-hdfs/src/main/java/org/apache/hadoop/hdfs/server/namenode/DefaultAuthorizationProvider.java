@@ -123,6 +123,26 @@ public class DefaultAuthorizationProvider
     inode.addFeature(f);
   }
 
+  /**
+   * Check whether exception e is due to an ancestor inode's not being
+   * directory.
+   */
+  private void checkAncestorType(INode[] inodes, int ancestorIndex,
+      AccessControlException e) throws AccessControlException {
+    for (int i = 0; i <= ancestorIndex; i++) {
+      if (inodes[i] == null) {
+        break;
+      }
+      if (!inodes[i].isDirectory()) {
+        throw new AccessControlException(
+            e.getMessage() + " (Ancestor " + inodes[i].getFullPathName()
+                + " is not a directory).");
+      }
+    }
+    throw e;
+  }
+
+
   @Override
   public void checkPermission(String user, Set<String> groups,
       INodeAuthorizationInfo[] nodes, int snapshotId,
@@ -134,7 +154,11 @@ public class DefaultAuthorizationProvider
     for (; ancestorIndex >= 0 && inodes[ancestorIndex] == null;
          ancestorIndex--)
       ;
-    checkTraverse(user, groups, inodes, ancestorIndex, snapshotId);
+    try {
+      checkTraverse(user, groups, inodes, ancestorIndex, snapshotId);
+    } catch (AccessControlException e) {
+      checkAncestorType(inodes, ancestorIndex, e);
+    }
 
     final INode last = inodes[inodes.length - 1];
     if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
