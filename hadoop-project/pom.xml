@@ -67,9 +67,8 @@
 
     <!-- ProtocolBuffer version, used to verify the protoc version and -->
     <!-- define the protobuf JAR version                               -->
-    <cdh.protobuf.path>${env.HADOOP_PROTOC_PATH}</cdh.protobuf.path>
     <protobuf.version>${cdh.protobuf.version}</protobuf.version>
-    <protoc.path>${cdh.protobuf.path}</protoc.path>
+    <protoc.path>${env.HADOOP_PROTOC_CDH5_PATH}</protoc.path>
 
     <zookeeper.version>3.4.6</zookeeper.version>
     <curator.version>2.7.1</curator.version>
@@ -90,7 +89,7 @@
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx4096m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>${cdh.surefire.version}</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
   </properties>

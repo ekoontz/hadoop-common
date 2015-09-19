@@ -21,7 +21,8 @@ git ls-tree -r HEAD
 cd ..
 
 # Run the build and tests
-./jenkins-job-scripts/run_precommit.sh
+export CONF_NAME=CDH5-Hadoop-2.6.0
+./jenkins-job-scripts/run.sh
 
 if [[ -d $SCRIPTS ]]; then
     rm -rf $SCRIPTS
