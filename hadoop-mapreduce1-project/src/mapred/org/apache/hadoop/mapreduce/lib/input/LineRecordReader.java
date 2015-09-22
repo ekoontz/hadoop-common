@@ -100,7 +100,8 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
       }
     } else {
       fileIn.seek(start);
-      in = new SplitLineReader(fileIn, job, this.recordDelimiterBytes);
+      in = new UncompressedSplitLineReader(
+          fileIn, job, this.recordDelimiterBytes, split.getLength());
       filePosition = fileIn;
     }
     // If this is not the first split, we always throw away first record
@@ -235,6 +236,7 @@ public class LineRecordReader extends RecordReader<LongWritable, Text> {
     } finally {
       if (decompressor != null) {
         CodecPool.returnDecompressor(decompressor);
+        decompressor = null;
       }
     }
   }
