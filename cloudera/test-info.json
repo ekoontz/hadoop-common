@@ -1,0 +1,41 @@
+{
+  "test_info": {
+    "tests": [
+      {
+        "test_pattern": "org.hadoop.yarn.*",
+        "components": [
+          "Yarn"
+        ]
+      },
+      {
+        "test_pattern": "org.hadoop.hdfs.*",
+        "components": [
+          "HDFS"
+        ]
+      },
+      {
+        "test_pattern": "org.hadoop.mapred.*",
+        "components": [
+          "MapReduce"
+        ]
+      }
+    ],
+    "product": "CDH",
+    "release": "5.7.0",
+    "releases": [
+      "CDH5.7"
+    ],
+    "labels": [
+      "auto-jira",
+      "hadoop"
+    ],
+    "components": [
+      "Common"
+    ],
+    "jira-project": "CDH",
+    "test_framework": "surefire",
+    "email_threshold": 0.2,
+    "email_to": "chelin@cloudera.com",
+    "modified_threshold": 7
+  }
+}
