@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.web;
 
-import com.cloudera.io.netty.bootstrap.ChannelFactory;
-import com.cloudera.io.netty.bootstrap.ServerBootstrap;
-import com.cloudera.io.netty.channel.ChannelFuture;
-import com.cloudera.io.netty.channel.ChannelInitializer;
-import com.cloudera.io.netty.channel.ChannelPipeline;
-import com.cloudera.io.netty.channel.EventLoopGroup;
-import com.cloudera.io.netty.channel.nio.NioEventLoopGroup;
-import com.cloudera.io.netty.channel.socket.SocketChannel;
-import com.cloudera.io.netty.channel.socket.nio.NioServerSocketChannel;
-import com.cloudera.io.netty.handler.codec.http.HttpRequestDecoder;
-import com.cloudera.io.netty.handler.codec.http.HttpResponseEncoder;
-import com.cloudera.io.netty.handler.ssl.SslHandler;
-import com.cloudera.io.netty.handler.stream.ChunkedWriteHandler;
+import io.netty.bootstrap.ChannelFactory;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedWriteHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;

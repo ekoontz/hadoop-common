@@ -199,10 +199,6 @@
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>cloudera-netty-all</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
 
@@ -250,10 +246,6 @@
         <exclusion>
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>cloudera-netty-all</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -303,10 +295,6 @@
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>cloudera-netty-all</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
 
@@ -334,10 +322,6 @@
         <exclusion>
           <groupId>io.netty</groupId>
           <artifactId>netty</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>cloudera-netty-all</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

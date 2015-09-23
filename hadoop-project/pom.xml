@@ -554,15 +554,15 @@
       </dependency>
 
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>cloudera-netty-all</artifactId>
-        <version>${project.version}</version>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>3.6.2.Final</version>
       </dependency>
 
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
-        <version>3.6.2.Final</version>
+        <artifactId>netty-all</artifactId>
+        <version>4.0.23.Final</version>
       </dependency>
 
       <dependency>

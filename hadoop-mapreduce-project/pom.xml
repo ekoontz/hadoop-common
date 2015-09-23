@@ -64,10 +64,6 @@
           <artifactId>netty</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>cloudera-netty-all</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.apache.velocity</groupId>
           <artifactId>velocity</artifactId>
         </exclusion>

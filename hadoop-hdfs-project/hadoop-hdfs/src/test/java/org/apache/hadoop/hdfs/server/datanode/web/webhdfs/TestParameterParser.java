@@ -28,7 +28,7 @@ import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.cloudera.io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 import javax.servlet.ServletContext;
 

@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import com.cloudera.io.netty.bootstrap.ServerBootstrap;
-import com.cloudera.io.netty.channel.Channel;
-import com.cloudera.io.netty.channel.ChannelInitializer;
-import com.cloudera.io.netty.channel.ChannelPipeline;
-import com.cloudera.io.netty.channel.EventLoopGroup;
-import com.cloudera.io.netty.channel.group.ChannelGroup;
-import com.cloudera.io.netty.channel.group.DefaultChannelGroup;
-import com.cloudera.io.netty.channel.nio.NioEventLoopGroup;
-import com.cloudera.io.netty.channel.socket.SocketChannel;
-import com.cloudera.io.netty.channel.socket.nio.NioServerSocketChannel;
-import com.cloudera.io.netty.handler.codec.http.HttpRequestDecoder;
-import com.cloudera.io.netty.handler.codec.http.HttpResponseEncoder;
-import com.cloudera.io.netty.handler.codec.string.StringEncoder;
-import com.cloudera.io.netty.util.concurrent.GlobalEventExecutor;
 import com.google.common.annotations.VisibleForTesting;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.string.StringEncoder;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
