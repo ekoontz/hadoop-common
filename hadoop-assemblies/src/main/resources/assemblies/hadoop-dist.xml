@@ -141,6 +141,7 @@
       <excludes>
         <exclude>org.apache.ant:*:jar</exclude>
         <exclude>jdiff:jdiff:jar</exclude>
+        <exclude>io.netty:netty-all:jar</exclude>
       </excludes>
     </dependencySet>
   </dependencySets>
