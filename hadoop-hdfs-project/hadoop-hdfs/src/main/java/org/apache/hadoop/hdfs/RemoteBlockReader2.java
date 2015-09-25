@@ -457,7 +457,8 @@ public class RemoteBlockReader2  implements BlockReader {
                 + ", for pool " + block.getBlockPoolId() + " block " 
                 + block.getBlockId() + "_" + block.getGenerationStamp());
       } else {
-        throw new IOException("Got error for OP_READ_BLOCK, self="
+        throw new IOException("Got error for OP_READ_BLOCK, status="
+            + status.getStatus().name() + ", self="
             + peer.getLocalAddressString() + ", remote="
             + peer.getRemoteAddressString() + ", for file " + file
             + ", for pool " + block.getBlockPoolId() + " block " 
