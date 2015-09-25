@@ -181,14 +181,17 @@ public class TestExternalBlockReader {
             "than 0 at " + pos);
         return 0;
       }
-      int i = 0, nread = 0;
-      for (int ipos = (int)pos;
+      int i = 0, nread = 0, ipos;
+      for (ipos = (int)pos;
            (ipos < contents.length) && (nread < len);
            ipos++) {
         buf[i++] = contents[ipos];
         nread++;
         totalRead++;
         LOG.info("ipos = " + ipos + ", contents.length = " + contents.length + ", nread = " + nread + ", len = " + len);
+      }
+      if ((nread == 0) && (ipos >= contents.length)) {
+        return -1;
       }
       return nread;
     }
@@ -202,8 +205,8 @@ public class TestExternalBlockReader {
             "than 0 at " + pos);
         return 0;
       }
-      int i = 0, nread = 0;
-      for (int ipos = (int)pos;
+      int i = 0, nread = 0, ipos;
+      for (ipos = (int)pos;
            ipos < contents.length; ipos++) {
         try {
           buf.put(contents[ipos]);
@@ -212,6 +215,9 @@ public class TestExternalBlockReader {
         }
         nread++;
         totalRead++;
+      }
+      if ((nread == 0) && (ipos >= contents.length)) {
+        return -1;
       }
       return nread;
     }
@@ -289,6 +295,11 @@ public class TestExternalBlockReader {
       Assert.assertEquals(1024L, accessor.totalRead);
       Assert.assertEquals("", accessor.getError());
       Assert.assertEquals(1, accessor.numCloses);
+      byte[] tempBuf = new byte[5];
+      Assert.assertEquals(-1, accessor.read(TEST_LENGTH,
+            tempBuf, 0, 0));
+      Assert.assertEquals(-1, accessor.read(TEST_LENGTH,
+            tempBuf, 0, tempBuf.length));
       accessors.remove(uuid);
     } finally {
       dfs.close();
