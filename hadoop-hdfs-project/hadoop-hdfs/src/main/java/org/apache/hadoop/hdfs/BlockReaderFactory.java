@@ -378,6 +378,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         ReplicaAccessor accessor = builder.
             setAllowShortCircuitReads(allowShortCircuitLocalReads).
             setBlock(block.getBlockId(), block.getBlockPoolId()).
+            setGenerationStamp(block.getGenerationStamp()).
             setBlockAccessToken(tokenBytes).
             setClientName(clientName).
             setConfiguration(configuration).
