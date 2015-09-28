@@ -33,9 +33,8 @@ import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitReplica;
 import org.apache.hadoop.util.DirectBufferPool;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -70,6 +69,7 @@ class BlockReaderLocal implements BlockReader {
     private long dataPos;
     private ExtendedBlock block;
     private StorageType storageType;
+    private Tracer tracer;
 
     public Builder(Conf conf) {
       this.maxReadahead = Integer.MAX_VALUE;
@@ -112,6 +112,11 @@ class BlockReaderLocal implements BlockReader {
 
     public Builder setStorageType(StorageType storageType) {
       this.storageType = storageType;
+      return this;
+    }
+
+    public Builder setTracer(Tracer tracer) {
+      this.tracer = tracer;
       return this;
     }
 
@@ -223,6 +228,11 @@ class BlockReaderLocal implements BlockReader {
    */
   private StorageType storageType;
 
+  /**
+   * The Tracer to use.
+   */
+  private final Tracer tracer;
+
   private BlockReaderLocal(Builder builder) {
     this.replica = builder.replica;
     this.dataIn = replica.getDataStream().getChannel();
@@ -252,6 +262,7 @@ class BlockReaderLocal implements BlockReader {
     }
     this.maxReadaheadLength = maxReadaheadChunks * bytesPerChecksum;
     this.storageType = builder.storageType;
+    this.tracer = builder.tracer;
   }
 
   private synchronized void createDataBufIfNeeded() {
@@ -319,8 +330,8 @@ class BlockReaderLocal implements BlockReader {
    */
   private synchronized int fillBuffer(ByteBuffer buf, boolean canSkipChecksum)
       throws IOException {
-    TraceScope scope = Trace.startSpan("BlockReaderLocal#fillBuffer(" +
-        block.getBlockId() + ")", Sampler.NEVER);
+    TraceScope scope = tracer.newScope(
+        "BlockReaderLocal#fillBuffer(" + block.getBlockId() + ")");
     try {
       int total = 0;
       long startDataPos = dataPos;

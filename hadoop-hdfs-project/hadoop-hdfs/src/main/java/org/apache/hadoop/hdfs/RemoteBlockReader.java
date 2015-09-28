@@ -46,9 +46,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 
 /**
@@ -102,6 +101,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   int dataLeft = 0;
   
   private final PeerCache peerCache;
+
+  private final Tracer tracer;
   
   /* FSInputChecker interface */
   
@@ -213,9 +214,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   protected synchronized int readChunk(long pos, byte[] buf, int offset, 
                                        int len, byte[] checksumBuf) 
                                        throws IOException {
-    TraceScope scope =
-        Trace.startSpan("RemoteBlockReader#readChunk(" + blockId + ")",
-            Sampler.NEVER);
+    TraceScope scope = tracer.
+        newScope("RemoteBlockReader#readChunk(" + blockId + ")");
     try {
       return readChunkImpl(pos, buf, offset, len, checksumBuf);
     } finally {
@@ -349,7 +349,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   private RemoteBlockReader(String file, String bpid, long blockId,
       DataInputStream in, DataChecksum checksum, boolean verifyChecksum,
       long startOffset, long firstChunkOffset, long bytesToRead, Peer peer,
-      DatanodeID datanodeID, PeerCache peerCache) {
+      DatanodeID datanodeID, PeerCache peerCache, Tracer tracer) {
     // Path is used only for printing block and file information in debug
     super(new Path("/blk_" + blockId + ":" + bpid + ":of:"+ file)/*too non path-like?*/,
           1, verifyChecksum,
@@ -380,6 +380,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
     bytesPerChecksum = this.checksum.getBytesPerChecksum();
     checksumSize = this.checksum.getChecksumSize();
     this.peerCache = peerCache;
+    this.tracer = tracer;
   }
 
   /**
@@ -404,7 +405,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
                                      String clientName, Peer peer,
                                      DatanodeID datanodeID,
                                      PeerCache peerCache,
-                                     CachingStrategy cachingStrategy)
+                                     CachingStrategy cachingStrategy,
+                                     Tracer tracer)
                                        throws IOException {
     // in and out will be closed when sock is closed (by the caller)
     final DataOutputStream out =
@@ -440,7 +442,7 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
     return new RemoteBlockReader(file, block.getBlockPoolId(), block.getBlockId(),
         in, checksum, verifyChecksum, startOffset, firstChunkOffset, len,
-        peer, datanodeID, peerCache);
+        peer, datanodeID, peerCache, tracer);
   }
 
   @Override

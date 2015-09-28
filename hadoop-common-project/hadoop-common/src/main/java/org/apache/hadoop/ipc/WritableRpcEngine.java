@@ -42,8 +42,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.*;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving
@@ -233,9 +233,10 @@ public class WritableRpcEngine implements RpcEngine {
       if (LOG.isDebugEnabled()) {
         startTime = Time.now();
       }
+      Tracer tracer = Tracer.curThreadTracer();
       TraceScope traceScope = null;
-      if (Trace.isTracing()) {
-        traceScope = Trace.startSpan(RpcClientUtil.methodToTraceString(method));
+      if (tracer != null) {
+        traceScope = tracer.newScope(RpcClientUtil.methodToTraceString(method));
       }
       ObjectWritable value;
       try {

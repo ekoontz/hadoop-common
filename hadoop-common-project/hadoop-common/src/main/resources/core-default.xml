@@ -185,6 +185,21 @@ You also need to configure other properties like
 for ldap providers in the same way as above does.
 
 -->
+
+<property>
+  <name>fs.client.htrace.sampler.classes</name>
+  <value></value>
+  <description>The class names of the HTrace Samplers to use for Hadoop
+    filesystem clients.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.htrace.span.receiver.classes</name>
+  <value></value>
+  <description>The class names of the Span Receivers to use for Hadoop.
+  </description>
+</property>
  
 <property>
   <name>hadoop.security.groups.cache.secs</name>

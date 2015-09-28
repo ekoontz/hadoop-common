@@ -46,9 +46,8 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.Sampler;
-import org.apache.htrace.Trace;
-import org.apache.htrace.TraceScope;
+import org.apache.htrace.core.TraceScope;
+import org.apache.htrace.core.Tracer;
 
 /**
  * BlockReaderLocalLegacy enables local short circuited reads. If the DFS client is on
@@ -173,7 +172,8 @@ class BlockReaderLocalLegacy implements BlockReader {
   private long startOffset;
   private final String filename;
   private long blockId;
-  
+  private final Tracer tracer;
+
   /**
    * The only way this object can be instantiated.
    */
@@ -181,8 +181,8 @@ class BlockReaderLocalLegacy implements BlockReader {
       UserGroupInformation userGroupInformation,
       Configuration configuration, String file, ExtendedBlock blk,
       Token<BlockTokenIdentifier> token, DatanodeInfo node, 
-      long startOffset, long length, StorageType storageType)
-      throws IOException {
+      long startOffset, long length, StorageType storageType,
+      Tracer tracer) throws IOException {
     LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node
         .getIpcPort());
     // check the cache first
@@ -229,10 +229,10 @@ class BlockReaderLocalLegacy implements BlockReader {
             - (startOffset % checksum.getBytesPerChecksum());
         localBlockReader = new BlockReaderLocalLegacy(conf, file, blk, token,
             startOffset, length, pathinfo, checksum, true, dataIn,
-            firstChunkOffset, checksumIn);
+            firstChunkOffset, checksumIn, tracer);
       } else {
         localBlockReader = new BlockReaderLocalLegacy(conf, file, blk, token,
-            startOffset, length, pathinfo, dataIn);
+            startOffset, length, pathinfo, dataIn, tracer);
       }
     } catch (IOException e) {
       // remove from cache
@@ -311,18 +311,18 @@ class BlockReaderLocalLegacy implements BlockReader {
 
   private BlockReaderLocalLegacy(DFSClient.Conf conf, String hdfsfile,
       ExtendedBlock block, Token<BlockTokenIdentifier> token, long startOffset,
-      long length, BlockLocalPathInfo pathinfo, FileInputStream dataIn)
-      throws IOException {
+      long length, BlockLocalPathInfo pathinfo, FileInputStream dataIn,
+      Tracer tracer) throws IOException {
     this(conf, hdfsfile, block, token, startOffset, length, pathinfo,
         DataChecksum.newDataChecksum(DataChecksum.Type.NULL, 4), false,
-        dataIn, startOffset, null);
+        dataIn, startOffset, null, tracer);
   }
 
   private BlockReaderLocalLegacy(DFSClient.Conf conf, String hdfsfile,
       ExtendedBlock block, Token<BlockTokenIdentifier> token, long startOffset,
       long length, BlockLocalPathInfo pathinfo, DataChecksum checksum,
       boolean verifyChecksum, FileInputStream dataIn, long firstChunkOffset,
-      FileInputStream checksumIn) throws IOException {
+      FileInputStream checksumIn, Tracer tracer) throws IOException {
     this.filename = hdfsfile;
     this.checksum = checksum;
     this.verifyChecksum = verifyChecksum;
@@ -358,6 +358,7 @@ class BlockReaderLocalLegacy implements BlockReader {
         bufferPool.returnBuffer(checksumBuff);
       }
     }
+    this.tracer = tracer;
   }
 
   /**
@@ -365,8 +366,8 @@ class BlockReaderLocalLegacy implements BlockReader {
    */
   private int fillBuffer(FileInputStream stream, ByteBuffer buf)
       throws IOException {
-    TraceScope scope = Trace.startSpan("BlockReaderLocalLegacy#fillBuffer(" +
-        blockId + ")", Sampler.NEVER);
+    TraceScope scope = tracer.
+        newScope("BlockReaderLocalLegacy#fillBuffer(" + blockId + ")");
     try {
       int bytesRead = stream.getChannel().read(buf);
       if (bytesRead < 0) {

@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -71,6 +72,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Time;
+import org.apache.htrace.core.Tracer;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -155,6 +157,8 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
 
   private final BlockPlacementPolicy bpPolicy;
 
+  private final Tracer tracer;
+
   /**
    * Filesystem checker.
    * @param conf configuration (namenode config)
@@ -180,6 +184,9 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
         networktopology,
         namenode.getNamesystem().getBlockManager().getDatanodeManager()
         .getHost2DatanodeMap());
+    this.tracer = new Tracer.Builder("NamenodeFsck").
+        conf(TraceUtils.wrapHadoopConf("namenode.htrace.", conf)).
+        build();
     
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -619,6 +626,7 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             setCachingStrategy(CachingStrategy.newDropBehind()).
             setClientCacheContext(dfs.getClientContext()).
             setConfiguration(namenode.conf).
+            setTracer(tracer).
             setRemotePeerFactory(new RemotePeerFactory() {
               @Override
               public Peer newConnectedPeer(InetSocketAddress addr,
