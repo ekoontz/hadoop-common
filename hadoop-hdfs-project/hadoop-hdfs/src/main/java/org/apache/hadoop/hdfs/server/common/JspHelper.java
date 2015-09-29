@@ -44,6 +44,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FsTracer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
@@ -234,6 +235,7 @@ public class JspHelper {
       setDatanodeInfo(new DatanodeInfo(datanodeId)).
       setCachingStrategy(CachingStrategy.newDefaultStrategy()).
       setConfiguration(conf).
+      setTracer(FsTracer.get(conf)).
       setRemotePeerFactory(new RemotePeerFactory() {
         @Override
         public Peer newConnectedPeer(InetSocketAddress addr,
