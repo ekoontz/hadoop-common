@@ -4007,6 +4007,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
     }
     boolean status = deleteInternal(src, recursive, true, logRetryCache);
+    getEditLog().logSync();
     if (status) {
       logAuditEvent(true, "delete", src);
     }
@@ -4072,7 +4073,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    getEditLog().logSync(); 
     removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
 
@@ -5337,7 +5337,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       BlockStoragePolicy lpPolicy = blockManager.getStoragePolicy("LAZY_PERSIST");
 
       List<BlockCollection> filesToDelete = new ArrayList<BlockCollection>();
-
+      boolean changed = false;
       writeLock();
 
       try {
@@ -5353,10 +5353,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         for (BlockCollection bc : filesToDelete) {
           LOG.warn("Removing lazyPersist file " + bc.getName() + " with no replicas.");
-          deleteInternal(bc.getName(), false, false, false);
+          changed |= deleteInternal(bc.getName(), false, false, false);
         }
       } finally {
         writeUnlock();
+      }
+      if (changed) {
+        getEditLog().logSync();
       }
     }
 
