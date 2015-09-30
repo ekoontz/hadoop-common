@@ -72,14 +72,7 @@
           data[k] = k === 'nn' ? workaround(d[k].beans[0]) : d[k].beans[0];
         }
 
-        var blockstats = data['blockstats'];
-        for (var k in blockstats.StorageTypeStats) {
-          var b = blockstats.StorageTypeStats[k].value;
-          b.capacityUsedPercentage = b.capacityUsed * 100.0 / b.capacityTotal;
-          b.capacityRemainingPercentage = b.capacityRemaining * 100.0 / b.capacityTotal;
-        }
-
-        data.fs.ObjectsTotal = data.fs.FilesTotal + data.fs.BlocksTotal;
+        data['fs'].ObjectsTotal = data['fs'].FilesTotal + data['fs'].BlocksTotal;
 
         render();
       }),
