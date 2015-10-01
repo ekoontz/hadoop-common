@@ -142,12 +142,15 @@ class Globber {
   }
 
   public FileStatus[] glob() throws IOException {
-    TraceScope scope = tracer.newScope("Globber#glob");
-    scope.addKVAnnotation("pattern", pathPattern.toUri().getPath());
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("Globber#glob");
+      scope.addKVAnnotation("pattern", pathPattern.toUri().getPath());
+    }
     try {
       return doGlob();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 

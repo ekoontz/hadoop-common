@@ -351,8 +351,10 @@ class BlockStorageLocationUtil {
       HdfsBlocksMetadata metadata = null;
       // Create the RPC proxy and make the RPC
       ClientDatanodeProtocol cdp = null;
-      TraceScope scope =
-          tracer.newScope("getHdfsBlocksMetadata", parentSpanId);
+      TraceScope scope = null;
+      if (tracer != null) {
+        scope = tracer.newScope("getHdfsBlocksMetadata", parentSpanId);
+      }
       try {
         cdp = DFSUtil.createClientDatanodeProtocolProxy(datanode, configuration,
             timeout, connectToDnViaHostname);
@@ -361,7 +363,7 @@ class BlockStorageLocationUtil {
         // Bubble this up to the caller, handle with the Future
         throw e;
       } finally {
-        scope.close();
+        if (scope != null) scope.close();
         if (cdp != null) {
           RPC.stopProxy(cdp);
         }

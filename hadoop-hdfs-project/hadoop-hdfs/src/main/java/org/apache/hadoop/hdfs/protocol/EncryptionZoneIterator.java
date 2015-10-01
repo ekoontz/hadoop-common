@@ -47,11 +47,14 @@ public class EncryptionZoneIterator
   @Override
   public BatchedEntries<EncryptionZone> makeRequest(Long prevId)
       throws IOException {
-    TraceScope scope = tracer.newScope("listEncryptionZones");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("listEncryptionZones");
+    }
     try {
       return namenode.listEncryptionZones(prevId);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 

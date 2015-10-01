@@ -330,8 +330,10 @@ class BlockReaderLocal implements BlockReader {
    */
   private synchronized int fillBuffer(ByteBuffer buf, boolean canSkipChecksum)
       throws IOException {
-    TraceScope scope = tracer.newScope(
-        "BlockReaderLocal#fillBuffer(" + block.getBlockId() + ")");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("BlockReaderLocal#fillBuffer(" + block.getBlockId() + ")");
+    }
     try {
       int total = 0;
       long startDataPos = dataPos;
@@ -376,7 +378,7 @@ class BlockReaderLocal implements BlockReader {
       }
       return total;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 

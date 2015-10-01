@@ -148,12 +148,14 @@ public class RemoteBlockReader2  implements BlockReader {
     }
 
     if (curDataSlice == null || curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
-      TraceScope scope = tracer.newScope(
-          "RemoteBlockReader2#readNextPacket(" + blockId + ")");
+      TraceScope scope = null;
+      if (tracer != null) {
+        scope = tracer.newScope("RemoteBlockReader2#readNextPacket(" + blockId + ")");
+      }
       try {
         readNextPacket();
       } finally {
-        scope.close();
+        if (scope != null) scope.close();
       }
     }
 
@@ -176,12 +178,14 @@ public class RemoteBlockReader2  implements BlockReader {
   @Override
   public int read(ByteBuffer buf) throws IOException {
     if (curDataSlice == null || curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
-      TraceScope scope = tracer.newScope(
-          "RemoteBlockReader2#readNextPacket(" + blockId + ")");
+      TraceScope scope = null;
+      if (tracer != null) {
+        scope = tracer.newScope("RemoteBlockReader2#readNextPacket(" + blockId + ")");
+      }
       try {
         readNextPacket();
       } finally {
-        scope.close();
+        if (scope != null) scope.close();
       }
     }
     if (curDataSlice.remaining() == 0) {

@@ -214,12 +214,14 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   protected synchronized int readChunk(long pos, byte[] buf, int offset, 
                                        int len, byte[] checksumBuf) 
                                        throws IOException {
-    TraceScope scope = tracer.
-        newScope("RemoteBlockReader#readChunk(" + blockId + ")");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("RemoteBlockReader#readChunk(" + blockId + ")");
+    }
     try {
       return readChunkImpl(pos, buf, offset, len, checksumBuf);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 

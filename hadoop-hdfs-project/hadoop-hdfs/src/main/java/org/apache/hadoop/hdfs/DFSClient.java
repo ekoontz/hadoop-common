@@ -1018,7 +1018,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       LOG.warn("Problem getting block size", ie);
       throw ie;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1053,7 +1053,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     assert dtService != null;
-    TraceScope scope = tracer.newScope("getDelegationToken");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("getDelegationToken");
+    }
     try {
       Token<DelegationTokenIdentifier> token =
         namenode.getDelegationToken(renewer);
@@ -1065,7 +1068,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
       return token;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1241,7 +1244,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       return callGetBlockLocations(namenode, src, start, length);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1277,7 +1280,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      AccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1305,7 +1308,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       }
       return hdfsLocations;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -1360,21 +1363,24 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     }
         
     // Make RPCs to the datanodes to get volume locations for its replicas
-    TraceScope scope =
-      tracer.newScope("getBlockStorageLocations");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("getBlockStorageLocations");
+    }
     Map<DatanodeInfo, HdfsBlocksMetadata> metadatas;
     try {
       metadatas = BlockStorageLocationUtil.
           queryDatanodesForHdfsBlocksMetadata(conf, datanodeBlocks,
               getConf().getFileBlockStorageLocationsNumThreads,
               getConf().getFileBlockStorageLocationsTimeoutMs,
-              getConf().connectToDnViaHostname, tracer, scope.getSpanId());
+              getConf().connectToDnViaHostname, tracer,
+              scope == null? null: scope.getSpanId());
       if (LOG.isTraceEnabled()) {
         LOG.trace("metadata returned: "
             + Joiner.on("\n").withKeyValueSeparator("=").join(metadatas));
       }
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
     
     // Regroup the returned VolumeId metadata to again be grouped by
@@ -1394,7 +1400,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   private KeyVersion decryptEncryptedDataEncryptionKey(FileEncryptionInfo
       feInfo) throws IOException {
-    TraceScope scope = tracer.newScope("decryptEDEK");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("decryptEDEK");
+    }
     try {
       KeyProvider provider = getKeyProvider();
       if (provider == null) {
@@ -1412,7 +1421,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         throw new IOException(e);
       }
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1554,7 +1563,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       return new DFSInputStream(this, src, verifyChecksum);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1803,7 +1812,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1821,7 +1830,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(AccessControlException.class,
                                      FileNotFoundException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1891,7 +1900,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1913,7 +1922,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                     UnresolvedPathException.class,
                                     SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1921,11 +1930,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @return All the existing storage policies
    */
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
-    TraceScope scope = tracer.newScope("getStoragePolicies");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("getStoragePolicies");
+    }
     try {
       return namenode.getStoragePolicies();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1947,7 +1959,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -1957,7 +1969,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void concat(String trg, String [] srcs) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("concat");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("concat");
+    }
     try {
       namenode.concat(trg, srcs);
     } catch(RemoteException re) {
@@ -1965,7 +1980,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   /**
@@ -1989,7 +2004,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   /**
@@ -2021,7 +2036,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2061,7 +2076,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2083,7 +2098,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2101,7 +2116,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2122,7 +2137,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(AccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
    }
   
@@ -2433,7 +2448,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2458,17 +2473,20 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);                                   
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   private long[] callGetStats() throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("getStats");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("getStats");
+    }
     try {
       return namenode.getStats();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2527,30 +2545,35 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     try {
       return namenode.listCorruptFileBlocks(path, cookie);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public DatanodeInfo[] datanodeReport(DatanodeReportType type)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("datanodeReport");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("datanodeReport");
+    }
     try {
       return namenode.getDatanodeReport(type);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
     
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
     checkOpen();
-    TraceScope scope =
-        tracer.newScope("datanodeStorageReport");
+    TraceScope scope = null;
+    if (tracer != null)  {
+      scope = tracer.newScope("datanodeStorageReport");
+    }
     try {
       return namenode.getDatanodeStorageReport(type);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2575,12 +2598,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#setSafeMode(HdfsConstants.SafeModeAction, boolean)
    */
   public boolean setSafeMode(SafeModeAction action, boolean isChecked) throws IOException{
-    TraceScope scope =
-        tracer.newScope("setSafeMode");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("setSafeMode");
+    }
     try {
       return namenode.setSafeMode(action, isChecked);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
  
@@ -2595,13 +2620,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("createSnapshot");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("createSnapshot");
+    }
     try {
       return namenode.createSnapshot(snapshotRoot, snapshotName);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2617,13 +2645,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("deleteSnapshot");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("deleteSnapshot");
+    }
     try {
       namenode.deleteSnapshot(snapshotRoot, snapshotName);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2638,13 +2669,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public void renameSnapshot(String snapshotDir, String snapshotOldName,
       String snapshotNewName) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("renameSnapshot");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("renameSnapshot");
+    }
     try {
       namenode.renameSnapshot(snapshotDir, snapshotOldName, snapshotNewName);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2657,13 +2691,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("getSnapshottableDirListing");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("getSnapshottableDirListing");
+    }
     try {
       return namenode.getSnapshottableDirListing();
     } catch(RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2674,13 +2711,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void allowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("allowSnapshot");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("allowSnapshot");
+    }
     try {
       namenode.allowSnapshot(snapshotRoot);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2691,13 +2731,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   public void disallowSnapshot(String snapshotRoot) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("disallowSnapshot");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("disallowSnapshot");
+    }
     try {
       namenode.disallowSnapshot(snapshotRoot);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2709,53 +2752,65 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotDir,
       String fromSnapshot, String toSnapshot) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("getSnapshotDiffReport");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("getSnapshotDiffReport");
+    }
     try {
       return namenode.getSnapshotDiffReport(snapshotDir,
           fromSnapshot, toSnapshot);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public long addCacheDirective(
       CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("addCacheDirective");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("addCacheDirective");
+    }
     try {
       return namenode.addCacheDirective(info, flags);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
   public void modifyCacheDirective(
       CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("modifyCacheDirective");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("modifyCacheDirective");
+    }
     try {
       namenode.modifyCacheDirective(info, flags);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void removeCacheDirective(long id)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeCacheDirective");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("removeCacheDirective");
+    }
     try {
       namenode.removeCacheDirective(id);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -2766,37 +2821,46 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
 
   public void addCachePool(CachePoolInfo info) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("addCachePool");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("addCachePool");
+    }
     try {
       namenode.addCachePool(info);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void modifyCachePool(CachePoolInfo info) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("modifyCachePool");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("modifyCachePool");
+    }
     try {
       namenode.modifyCachePool(info);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void removeCachePool(String poolName) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeCachePool");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("removeCachePool");
+    }
     try {
       namenode.removeCachePool(poolName);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2810,13 +2874,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#saveNamespace()
    */
   void saveNamespace() throws AccessControlException, IOException {
-    TraceScope scope = tracer.newScope("saveNamespace");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("saveNamespace");
+    }
     try {
       namenode.saveNamespace();
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2827,13 +2894,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#rollEdits()
    */
   long rollEdits() throws AccessControlException, IOException {
-    TraceScope scope = tracer.newScope("rollEdits");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("rollEdits");
+    }
     try {
       return namenode.rollEdits();
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2849,11 +2919,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    */
   boolean restoreFailedStorage(String arg)
       throws AccessControlException, IOException{
-    TraceScope scope = tracer.newScope("restoreFailedStorage");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("restoreFailedStorage");
+    }
     try {
       return namenode.restoreFailedStorage(arg);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2865,11 +2938,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#refreshNodes()
    */
   public void refreshNodes() throws IOException {
-    TraceScope scope = tracer.newScope("refreshNodes");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("refreshNodes");
+    }
     try {
       namenode.refreshNodes();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2879,11 +2955,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#metaSave(String)
    */
   public void metaSave(String pathname) throws IOException {
-    TraceScope scope = tracer.newScope("metaSave");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("metaSave");
+    }
     try {
       namenode.metaSave(pathname);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2896,11 +2975,14 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#setBalancerBandwidth(long)
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
-    TraceScope scope = tracer.newScope("setBalancerBandwidth");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("setBalancerBandwidth");
+    }
     try {
       namenode.setBalancerBandwidth(bandwidth);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
     
@@ -2908,20 +2990,26 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
    * @see ClientProtocol#finalizeUpgrade()
    */
   public void finalizeUpgrade() throws IOException {
-    TraceScope scope = tracer.newScope("finalizeUpgrade");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("finalizeUpgrade");
+    }
     try {
       namenode.finalizeUpgrade();
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action) throws IOException {
-    TraceScope scope = tracer.newScope("rollingUpgrade");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("rollingUpgrade");
+    }
     try {
       return namenode.rollingUpgrade(action);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -2979,7 +3067,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     if(LOG.isDebugEnabled()) {
       LOG.debug(src + ": masked=" + absPermission);
     }
-    TraceScope scope = tracer.newScope("mkdir");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("mkdir");
+    }
     try {
       return namenode.mkdirs(src, absPermission, createParent);
     } catch(RemoteException re) {
@@ -2994,7 +3085,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -3013,7 +3104,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3044,7 +3135,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3064,7 +3155,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      UnresolvedPathException.class,
                                      SnapshotAccessControlException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3128,14 +3219,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void removeAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeAclEntries");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("removeAclEntries");
+    }
     try {
       namenode.removeAclEntries(src, aclSpec);
     } catch(RemoteException re) {
@@ -3147,13 +3241,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void removeDefaultAcl(String src) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeDefaultAcl");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("removeDefaultAcl");
+    }
     try {
       namenode.removeDefaultAcl(src);
     } catch(RemoteException re) {
@@ -3165,13 +3262,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void removeAcl(String src) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("removeAcl");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("removeAcl");
+    }
     try {
       namenode.removeAcl(src);
     } catch(RemoteException re) {
@@ -3183,13 +3283,16 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
   public void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     checkOpen();
-    TraceScope scope = tracer.newScope("setAcl");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("setAcl");
+    }
     try {
       namenode.setAcl(src, aclSpec);
     } catch(RemoteException re) {
@@ -3201,7 +3304,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3216,7 +3319,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -3231,7 +3334,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SafeModeException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3245,7 +3348,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throw re.unwrapRemoteException(AccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3269,7 +3372,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -3285,7 +3388,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -3299,7 +3402,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -3315,7 +3418,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   
@@ -3332,7 +3435,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3349,7 +3452,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3363,7 +3466,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
           FileNotFoundException.class,
           UnresolvedPathException.class);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -3495,20 +3598,26 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
   }
 
   TraceScope newPathTraceScope(String description, String path) {
-    TraceScope scope = tracer.newScope(description);
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope(description);
+    }
     if (path != null) {
-      scope.addKVAnnotation("path", path);
+      if (scope != null) scope.addKVAnnotation("path", path);
     }
     return scope;
   }
 
   TraceScope newSrcDstTraceScope(String description, String src, String dst) {
-    TraceScope scope = tracer.newScope(description);
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope(description);
+    }
     if (src != null) {
-      scope.addKVAnnotation("src", src);
+      if (scope != null) scope.addKVAnnotation("src", src);
     }
     if (dst != null) {
-      scope.addKVAnnotation("dst", dst);
+      if (scope != null) scope.addKVAnnotation("dst", dst);
     }
     return scope;
   }

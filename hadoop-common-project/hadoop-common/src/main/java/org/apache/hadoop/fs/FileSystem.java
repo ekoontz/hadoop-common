@@ -2628,8 +2628,11 @@ public abstract class FileSystem extends Configured implements Closeable {
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
     Tracer tracer = FsTracer.get(conf);
-    TraceScope scope = tracer.newScope("FileSystem#createFileSystem");
-    scope.addKVAnnotation("scheme", uri.getScheme());
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("FileSystem#createFileSystem");
+      scope.addKVAnnotation("scheme", uri.getScheme());
+    }
     try {
       Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
       if (clazz == null) {
@@ -2640,7 +2643,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       fs.initialize(uri, conf);
       return fs;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 

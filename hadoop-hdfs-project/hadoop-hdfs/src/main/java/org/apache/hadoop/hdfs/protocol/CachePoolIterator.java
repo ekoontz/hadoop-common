@@ -47,11 +47,14 @@ public class CachePoolIterator
   @Override
   public BatchedEntries<CachePoolEntry> makeRequest(String prevKey)
       throws IOException {
-    TraceScope scope = tracer.newScope("listCachePools");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("listCachePools");
+    }
     try {
       return namenode.listCachePools(prevKey);
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 

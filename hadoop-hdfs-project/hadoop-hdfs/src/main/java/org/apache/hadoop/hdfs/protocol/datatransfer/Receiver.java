@@ -79,7 +79,9 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope scope = null;
     SpanId spanId = fromProto(proto);
     if (spanId != null) {
-      scope = tracer.newScope(description, spanId);
+      if (tracer != null) {
+        scope = tracer.newScope(description, spanId);
+      }
     }
     return scope;
   }

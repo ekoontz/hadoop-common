@@ -94,7 +94,10 @@ public class DFSInotifyEventInputStream {
    * The next available batch of events will be returned.
    */
   public EventBatch poll() throws IOException, MissingEventsException {
-    TraceScope scope = tracer.newScope("inotifyPoll");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("inotifyPoll");
+    }
     try {
       // need to keep retrying until the NN sends us the latest committed txid
       if (lastReadTxid == -1) {
@@ -131,7 +134,7 @@ public class DFSInotifyEventInputStream {
         return null;
       }
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
 
@@ -175,7 +178,10 @@ public class DFSInotifyEventInputStream {
    */
   public EventBatch poll(long time, TimeUnit tu) throws IOException,
       InterruptedException, MissingEventsException {
-    TraceScope scope = tracer.newScope("inotifyPollWithTimeout");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("inotifyPollWithTimeout");
+    } 
     EventBatch next = null;
     try {
       long initialTime = Time.monotonicNow();
@@ -196,7 +202,7 @@ public class DFSInotifyEventInputStream {
         Thread.sleep(nextWait);
       }
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
     return next;
   }
@@ -212,7 +218,10 @@ public class DFSInotifyEventInputStream {
    */
   public EventBatch take() throws IOException, InterruptedException,
       MissingEventsException {
-    TraceScope scope = tracer.newScope("inotifyTake");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("inotifyTake");
+    }
     EventBatch next = null;
     try {
       int nextWaitMin = INITIAL_WAIT_MS;
@@ -226,7 +235,7 @@ public class DFSInotifyEventInputStream {
         nextWaitMin = Math.min(60000, nextWaitMin * 2);
       }
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
 
     return next;

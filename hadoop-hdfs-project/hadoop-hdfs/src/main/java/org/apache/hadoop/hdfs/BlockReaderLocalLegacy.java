@@ -366,8 +366,8 @@ class BlockReaderLocalLegacy implements BlockReader {
    */
   private int fillBuffer(FileInputStream stream, ByteBuffer buf)
       throws IOException {
-    TraceScope scope = tracer.
-        newScope("BlockReaderLocalLegacy#fillBuffer(" + blockId + ")");
+    TraceScope scope = tracer == null? null:
+      tracer.newScope("BlockReaderLocalLegacy#fillBuffer(" + blockId + ")");
     try {
       int bytesRead = stream.getChannel().read(buf);
       if (bytesRead < 0) {
@@ -384,7 +384,7 @@ class BlockReaderLocalLegacy implements BlockReader {
       }
       return bytesRead;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
   }
   

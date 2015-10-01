@@ -93,7 +93,10 @@ public class CacheDirectiveIterator
   public BatchedEntries<CacheDirectiveEntry> makeRequest(Long prevKey)
       throws IOException {
     BatchedEntries<CacheDirectiveEntry> entries = null;
-    TraceScope scope = tracer.newScope("listCacheDirectives");
+    TraceScope scope = null;
+    if (tracer != null) {
+      scope = tracer.newScope("listCacheDirectives");
+    }
     try {
       entries = namenode.listCacheDirectives(prevKey, filter);
     } catch (IOException e) {
@@ -116,7 +119,7 @@ public class CacheDirectiveIterator
       }
       throw e;
     } finally {
-      scope.close();
+      if (scope != null) scope.close();
     }
     Preconditions.checkNotNull(entries);
     return entries;
