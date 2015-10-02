@@ -120,6 +120,8 @@ public class Dispatcher {
   /** The maximum number of concurrent blocks moves at a datanode */
   private final int maxConcurrentMovesPerNode;
 
+  private final boolean connectToDnViaHostname;
+
   private static class GlobalBlockMap {
     private final Map<Block, DBlock> map = new HashMap<Block, DBlock>();
 
@@ -294,8 +296,9 @@ public class Dispatcher {
       DataInputStream in = null;
       try {
         sock.connect(
-            NetUtils.createSocketAddr(target.getDatanodeInfo().getXferAddr()),
-            HdfsServerConstants.READ_TIMEOUT);
+            NetUtils.createSocketAddr(target.getDatanodeInfo().
+                getXferAddr(Dispatcher.this.connectToDnViaHostname)),
+                HdfsServerConstants.READ_TIMEOUT);
 
         sock.setKeepAlive(true);
 
@@ -807,6 +810,9 @@ public class Dispatcher {
     this.saslClient = new SaslDataTransferClient(conf,
         DataTransferSaslUtil.getSaslPropertiesResolver(conf),
         TrustedChannelResolver.getInstance(conf), nnc.fallbackToSimpleAuth);
+    this.connectToDnViaHostname = conf.getBoolean(
+        DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME,
+        DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
   }
 
   public DistributedFileSystem getDistributedFileSystem() {
