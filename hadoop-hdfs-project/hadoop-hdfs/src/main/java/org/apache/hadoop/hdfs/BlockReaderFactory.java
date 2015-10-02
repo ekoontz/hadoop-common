@@ -386,6 +386,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         Constructor<? extends ReplicaAccessorBuilder> ctor =
             cls.getConstructor();
         ReplicaAccessorBuilder builder = ctor.newInstance();
+        long visibleLength = startOffset + length;
         ReplicaAccessor accessor = builder.
             setAllowShortCircuitReads(allowShortCircuitLocalReads).
             setBlock(block.getBlockId(), block.getBlockPoolId()).
@@ -395,7 +396,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
             setConfiguration(configuration).
             setFileName(fileName).
             setVerifyChecksum(verifyChecksum).
-            setVisibleLength(length).
+            setVisibleLength(visibleLength).
             build();
         if (accessor == null) {
           if (LOG.isTraceEnabled()) {
@@ -403,7 +404,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
                 cls.getName());
           }
         } else {
-          return new ExternalBlockReader(accessor, length, startOffset);
+          return new ExternalBlockReader(accessor, visibleLength, startOffset);
         }
       } catch (Throwable t) {
         LOG.warn("Failed to construct new object of type " +
