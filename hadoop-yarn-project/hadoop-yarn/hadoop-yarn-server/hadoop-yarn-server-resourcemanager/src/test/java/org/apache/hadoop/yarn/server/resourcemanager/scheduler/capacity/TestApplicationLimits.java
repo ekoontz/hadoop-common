@@ -28,16 +28,21 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -47,6 +52,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -135,7 +141,7 @@ public class TestApplicationLimits {
     
     final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
     conf.setCapacity(Q_B, 90);
-    
+
     LOG.info("Setup top-level queues a and b");
   }
 
@@ -183,27 +189,27 @@ public class TestApplicationLimits {
     LeafQueue queue = (LeafQueue)queues.get(A);
     
     LOG.info("Queue 'A' -" +
-    		" maxActiveApplications=" + queue.getMaximumActiveApplications() + 
-    		" maxActiveApplicationsPerUser=" + 
+		" maxActiveApplications=" + queue.getMaximumActiveApplications() +
+		" maxActiveApplicationsPerUser=" +
     		queue.getMaximumActiveApplicationsPerUser());
-    int expectedMaxActiveApps = 
-        Math.max(1, 
-            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+    int expectedMaxActiveApps =
+        Math.max(1,
+            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) *
                    csConf.
                      getMaximumApplicationMasterResourcePerQueuePercent(
                                                         queue.getQueuePath()) *
                    queue.getAbsoluteMaximumCapacity()));
-    assertEquals(expectedMaxActiveApps, 
+    assertEquals(expectedMaxActiveApps,
                  queue.getMaximumActiveApplications());
-    int expectedMaxActiveAppsUsingAbsCap = 
-            Math.max(1, 
-                (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+    int expectedMaxActiveAppsUsingAbsCap =
+            Math.max(1,
+                (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) *
                        csConf.getMaximumApplicationMasterResourcePercent() *
                        queue.getAbsoluteCapacity()));
     assertEquals(
         (int)Math.ceil(
-        		expectedMaxActiveAppsUsingAbsCap * (queue.getUserLimit() / 100.0f) * 
-            queue.getUserLimitFactor()), 
+			expectedMaxActiveAppsUsingAbsCap * (queue.getUserLimit() / 100.0f) *
+            queue.getUserLimitFactor()),
         queue.getMaximumActiveApplicationsPerUser());
     assertEquals(
         (int)(clusterResource.getMemory() * queue.getAbsoluteCapacity()),
@@ -213,23 +219,23 @@ public class TestApplicationLimits {
     // Add some nodes to the cluster & test new limits
     clusterResource = Resources.createResource(120 * 16 * GB);
     root.updateClusterResource(clusterResource);
-    expectedMaxActiveApps = 
-        Math.max(1, 
-            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+    expectedMaxActiveApps =
+        Math.max(1,
+            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) *
                    csConf.
                      getMaximumApplicationMasterResourcePerQueuePercent(
                                                         queue.getQueuePath()) *
                    queue.getAbsoluteMaximumCapacity()));
-    assertEquals(expectedMaxActiveApps, 
+    assertEquals(expectedMaxActiveApps,
                  queue.getMaximumActiveApplications());
-    expectedMaxActiveAppsUsingAbsCap = 
-            Math.max(1, 
-                (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+    expectedMaxActiveAppsUsingAbsCap =
+            Math.max(1,
+                (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) *
                        csConf.getMaximumApplicationMasterResourcePercent() *
                        queue.getAbsoluteCapacity()));
     assertEquals(
-        (int)Math.ceil(expectedMaxActiveAppsUsingAbsCap * 
-            (queue.getUserLimit() / 100.0f) * queue.getUserLimitFactor()), 
+        (int)Math.ceil(expectedMaxActiveAppsUsingAbsCap *
+            (queue.getUserLimit() / 100.0f) * queue.getUserLimitFactor()),
         queue.getMaximumActiveApplicationsPerUser());
     assertEquals(
         (int)(clusterResource.getMemory() * queue.getAbsoluteCapacity()),
@@ -271,9 +277,9 @@ public class TestApplicationLimits {
     clusterResource = Resources.createResource(100 * 16 * GB);
 
     queue = (LeafQueue)queues.get(A);
-    expectedMaxActiveApps = 
-        Math.max(1, 
-            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+    expectedMaxActiveApps =
+        Math.max(1,
+            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) *
                    csConf.
                      getMaximumApplicationMasterResourcePerQueuePercent(
                                                         queue.getQueuePath()) *
@@ -281,7 +287,7 @@ public class TestApplicationLimits {
 
     assertEquals((long) 0.5, 
         (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(queue.getQueuePath()));
-    assertEquals(expectedMaxActiveApps, 
+    assertEquals(expectedMaxActiveApps,
         queue.getMaximumActiveApplications());
 
     // Change the per-queue max applications.
@@ -351,7 +357,7 @@ public class TestApplicationLimits {
     
     // Change queue limit to be smaller so 2 users can fill it up
     doReturn(3).when(queue).getMaximumActiveApplications();
-    
+
     // Submit first app for user_1
     FiCaSchedulerApp app_4 = getMockApplication(APPLICATION_ID++, user_1);
     queue.submitApplicationAttempt(app_4, user_1);
@@ -506,6 +512,17 @@ public class TestApplicationLimits {
     RecordFactory recordFactory = 
         RecordFactoryProvider.getRecordFactory(null);
     RMContext rmContext = TestUtils.getMockRMContext();
+    RMContext spyRMContext = spy(rmContext);
+
+    ConcurrentMap<ApplicationId, RMApp> spyApps =
+        spy(new ConcurrentHashMap<ApplicationId, RMApp>());
+    RMApp rmApp = mock(RMApp.class);
+    ResourceRequest amResourceRequest = mock(ResourceRequest.class);
+    Resource amResource = Resources.createResource(0, 0);
+    when(amResourceRequest.getCapability()).thenReturn(amResource);
+    Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
+    when(spyRMContext.getRMApps()).thenReturn(spyApps);
+
 
     Priority priority_1 = TestUtils.createMockPriority(1);
 
@@ -513,9 +530,9 @@ public class TestApplicationLimits {
     // and check headroom
     final ApplicationAttemptId appAttemptId_0_0 = 
         TestUtils.getMockApplicationAttemptId(0, 0); 
-    FiCaSchedulerApp app_0_0 = 
-        spy(new FiCaSchedulerApp(appAttemptId_0_0, user_0, queue, 
-            queue.getActiveUsersManager(), rmContext));
+    FiCaSchedulerApp app_0_0 = new FiCaSchedulerApp(
+      appAttemptId_0_0, user_0, queue,
+            queue.getActiveUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_0, user_0);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
@@ -532,9 +549,9 @@ public class TestApplicationLimits {
     // Submit second application from user_0, check headroom
     final ApplicationAttemptId appAttemptId_0_1 = 
         TestUtils.getMockApplicationAttemptId(1, 0); 
-    FiCaSchedulerApp app_0_1 = 
-        spy(new FiCaSchedulerApp(appAttemptId_0_1, user_0, queue, 
-            queue.getActiveUsersManager(), rmContext));
+    FiCaSchedulerApp app_0_1 = new FiCaSchedulerApp(
+      appAttemptId_0_1, user_0, queue,
+            queue.getActiveUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_0_1, user_0);
     
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
@@ -551,9 +568,9 @@ public class TestApplicationLimits {
     // Submit first application from user_1, check  for new headroom
     final ApplicationAttemptId appAttemptId_1_0 = 
         TestUtils.getMockApplicationAttemptId(2, 0); 
-    FiCaSchedulerApp app_1_0 = 
-        spy(new FiCaSchedulerApp(appAttemptId_1_0, user_1, queue, 
-            queue.getActiveUsersManager(), rmContext));
+    FiCaSchedulerApp app_1_0 = new FiCaSchedulerApp(
+      appAttemptId_1_0, user_1, queue,
+            queue.getActiveUsersManager(), spyRMContext);
     queue.submitApplicationAttempt(app_1_0, user_1);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
