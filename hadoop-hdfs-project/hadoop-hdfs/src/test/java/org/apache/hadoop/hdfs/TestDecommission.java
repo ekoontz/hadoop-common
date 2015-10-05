@@ -53,6 +53,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 
 /**
  * This class tests the decommissioning of nodes.
@@ -898,6 +899,7 @@ public class TestDecommission {
    * It is not recommended to use a registration name which is not also a
    * valid DNS hostname for the DataNode.  See HDFS-5237 for background.
    */
+  @Ignore
   @Test(timeout=360000)
   public void testIncludeByRegistrationName() throws IOException,
       InterruptedException {
