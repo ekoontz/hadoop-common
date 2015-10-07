@@ -74,7 +74,8 @@ function runCodeCoverage() {
   echo Running code coverage tests in ${_POM} with ${_MAVEN_FLAGS}
   echo ----
   echo
-  mvn -Pcloudera-clover -Pcloudera-unittest -f ${_POM} -e findbugs:findbugs checkstyle:checkstyle test ${_MAVEN_FLAGS} -Dtest.excludes.file=${_EXCLUDES}
+  mvn -Pcloudera-clover -Pcloudera-unittest -f ${_POM} -e findbugs:findbugs checkstyle:checkstyle test ${_MAVEN_FLAGS} \
+   clover2:aggregate clover2:clover -Dtest.excludes.file=${_EXCLUDES}
 
   echo
   echo ----
