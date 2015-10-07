@@ -36,11 +36,19 @@ public class DataNodeFaultInjector {
     return instance;
   }
 
+  public static void set(DataNodeFaultInjector injector) {
+    instance = injector;
+  }
+
   public void getHdfsBlocksMetadata() {}
 
   public void writeBlockAfterFlush() throws IOException {}
 
   public void sendShortCircuitShmResponse() throws IOException {}
+
+  public boolean dropHeartbeatPacket() {
+    return false;
+  }
 
   public void noRegistration() throws IOException { }
 }
