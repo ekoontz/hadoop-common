@@ -81,7 +81,7 @@ public class TestCorruptFilesJsp  {
       // Now corrupt all the files except for the last one
       for (int idx = 0; idx < filepaths.length - 1; idx++) {
         ExtendedBlock blk = DFSTestUtil.getFirstBlock(fs, filepaths[idx]);
-        assertTrue(cluster.corruptReplica(0, blk));
+        cluster.corruptReplica(0, blk);
 
         // read the file so that the corrupt block is reported to NN
         FSDataInputStream in = fs.open(filepaths[idx]);
