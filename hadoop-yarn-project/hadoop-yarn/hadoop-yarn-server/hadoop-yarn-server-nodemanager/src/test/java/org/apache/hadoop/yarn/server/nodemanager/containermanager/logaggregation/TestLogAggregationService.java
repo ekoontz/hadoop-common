@@ -758,7 +758,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     // ContainerLogDir should be created
     String containerStr = ConverterUtils.toString(containerId);
     File containerLogDir = new File(appLogDir, containerStr);
-    containerLogDir.mkdir();
+    boolean created = containerLogDir.mkdirs();
+    LOG.info("Created Dir:" + containerLogDir.getAbsolutePath() + " status :"
+        + created);
     for (String fileType : fileName) {
       Writer writer11 = new FileWriter(new File(containerLogDir, fileType));
       writer11.write(containerStr + " Hello " + fileType + "!");
@@ -1364,7 +1366,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         Records.newRecord(LogAggregationContext.class);
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-      this.remoteRootLogDir.getAbsolutePath());
+        this.remoteRootLogDir.toURI().toString());
     this.conf.setLong(
       YarnConfiguration.NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS,
       3600);
@@ -1385,7 +1387,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
     dispatcher.register(ApplicationEventType.class, appEventHandler);
 
-    ApplicationId application = BuilderUtils.newApplicationId(123456, 1);
+    ApplicationId application =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(), 1);
     ApplicationAttemptId appAttemptId =
         BuilderUtils.newApplicationAttemptId(application, 1);
     ContainerId container = BuilderUtils.newContainerId(appAttemptId, 1);
@@ -1444,8 +1447,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     // Same logs will not be aggregated again.
     // Only one aggregated log file in Remote file directory.
-    Assert.assertEquals(numOfLogsAvailable(logAggregationService,
-        application, true, null), 1);
+    Assert.assertTrue(
+        "Only one aggregated log file in Remote file directory expected",
+        waitAndCheckLogNum(logAggregationService, application, 50, 1, true,
+            null));
 
     Thread.sleep(2000);
 
@@ -1561,6 +1566,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
           FileContext.getFileContext(qualifiedLogDir.toUri(), this.conf)
             .listStatus(appLogDir);
     } catch (FileNotFoundException fnf) {
+      LOG.info("Context file not vailable: " + fnf);
       return -1;
     }
     int count = 0;
@@ -1570,13 +1576,17 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       if (filename.contains(LogAggregationUtils.TMP_FILE_SUFFIX)
           || (lastLogFile != null && filename.contains(lastLogFile)
               && sizeLimited)) {
+        LOG.info("fileName :" + filename);
+        LOG.info("lastLogFile :" + lastLogFile);
         return -1;
       }
       if (filename.contains(LogAggregationUtils
         .getNodeString(logAggregationService.getNodeId()))) {
+        LOG.info("Node list filename :" + filename);
         count++;
       }
     }
+    LOG.info("File Count :" + count);
     return count;
   }
 
@@ -1585,12 +1595,16 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       int maxAttempts, int expectNum, boolean sizeLimited, String lastLogFile)
       throws IOException, InterruptedException {
     int count = 0;
-    while (numOfLogsAvailable(logAggregationService, application, sizeLimited,
-      lastLogFile) != expectNum && count <= maxAttempts) {
+    int logFiles=numOfLogsAvailable(logAggregationService, application, sizeLimited,
+        lastLogFile);
+    while ((logFiles != expectNum)
+        && (count <= maxAttempts)) {
       Thread.sleep(500);
       count++;
+      logFiles =
+          numOfLogsAvailable(logAggregationService, application, sizeLimited,
+              lastLogFile);
     }
-    return numOfLogsAvailable(logAggregationService, application, sizeLimited,
-      lastLogFile) == expectNum;
+    return (logFiles == expectNum);
   }
 }
