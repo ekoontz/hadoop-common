@@ -1656,6 +1656,21 @@ public class DFSUtil {
     sslConf.addResource(conf.get(
         DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
         DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
+    final String[] reqSslProps = {
+        DFSConfigKeys.DFS_SERVER_HTTPS_TRUSTSTORE_LOCATION_KEY,
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_LOCATION_KEY,
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_PASSWORD_KEY,
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYPASSWORD_KEY
+    };
+
+    // Check if the required properties are included
+    for (String sslProp : reqSslProps) {
+      if (sslConf.get(sslProp) == null) {
+        LOG.warn("SSL config " + sslProp + " is missing. If " +
+            DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY +
+            " is specified, make sure it is a relative path");
+      }
+    }
 
     boolean requireClientAuth = conf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
         DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
@@ -1729,6 +1744,9 @@ public class DFSUtil {
       }
     }
     catch (IOException ioe) {
+      LOG.warn("Setting password to null since IOException is caught"
+          + " when getting password", ioe);
+
       password = null;
     }
     return password;
