@@ -140,6 +140,10 @@
       <item name="Configuration" href="hadoop-auth/Configuration.html"/>
       <item name="Building" href="hadoop-auth/BuildingIt.html"/>
     </menu>
+
+    <menu name="Tools" inherit="top">
+      <item name="Hadoop Archive Logs" href="hadoop-archive-logs/HadoopArchiveLogs.html"/>
+    </menu>
     
     <menu name="Reference" inherit="top">
       <item name="Release Notes" href="hadoop-project-dist/hadoop-common/releasenotes.html"/>

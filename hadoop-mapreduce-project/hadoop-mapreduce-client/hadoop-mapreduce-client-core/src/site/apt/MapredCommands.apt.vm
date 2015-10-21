@@ -177,6 +177,12 @@ MapReduce Commands Guide
    Creates a hadoop archive. More information can be found at
    {{{./HadoopArchives.html}Hadoop Archives Guide}}.
 
+** <<<archive-logs>>>
+
+   A tool to combine YARN aggregated logs into Hadoop archives to reduce the number
+   of files in HDFS. More information can be found at
+   {{{../../hadoop-archive-logs/HadoopArchiveLogs.html}Hadoop Archive Logs Guide}}.
+
 * Administration Commands
 
    Commands useful for administrators of a hadoop cluster.
