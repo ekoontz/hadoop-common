@@ -49,6 +49,7 @@ public class TestSecondaryWebUi {
     cluster.waitActive();
     
     snn = new SecondaryNameNode(conf);
+    snn.startInfoServer();
   }
   
   @AfterClass
