@@ -1851,6 +1851,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
                                      SnapshotAccessControlException.class);
     }
     HdfsFileStatus newStat = lastBlockWithStatus.getFileStatus();
+    if (newStat == null) {
+      DFSClient.LOG.debug("NameNode is on an older version, request file " +
+          "info with additional RPC call for file: " + src);
+      newStat = getFileInfo(src);
+    }
     return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
         lastBlockWithStatus.getLastBlock(), newStat,
         dfsClientConf.createChecksum());
