@@ -1320,7 +1320,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   }
 
   private boolean shouldCountTowardsNodeBlacklisting(int exitStatus) {
-    return exitStatus == ContainerExitStatus.DISKS_FAILED;
+    return !(exitStatus == ContainerExitStatus.SUCCESS
+        || exitStatus == ContainerExitStatus.PREEMPTED);
   }
 
   private static final class UnmanagedAMAttemptSavedTransition
