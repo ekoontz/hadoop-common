@@ -187,7 +187,9 @@ public class DefaultAuthorizationProvider
    */
   private void checkOwner(String user, INode inode, int snapshotId
   ) throws AccessControlException {
-    if (inode != null && user.equals(inode.getUserName(snapshotId))) {
+    // inode could be deleted after we list it from shell. No need to throw
+    // AccessControlException if it's null.
+    if (inode == null || user.equals(inode.getUserName(snapshotId))) {
       return;
     }
     throw new AccessControlException(
