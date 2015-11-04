@@ -150,7 +150,7 @@ public class TestNameNodeMXBean {
       assertTrue(liveNodes.size() > 0);
       for (Map<String, Object> liveNode : liveNodes.values()) {
         assertTrue(liveNode.containsKey("nonDfsUsedSpace"));
-        assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) > 0);
+        assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) >= 0);
         assertTrue(liveNode.containsKey("capacity"));
         assertTrue(((Long)liveNode.get("capacity")) > 0);
         assertTrue(liveNode.containsKey("numBlocks"));
