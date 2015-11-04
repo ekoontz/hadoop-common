@@ -8104,26 +8104,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return list;
   }
 
-  /**
-   * Get the list of snapshottable directories.
-   * @return The list of all the current snapshottable directories
-   * @see #getSnapshottableDirListing()
-   * @throws IOException
-   */
-  List<String> getSnapshottableDirs() throws IOException {
-    List<String> snapshottableDirs = new ArrayList<String>();
-    final FSPermissionChecker pc = getPermissionChecker();
-    final String user = pc.isSuperUser() ? null : pc.getUser();
-    final SnapshottableDirectoryStatus[] snapDirs =
-        snapshotManager.getSnapshottableDirListing(user);
-    if (snapDirs != null) {
-      for (SnapshottableDirectoryStatus sds : snapDirs) {
-        snapshottableDirs.add(sds.getFullPath().toString());
-      }
-    }
-    return snapshottableDirs;
-  }
-
   @Override  //NameNodeMXBean
   public int getDistinctVersionCount() {
     return blockManager.getDatanodeManager().getDatanodesSoftwareVersions()
