@@ -184,6 +184,8 @@ public class MiniDFSCluster {
     
     public Builder(Configuration conf) {
       this.conf = conf;
+      this.storagesPerDatanode =
+          FsDatasetTestUtils.Factory.getFactory(conf).getDefaultNumOfDataDirs();
     }
     
     /**
