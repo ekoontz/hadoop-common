@@ -2,10 +2,10 @@
 set -xe
 
 # This script ensures that the environment is properly setup for build and test of the
-# corresponding component. There are two differnet modes of operation
+# corresponding component. There are two different modes of operation
 # 1) Toolchain - TOOLCHAIN_HOME is defined and the environment will be derived using then
 #                environment exported from it
-# 2) Manual - On a developers machine, the developer is supposed to have setup the neccessary
+# 2) Manual - On a developers machine, the developer is supposed to have setup the necessary
 #             environment such as PATH referencing the desired JAVA, MAVEN, ANT..
 
 
@@ -105,6 +105,25 @@ function runStableTests() {
   echo ----
   echo
   mvn -Pcloudera-unittest -f ${_POM} -e findbugs:findbugs checkstyle:checkstyle test ${_MAVEN_FLAGS} -Dtest.excludes.file=${_EXCLUDES}
+}
+
+# Run the tests in the supplied test policy. Takes the following arguments:
+#
+# - POM -- the POM to test
+# - MAVEN_FLAGS -- and Maven flags, properties or options to the test
+# - TEST_SET -- file containing the tests to run
+function runTestSet() {
+  local _POM=$1
+  local _MAVEN_FLAGS=$2
+  local _TEST_SET=$3
+
+  echo
+  echo ----
+  echo Running tests specified in ${_TEST_SET} in ${_POM} with ${_MAVEN_FLAGS}
+  echo ----
+  echo
+  mvn -Pcloudera-unittest -f ${_POM} -e findbugs:findbugs checkstyle:checkstyle test ${_MAVEN_FLAGS} \
+    -Dtest.includes.file=${_TEST_SET} -Dtest.excludes.file=
 }
 
 # Setup the infra_tools and return the location of the infra_tools
@@ -254,7 +273,7 @@ function ensureCommand() {
 # to contain the necessary tools to produce the build. As a result PATH and other key
 # environment variables will be setup according to the tool chain.
 #
-# Takes two argumnets
+# Takes two arguments
 # JAVA_VERSION - the source Java compiler
 # TOOLCHAIN_HOME - (Optional) if not empty initialize using the toolchain environment
 function setupToolChain() {
@@ -300,7 +319,7 @@ function setupToolChain() {
 
 # Setup the Java generated class files for specific VM version.
 # The supported versions include 1.7 & 1.8. If the target version
-# is successfull then TARGET_JAVA_VERSION will be setup correctly.
+# is successful then TARGET_JAVA_VERSION will be setup correctly.
 #
 # Takes the following arguments:
 # TARGET-JAVA_VERSION - the target version
@@ -351,23 +370,23 @@ function printUsage() {
   echo Usage:
   echo "lib.sh --java=<1.7(default)|1.8> --target-java=<1.7(default)|1.8> --pom=<pom path> --no-build=<true|false(default)>"
   echo "       --toolchain-home=<toolchain directory> --protobuf-home=<protobuf directory> --iterations=<number>"
-  echo "       --test-fork-count=<number> --test-fork-reuse=<true(default)|false>"
+  echo "       --test-fork-count=<number> --test-fork-reuse=<true(default)|false> --test-set=<include-file>"
   echo
-  echo "This script is intended to be invoked by one of the proxy links: build, test-all, test-code-coverage, test-flaky"
-  echo "and test-stable"
+  echo "This script is intended to be invoked by one of the proxy scripts: build.sh, test-all.sh, test-code-coverage.sh, "
+  echo "test-flaky.sh, test-stable.sh or test-set.sh"
   echo
-  echo "Assume that this script is running using Jenkins and with toolkit defining the following environment variables"
+  echo "Assuming this script is running under Jenkins and with toolkit env defining the following environment variables"
   echo "- ANT_HOME"
   echo "- MAVEN3_HOME"
   echo "- JAVA7_HOME"
   echo "- JAVA8_HOME (optional only needed when using Java 8)"
   echo
-  echo "If WORKSPACE is not defined by environment, the current working directory is assumed as the WORKSPACE."
-  echo "The result of parsing arguments is that the following envionment variables will be assigned"
+  echo "If WORKSPACE is not defined by environment, the current working directory is used as the WORKSPACE."
+  echo "The result of parsing arguments, is that the following environment variables gets assigned:"
   echo "- POM -- the POM that will be used to drive build/testing"
   echo "- JAVA -- the Java source version"
   echo "- TARGET_JAVA -- the Java target byte code version"
-  echo "- JAVA_HOME -- the home directory of the choosen Java"
+  echo "- JAVA_HOME -- the home directory of the chosen Java"
   echo "- MAVEN_FLAGS -- the Maven flags, options and properties"
   echo "- JAVA_OPTS -- Java flags"
   echo "- MAVEN_OPTS -- Maven options"
@@ -375,23 +394,41 @@ function printUsage() {
   echo "Optionally the following variables could be set"
   echo "- TEST_ITERATIONS -- the number of times flaky tests should be executed"
   echo "- NO_BUILD -- iff set to true no pre-build will be performed"
+  echo
+  echo "About exclude and include files"
+  echo
+  echo "The format of the exclude/include files is defined by Maven Surefire which is a line based format."
+  echo "Each line represents one or more classes to exclude or include, some special characters are allowed:"
+  echo "- Lines where the first character is a '#' is considered a comment"
+  echo "- Empty lines are allowed."
+  echo "- '**/' is a path wildcard"
+  echo "- '.*' is a file ending wildcard, otherwise .class is assumed"
+  echo "- if a line contains a '#', the expression on the right of the '#' is treated as a method name"
+  echo
+  echo "The default exclude file for test-stable.sh and test-code-coverage.sh is 'excludes.txt'. Since some tests are"
+  echo "more prone to fail during code coverage, an additional exclude file 'code-coverage-excludes.txt' is available."
+  echo "This file specifies tests which that are only to be excluded during code coverage runs."
+  echo
+  echo "To run a custom selected set of tests, use test-set.sh and specify which tests in a include file using the "
+  echo "--test-set switch."
 }
 
-# Assume that this script is running using Jenkins and with toolkit defining the following environment variables
+# Assuming this script is running under Jenkins and with toolkit env defining the following environment variables
 # - ANT_HOME
 # - MAVEN3_HOME
 # - JAVA7_HOME
 # - JAVA8_HOME
 #
-# If WORKSPACE is not defined by environment, the current working directory is assumed as the WORKSPACE.
-# The result of parsing arguments is that the following envionment variables will be assigned
+#If WORKSPACE is not defined by environment, the current working directory is used as the WORKSPACE.
+#The result of parsing arguments, is that the following environment variables gets assigned:
 # - POM -- the POM that will be used to drive build/testing
 # - JAVA_VERSION -- the Java source version
 # - TARGET_JAVA -- the Java target byte code version
-# - JAVA_HOME -- the home directory of the choosen Java
+# - JAVA_HOME -- the home directory of the chosen Java
 # - MAVEN_FLAGS -- the Maven flags, options and properties
 # - JAVA_OPTS -- Java flags
 # - MAVEN_OPTS -- Maven options
+# - TEST_SET -- Name of a file in the cloudera folder describing which tests to run
 #
 # Optionally the following variables could be set
 # - ITERATIONS -- the number of times flaky tests should be executed
@@ -467,6 +504,11 @@ function initialize() {
       shift
       ;;
 
+    --test-set=*|-tests=*)
+      TEST_SET="${arg#*=}"
+      shift
+      ;;
+
     *)
       echo Unknown flag ${arg}
       ;;
@@ -475,6 +517,11 @@ function initialize() {
 
   if [[ "${SCRIPT}" != "test-flaky.sh" && ${TEST_ITERATIONS} ]]; then
     echo ${SCRIPT} cannot use --test-iterations, repetitive testing only works with test-flaky.sh
+    exit 1
+  fi
+
+   if [[ "${SCRIPT}" != "test-set.sh" && ${TEST_SET} ]]; then
+    echo ${SCRIPT} cannot use --test-set, this argument is only read by test-set.sh
     exit 1
   fi
 
@@ -525,6 +572,11 @@ function main() {
     test-stable.sh)
       build pom.xml "${MAVEN_FLAGS}" false ${NO_BUILD}
       runStableTests ${POM} "${MAVEN_FLAGS}" "${CLOUDERA_DIR}/excludes.txt"
+      ;;
+
+    test-set.sh)
+      build pom.xml "${MAVEN_FLAGS}" false ${NO_BUILD}
+      runTestSet ${POM} "${MAVEN_FLAGS}" "${TEST_SET}"
       ;;
 
     *)
