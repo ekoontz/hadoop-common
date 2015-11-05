@@ -28,6 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -1540,6 +1541,40 @@ public class FSDirectory implements Closeable {
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);
+  }
+
+  /** Get a collection of full snapshot paths given file and snapshot dir.
+   * @param lsf a list of snapshottable features
+   * @param file full path of the file
+   * @return collection of full paths of snapshot of the file
+   */
+  Collection<String> getSnapshotFiles(
+      List<DirectorySnapshottableFeature> lsf,
+      String file) throws IOException {
+    ArrayList<String> snaps = new ArrayList<String>();
+    ListIterator<DirectorySnapshottableFeature> sfi = lsf.listIterator();
+    for (DirectorySnapshottableFeature sf : lsf) {
+      // for each snapshottable dir e.g. /dir1, /dir2
+      final ReadOnlyList<Snapshot> lsnap = sf.getSnapshotList();
+      for (Snapshot s : lsnap) {
+        // for each snapshot name under snapshottable dir
+        // e.g. /dir1/.snapshot/s1, /dir1/.snapshot/s2
+        final String dirName = s.getRoot().getRootFullPathName();
+        if (!file.startsWith(dirName)) {
+          // file not in current snapshot root dir, no need to check other snaps
+          break;
+        }
+        String snapname = s.getRoot().getFullPathName();
+        if (dirName.equals(Path.SEPARATOR)) { // handle rootDir
+          snapname += Path.SEPARATOR;
+        }
+        snapname += file.substring(file.indexOf(dirName) + dirName.length());
+        if (getFSNamesystem().getFileInfo(snapname, true) != null) {
+          snaps.add(snapname);
+        }
+      }
+    }
+    return snaps;
   }
 
   /** Get the file info for a specific file.
