@@ -1551,8 +1551,7 @@ public class FSDirectory implements Closeable {
   Collection<String> getSnapshotFiles(
       List<DirectorySnapshottableFeature> lsf,
       String file) throws IOException {
-    ArrayList<String> snaps = new ArrayList<String>();
-    ListIterator<DirectorySnapshottableFeature> sfi = lsf.listIterator();
+    ArrayList<String> snaps = new ArrayList<>();
     for (DirectorySnapshottableFeature sf : lsf) {
       // for each snapshottable dir e.g. /dir1, /dir2
       final ReadOnlyList<Snapshot> lsnap = sf.getSnapshotList();
