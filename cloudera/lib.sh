@@ -68,6 +68,10 @@ function runCodeCoverage() {
   local _POM=$1
   local _MAVEN_FLAGS=$2
   local _EXCLUDES=$3
+  local _MERGED_EXCLUDES=${CLOUDERA_DIR}/merged-excludes.txt
+
+  # merge the specified excludes with a potential code-coverage-excludes.txt file
+  cat ${_EXCLUDES} ${CLOUDERA_DIR}/code-coverage-excludes.txt 2> /dev/null | sed '/^$/d' | sort > ${_MERGED_EXCLUDES}
 
   echo
   echo ----
@@ -75,7 +79,7 @@ function runCodeCoverage() {
   echo ----
   echo
   mvn -Pcloudera-clover -Pcloudera-unittest -f ${_POM} -e findbugs:findbugs checkstyle:checkstyle test ${_MAVEN_FLAGS} \
-   clover2:aggregate clover2:clover -Dtest.excludes.file=${_EXCLUDES}
+   clover2:aggregate clover2:clover -Dtest.excludes.file=${_MERGED_EXCLUDES}
 
   echo
   echo ----
