@@ -1,0 +1,5 @@
+
+# Some tests disturbed by method names munged by Clover
+
+**/TestDatanodeStartupFixesLegacyStorageIDs.java
+**/TestCodec.java
