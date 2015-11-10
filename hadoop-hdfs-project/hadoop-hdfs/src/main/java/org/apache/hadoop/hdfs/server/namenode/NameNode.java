@@ -463,7 +463,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   public static InetSocketAddress getAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
-    return getAddress(filesystemURI);
+    return getAddressCheckLogical(conf, filesystemURI);
   }
 
 
@@ -485,6 +485,26 @@ public class NameNode implements NameNodeStatusMXBean {
           HdfsConstants.HDFS_URI_SCHEME));
     }
     return getAddress(authority);
+  }
+
+  /**
+   * Get the NN address from the URI. If the uri is logical, default address is
+   * returned. Otherwise return the DNS-resolved address of the URI.
+   *
+   * @param conf configuration
+   * @param filesystemURI URI of the file system
+   * @return address of file system
+   */
+  public static InetSocketAddress getAddressCheckLogical(Configuration conf,
+      URI filesystemURI) {
+    InetSocketAddress retAddr;
+    if (HAUtil.isLogicalUri(conf, filesystemURI)) {
+      retAddr = InetSocketAddress.createUnresolved(filesystemURI.getAuthority(),
+          DEFAULT_PORT);
+    } else {
+      retAddr = getAddress(filesystemURI);
+    }
+    return retAddr;
   }
 
   public static URI getUri(InetSocketAddress namenode) {
