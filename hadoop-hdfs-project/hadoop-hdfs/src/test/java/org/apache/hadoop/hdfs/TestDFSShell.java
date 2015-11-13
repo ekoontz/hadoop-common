@@ -882,9 +882,9 @@ public class TestDFSShell {
       assertEquals(dirs, in.nextLong());
       assertEquals(files, in.nextLong());
     } finally {
+      System.setOut(oldOut);
       if (in!=null) in.close();
       IOUtils.closeStream(out);
-      System.setOut(oldOut);
       System.out.println("results:\n" + results);
     }
   }
@@ -1647,9 +1647,9 @@ public class TestDFSShell {
       assertEquals(returnvalue, shell.run(new String[]{"-lsr", root}));
       results = bytes.toString();
     } finally {
-      IOUtils.closeStream(out);
       System.setOut(oldOut);
       System.setErr(oldErr);
+      IOUtils.closeStream(out);
     }
     System.out.println("results:\n" + results);
     return results;
