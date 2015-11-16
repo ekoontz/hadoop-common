@@ -5,10 +5,8 @@ org/apache/hadoop/fs/viewfs/ViewFsBaseTest.java
 
 org/apache/hadoop/ha/TestZKFailoverControllerStress.java
 
-org/apache/hadoop/mapred/TestJavaSerialization.java
 org/apache/hadoop/mapred/TestLocalJobSubmission.java
 
-org/apache/hadoop/mapreduce/TestLargeSort.java
 org/apache/hadoop/mapreduce/jobhistory/TestJobHistoryEventHandler.java
 
 org/apache/hadoop/security/TestShellBasedIdMapping.java
@@ -24,4 +22,5 @@ org/apache/hadoop/yarn/server/nodemanager/containermanager/logaggregation/TestLo
 org/apache/hadoop/yarn/server/resourcemanager/TestContainerResourceUsage.java
 org/apache/hadoop/yarn/server/resourcemanager/metrics/TestSystemMetricsPublisher.java
 org/apache/hadoop/yarn/server/resourcemanager/scheduler/capacity/TestContainerAllocation.java
+org/apache/hadoop/yarn/server/resourcemanager/webapp/TestRMWebApp.java
 org/apache/hadoop/yarn/server/timeline/webapp/TestTimelineWebServices.java
