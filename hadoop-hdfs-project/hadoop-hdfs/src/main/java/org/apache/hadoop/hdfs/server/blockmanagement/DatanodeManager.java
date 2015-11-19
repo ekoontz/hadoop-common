@@ -1337,7 +1337,7 @@ public class DatanodeManager {
 
     if (listDeadNodes) {
       for (InetSocketAddress addr : includedNodes) {
-        if (foundNodes.matchedBy(addr) || excludedNodes.match(addr)) {
+        if (foundNodes.matchedBy(addr)) {
           continue;
         }
         // The remaining nodes are ones that are referenced by the hosts
@@ -1353,7 +1353,10 @@ public class DatanodeManager {
                 .getAddress().getHostAddress(), addr.getHostName(), "",
                 addr.getPort() == 0 ? defaultXferPort : addr.getPort(),
                 defaultInfoPort, defaultInfoSecurePort, defaultIpcPort));
-        dn.setLastUpdate(0); // Consider this node dead for reporting
+        setDatanodeDead(dn);
+        if (excludedNodes.match(addr)) {
+          dn.setDecommissioned();
+        }
         nodes.add(dn);
       }
     }
