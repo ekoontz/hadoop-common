@@ -194,6 +194,7 @@
         <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
         <includeDependencies>false</includeDependencies>
         <unpack>false</unpack>
+        <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
       </binaries>
     </moduleSet>
     <moduleSet>
@@ -205,6 +206,7 @@
         <outputDirectory>share/hadoop/${hadoop.component}/test</outputDirectory>
         <includeDependencies>false</includeDependencies>
         <unpack>false</unpack>
+        <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
       </binaries>
     </moduleSet>
   </moduleSets>
@@ -212,6 +214,7 @@
     <dependencySet>
       <useProjectArtifact>false</useProjectArtifact>
       <outputDirectory>/share/hadoop/${hadoop.component}/lib</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
       <!-- Exclude hadoop artifacts. They will be found via HADOOP* env -->
       <excludes>
         <exclude>org.apache.hadoop:*</exclude>
@@ -224,6 +227,7 @@
     <dependencySet>
       <useProjectArtifact>false</useProjectArtifact>
       <outputDirectory>/share/hadoop/${hadoop.component}/lib-examples</outputDirectory>
+      <outputFileNameMapping>${artifact.artifactId}-${artifact.baseVersion}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
       <includes>
         <include>org.hsqldb:hsqldb</include>
       </includes>
