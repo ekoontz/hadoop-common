@@ -97,4 +97,8 @@ public class UncompressedSplitLineReader extends SplitLineReader {
   public boolean needAdditionalRecordAfterSplit() {
     return !finished && needAdditionalRecord;
   }
+
+  protected void unsetNeedAdditionalRecordAfterSplit() {
+    needAdditionalRecord = false;
+  }
 }
