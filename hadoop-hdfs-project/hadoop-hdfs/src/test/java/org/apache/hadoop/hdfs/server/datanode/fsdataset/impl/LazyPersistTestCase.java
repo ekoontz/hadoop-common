@@ -355,7 +355,7 @@ public abstract class LazyPersistTestCase {
     triggerBlockReport();
 
     while(
-      DataNodeTestUtils.getPendingAsyncDeletions(cluster.getDataNodes().get(0))
+        cluster.getFsDatasetTestUtils(0).getPendingAsyncDeletions()
         > 0L){
       Thread.sleep(1000);
     }
