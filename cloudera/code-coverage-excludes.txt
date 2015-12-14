@@ -3,3 +3,4 @@
 
 **/TestDatanodeStartupFixesLegacyStorageIDs.java
 **/TestCodec.java
+**/TestBootstrapStandby.java
