@@ -2224,4 +2224,8 @@
 
   <!-- end of task-controller targets -->
 
+  <!-- Debug target to show properties. -->
+  <target name="list-all-properties">
+    <echoproperties />
+  </target>
 </project>
