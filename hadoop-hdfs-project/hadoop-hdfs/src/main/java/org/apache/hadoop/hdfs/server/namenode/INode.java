@@ -73,9 +73,17 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   /** Get the {@link PermissionStatus} */
   abstract PermissionStatus getPermissionStatus(int snapshotId);
 
+  /** Get the Fsimage-stored {@link PermissionStatus} */
+  abstract PermissionStatus getFsimagePermissionStatus(int snapshotId);
+
   /** The same as getPermissionStatus(null). */
   final PermissionStatus getPermissionStatus() {
     return getPermissionStatus(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsimagePermissionStatus(null). */
+  final PermissionStatus getFsimagePermissionStatus() {
+    return getFsimagePermissionStatus(Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -88,10 +96,26 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   @Override
   public abstract String getUserName(int snapshotId);
 
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return stored user name
+   */
+  @Override
+  public abstract String getFsimageUserName(int snapshotId);
+
   /** The same as getUserName(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final String getUserName() {
     return getUserName(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsimageUserName(Snapshot.CURRENT_STATE_ID). */
+  @Override
+  public final String getFsimageUserName() {
+    return getFsimageUserName(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set user */
@@ -103,6 +127,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
     setUser(user);
     return this;
   }
+
   /**
    * @param snapshotId
    *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
@@ -113,10 +138,26 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   @Override
   public abstract String getGroupName(int snapshotId);
 
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return stored group name
+   */
+  @Override
+  public abstract String getFsimageGroupName(int snapshotId);
+
   /** The same as getGroupName(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final String getGroupName() {
     return getGroupName(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsimageGroupName(Snapshot.CURRENT_STATE_ID). */
+  @Override
+  public final String getFsimageGroupName() {
+    return getFsimageGroupName(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set group */
@@ -138,11 +179,27 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    */
   @Override
   public abstract FsPermission getFsPermission(int snapshotId);
-  
+
+  /**
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
+   * @return stored permission.
+   */
+  @Override
+  public abstract FsPermission getFsimageFsPermission(int snapshotId);
+
   /** The same as getFsPermission(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final FsPermission getFsPermission() {
     return getFsPermission(Snapshot.CURRENT_STATE_ID);
+  }
+
+  /** The same as getFsPermission(Snapshot.CURRENT_STATE_ID). */
+  @Override
+  public final FsPermission getFsimageFsPermission() {
+    return getFsimageFsPermission(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set the {@link FsPermission} of this {@link INode} */
@@ -159,8 +216,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
   public abstract AclFeature getAclFeature(int snapshotId);
 
   @Override
+  public abstract AclFeature getFsimageAclFeature(int snapshotId);
+
+  @Override
   public final AclFeature getAclFeature() {
     return getAclFeature(Snapshot.CURRENT_STATE_ID);
+  }
+
+  @Override
+  public final AclFeature getFsimageAclFeature() {
+    return getFsimageAclFeature(Snapshot.CURRENT_STATE_ID);
   }
 
   abstract void addAclFeature(AclFeature aclFeature);

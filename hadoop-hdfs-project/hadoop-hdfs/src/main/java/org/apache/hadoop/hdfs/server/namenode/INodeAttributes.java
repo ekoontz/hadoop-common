@@ -37,11 +37,20 @@ public interface INodeAttributes {
   /** @return the user name. */
   public String getUserName();
 
+  /** @return the Fsimage-stored user name. */
+  public String getFsimageUserName();
+
   /** @return the group name. */
   public String getGroupName();
-  
+
+  /** @return the Fsimage-stored default group name. */
+  public String getFsimageGroupName();
+
   /** @return the permission. */
   public FsPermission getFsPermission();
+
+  /** @return the permission. */
+  public FsPermission getFsimageFsPermission();
 
   /** @return the permission as a short. */
   public short getFsPermissionShort();
@@ -51,7 +60,10 @@ public interface INodeAttributes {
 
   /** @return the ACL feature. */
   public AclFeature getAclFeature();
-  
+
+  /** @return the Fsimage-stored ACL feature. */
+  public AclFeature getFsimageAclFeature();
+
   /** @return the XAttrs feature. */
   public XAttrFeature getXAttrFeature();
 
@@ -101,8 +113,18 @@ public interface INodeAttributes {
     }
 
     @Override
+    public final String getFsimageUserName() {
+      return getUserName();
+    }
+
+    @Override
     public final String getGroupName() {
       return PermissionStatusFormat.getGroup(permission);
+    }
+
+    @Override
+    public final String getFsimageGroupName() {
+      return getGroupName();
     }
 
     @Override
@@ -110,6 +132,11 @@ public interface INodeAttributes {
       return new FsPermission(getFsPermissionShort());
     }
 
+    @Override
+    public final FsPermission getFsimageFsPermission() {
+      return getFsPermission();
+    }
+    
     @Override
     public final short getFsPermissionShort() {
       return PermissionStatusFormat.getMode(permission);
@@ -123,6 +150,11 @@ public interface INodeAttributes {
     @Override
     public AclFeature getAclFeature() {
       return aclFeature;
+    }
+
+    @Override
+    public AclFeature getFsimageAclFeature() {
+      return getAclFeature();
     }
 
     @Override

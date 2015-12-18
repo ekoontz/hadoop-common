@@ -151,6 +151,15 @@ public abstract class AuthorizationProvider {
     public String getUserName(int snapshotId);
 
     /**
+     * Return the Fsimage-stored inode user for the specified snapshot.
+     * 
+     * @param snapshotId a snapshot ID or {@link #CURRENT_STATE_ID} for latest 
+     * value.
+     * @return the Fsimage-stored inode user for the specified snapshot.
+     */
+    public String getFsimageUserName(int snapshotId);
+
+    /**
      * Return the inode group for the specified snapshot.
      *
      * @param snapshotId a snapshot ID or {@link #CURRENT_STATE_ID} for latest
@@ -158,6 +167,15 @@ public abstract class AuthorizationProvider {
      * @return the inode group for the specified snapshot.
      */
     public String getGroupName(int snapshotId);
+
+    /**
+     * Return the Fsimage-stored inode group for the specified snapshot.
+     *
+     * @param snapshotId a snapshot ID or {@link #CURRENT_STATE_ID} for latest
+     * value.
+     * @return the Fsimage-stored inode group for the specified snapshot.
+     */
+    public String getFsimageGroupName(int snapshotId);
 
     /**
      * Return the inode permission for the specified snapshot.
@@ -169,6 +187,15 @@ public abstract class AuthorizationProvider {
     public FsPermission getFsPermission(int snapshotId);
 
     /**
+     * Return the inode permission for the specified snapshot.
+     *
+     * @param snapshotId a snapshot ID or {@link #CURRENT_STATE_ID} for latest
+     * value.
+     * @return the Fsimage-stored inode permission for the specified snapshot.
+     */
+    public FsPermission getFsimageFsPermission(int snapshotId);
+
+    /**
      * Return the inode ACL feature for the specified snapshot.
      *
      * @param snapshotId a snapshot ID or {@link #CURRENT_STATE_ID} for latest
@@ -176,7 +203,16 @@ public abstract class AuthorizationProvider {
      * @return the inode ACL feature for the specified snapshot.
      */
     public AclFeature getAclFeature(int snapshotId);
-    
+
+    /**
+     * Return the Fsimage-stored inode ACL feature for the specified snapshot.
+     *
+     * @param snapshotId a snapshot ID or {@link #CURRENT_STATE_ID} for latest
+     * value.
+     * @return the Fsimage-stored inode ACL feature for the specified snapshot.
+     */
+    public AclFeature getFsimageAclFeature(int snapshotId);
+
   }
 
   /**

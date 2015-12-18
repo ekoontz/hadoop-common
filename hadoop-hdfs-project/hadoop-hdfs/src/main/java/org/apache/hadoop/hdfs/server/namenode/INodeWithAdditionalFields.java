@@ -101,6 +101,9 @@ public abstract class INodeWithAdditionalFields extends INode
   private static final Feature[] EMPTY_FEATURE = new Feature[0];
   protected Feature[] features = EMPTY_FEATURE;
 
+  private static AuthorizationProvider dfltAuthProvider = 
+      new DefaultAuthorizationProvider();
+  
   private INodeWithAdditionalFields(INode parent, long id, byte[] name,
       long permission, long modificationTime, long accessTime) {
     super(parent);
@@ -161,6 +164,12 @@ public abstract class INodeWithAdditionalFields extends INode
         getFsPermission(snapshotId));
   }
 
+  @Override
+  final PermissionStatus getFsimagePermissionStatus(int snapshotId) {
+    return new PermissionStatus(getFsimageUserName(snapshotId),
+        getFsimageGroupName(snapshotId), getFsimageFsPermission(snapshotId));
+  }
+
   final void updatePermissionStatus(PermissionStatusFormat f, long n) {
     this.permission = f.BITS.combine(n, permission);
   }
@@ -168,6 +177,11 @@ public abstract class INodeWithAdditionalFields extends INode
   @Override
   public final String getUserName(int snapshotId) {
     return AuthorizationProvider.get().getUser(this, snapshotId);
+  }
+
+  @Override
+  public final String getFsimageUserName(int snapshotId) {
+    return dfltAuthProvider.getUser(this, snapshotId);
   }
 
   @Override
@@ -181,6 +195,11 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
+  public final String getFsimageGroupName(int snapshotId) {
+    return dfltAuthProvider.getGroup(this, snapshotId);
+  }
+
+  @Override
   final void setGroup(String group) {
     AuthorizationProvider.get().setGroup(this, group);
   }
@@ -188,6 +207,11 @@ public abstract class INodeWithAdditionalFields extends INode
   @Override
   public final FsPermission getFsPermission(int snapshotId) {
     return AuthorizationProvider.get().getFsPermission(this, snapshotId);
+  }
+
+  @Override
+  public final FsPermission getFsimageFsPermission(int snapshotId) {
+    return dfltAuthProvider.getFsPermission(this, snapshotId);
   }
 
   @Override
@@ -207,6 +231,11 @@ public abstract class INodeWithAdditionalFields extends INode
   @Override
   public final AclFeature getAclFeature(int snapshotId) {
     return AuthorizationProvider.get().getAclFeature(this, snapshotId);
+  }
+
+  @Override
+  public final AclFeature getFsimageAclFeature(int snapshotId) {
+    return dfltAuthProvider.getAclFeature(this, snapshotId);
   }
 
   @Override

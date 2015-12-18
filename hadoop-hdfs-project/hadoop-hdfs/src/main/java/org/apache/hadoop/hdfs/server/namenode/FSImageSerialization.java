@@ -96,7 +96,9 @@ public class FSImageSerialization {
       DataOutput out) throws IOException {
     final FsPermission p = TL_DATA.get().FILE_PERM;
     p.fromShort(inode.getFsPermissionShort());
-    PermissionStatus.write(out, inode.getUserName(), inode.getGroupName(), p);
+    
+    PermissionStatus.write(out,
+        inode.getFsimageUserName(), inode.getFsimageGroupName(), p);
   }
 
   private static void writeBlocks(final Block[] blocks,

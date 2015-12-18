@@ -356,8 +356,8 @@ public final class FSImageFormatPBINode {
   public final static class Saver {
     private static long buildPermissionStatus(INodeAttributes n,
         final SaverContext.DeduplicationMap<String> stringMap) {
-      long userId = stringMap.getId(n.getUserName());
-      long groupId = stringMap.getId(n.getGroupName());
+      long userId = stringMap.getId(n.getFsimageUserName());
+      long groupId = stringMap.getId(n.getFsimageGroupName());
       return ((userId & USER_GROUP_STRID_MASK) << USER_STRID_OFFSET)
           | ((groupId & USER_GROUP_STRID_MASK) << GROUP_STRID_OFFSET)
           | n.getFsPermissionShort();
@@ -411,7 +411,7 @@ public final class FSImageFormatPBINode {
           .setReplication(file.getFileReplication())
           .setStoragePolicyID(file.getLocalStoragePolicyID());
 
-      AclFeature f = file.getAclFeature();
+      AclFeature f = file.getFsimageAclFeature();
       if (f != null) {
         b.setAcl(buildAclEntries(f, state.getStringMap()));
       }
@@ -431,7 +431,7 @@ public final class FSImageFormatPBINode {
           .setDsQuota(quota.get(Quota.DISKSPACE))
           .setPermission(buildPermissionStatus(dir, state.getStringMap()));
 
-      AclFeature f = dir.getAclFeature();
+      AclFeature f = dir.getFsimageAclFeature();
       if (f != null) {
         b.setAcl(buildAclEntries(f, state.getStringMap()));
       }

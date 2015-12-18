@@ -547,8 +547,10 @@ public class INodeDirectory extends INodeWithAdditionalFields
     node.setParent(this);
     children.add(-insertionPoint - 1, node);
 
-    if (node.getGroupName() == null) {
-      node.setGroup(getGroupName());
+    if (node.getFsimageGroupName() == null) {
+      // CDH-34072: Cusotmized Provider (Sentry)'s setGroup API will 
+      // fall through to set Fsimage's group
+      node.setGroup(getFsimageGroupName());
     }
   }
 

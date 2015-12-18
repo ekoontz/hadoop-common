@@ -100,7 +100,7 @@ public class DefaultAuthorizationProvider
       int snapshotId) {
     INodeWithAdditionalFields inode = (INodeWithAdditionalFields) node;
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
-      return inode.getSnapshotINode(snapshotId).getAclFeature();
+      return inode.getSnapshotINode(snapshotId).getFsimageAclFeature();
     }
     return inode.getFeature(AclFeature.class);
   }
@@ -108,7 +108,7 @@ public class DefaultAuthorizationProvider
   @Override
   public void removeAclFeature(INodeAuthorizationInfo node) {
     INodeWithAdditionalFields inode = (INodeWithAdditionalFields) node;
-    AclFeature f = inode.getAclFeature();
+    AclFeature f = inode.getFsimageAclFeature();
     Preconditions.checkNotNull(f);
     inode.removeFeature(f);
   }
@@ -116,7 +116,7 @@ public class DefaultAuthorizationProvider
   @Override
   public void addAclFeature(INodeAuthorizationInfo node, AclFeature f) {
     INodeWithAdditionalFields inode = (INodeWithAdditionalFields) node;
-    AclFeature f1 = inode.getAclFeature();
+    AclFeature f1 = inode.getFsimageAclFeature();
     if (f1 != null) {
       throw new IllegalStateException("Duplicated ACLFeature");
     }

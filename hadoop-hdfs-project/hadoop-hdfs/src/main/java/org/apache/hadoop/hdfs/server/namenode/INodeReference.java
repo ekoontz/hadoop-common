@@ -189,35 +189,60 @@ public abstract class INodeReference extends INode {
   public final PermissionStatus getPermissionStatus(int snapshotId) {
     return referred.getPermissionStatus(snapshotId);
   }
-  
+
+  @Override
+  public final PermissionStatus getFsimagePermissionStatus(int snapshotId) {
+    return referred.getFsimagePermissionStatus(snapshotId);
+  }
+
   @Override
   public final String getUserName(int snapshotId) {
     return referred.getUserName(snapshotId);
   }
   
   @Override
+  public final String getFsimageUserName(int snapshotId) {
+    return referred.getFsimageUserName(snapshotId);
+  }
+
+  @Override
   final void setUser(String user) {
     referred.setUser(user);
   }
-  
+
   @Override
   public final String getGroupName(int snapshotId) {
     return referred.getGroupName(snapshotId);
   }
   
   @Override
+  public final String getFsimageGroupName(int snapshotId) {
+    return referred.getFsimageGroupName(snapshotId);
+  }
+
+  @Override
   final void setGroup(String group) {
     referred.setGroup(group);
   }
-  
+
   @Override
   public final FsPermission getFsPermission(int snapshotId) {
     return referred.getFsPermission(snapshotId);
   }
 
   @Override
+  public final FsPermission getFsimageFsPermission(int snapshotId) {
+    return referred.getFsimageFsPermission(snapshotId);
+  }
+
+  @Override
   public final AclFeature getAclFeature(int snapshotId) {
     return referred.getAclFeature(snapshotId);
+  }
+
+  @Override
+  public final AclFeature getFsimageAclFeature(int snapshotId) {
+    return getAclFeature(snapshotId);
   }
 
   @Override
@@ -229,7 +254,7 @@ public abstract class INodeReference extends INode {
   final void removeAclFeature() {
     referred.removeAclFeature();
   }
-  
+
   @Override
   final XAttrFeature getXAttrFeature(int snapshotId) {
     return referred.getXAttrFeature(snapshotId);
