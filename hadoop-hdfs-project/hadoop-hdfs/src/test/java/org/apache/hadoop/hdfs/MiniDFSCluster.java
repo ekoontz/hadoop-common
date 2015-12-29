@@ -1751,12 +1751,7 @@ public class MiniDFSCluster {
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
       if (nnInfo == null) continue;
-      NameNode nameNode = nnInfo.nameNode;
-      if (nameNode != null) {
-        nameNode.stop();
-        nameNode.join();
-        nameNode = null;
-      }
+      stopAndJoinNameNode(nnInfo.nameNode);
     }
     if (deleteDfsDir) {
         base_dir.delete();
@@ -1793,14 +1788,25 @@ public class MiniDFSCluster {
   public synchronized void shutdownNameNode(int nnIndex) {
     NameNode nn = nameNodes[nnIndex].nameNode;
     if (nn != null) {
-      LOG.info("Shutting down the namenode");
-      nn.stop();
-      nn.join();
+      stopAndJoinNameNode(nn);
       Configuration conf = nameNodes[nnIndex].conf;
       nameNodes[nnIndex] = new NameNodeInfo(null, null, null, null, conf);
     }
   }
-  
+
+  /**
+   * Fully stop the NameNode by stop and join.
+   */
+  private void stopAndJoinNameNode(NameNode nn) {
+    if (nn == null) {
+      return;
+    }
+    LOG.info("Shutting down the namenode");
+    nn.stop();
+    nn.join();
+    nn.joinHttpServer();
+  }
+
   /**
    * Restart all namenodes.
    */
