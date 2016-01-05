@@ -26,6 +26,7 @@ import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.ProviderUtils;
@@ -512,7 +513,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         writeJson(jsonOutput, conn.getOutputStream());
       }
     } catch (IOException ex) {
-      conn.getInputStream().close();
+      IOUtils.closeStream(conn.getInputStream());
       throw ex;
     }
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
@@ -550,15 +551,8 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       try {
         is = conn.getInputStream();
         ret = mapper.readValue(is, klass);
-      } catch (IOException ex) {
-        if (is != null) {
-          is.close();
-        }
-        throw ex;
       } finally {
-        if (is != null) {
-          is.close();
-        }
+        IOUtils.closeStream(is);
       }
     }
     return ret;
