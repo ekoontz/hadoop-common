@@ -164,7 +164,7 @@ Offline Image Viewer Guide
 *-----------------------:-----------------------------------+
 | <<<-p>>>\|<<<--processor>>> <processor> | Specify the image processor to
 |                       | apply against the image file. Currently valid options
-|                       | are Web (default), XML and FileDistribution.
+|                       | are Web (default), XML, Delimited and FileDistribution.
 *-----------------------:-----------------------------------+
 | <<<-addr>>> <address> | Specify the address(host:port) to listen.
 |                       | (localhost:5978 by default). This option is used with
