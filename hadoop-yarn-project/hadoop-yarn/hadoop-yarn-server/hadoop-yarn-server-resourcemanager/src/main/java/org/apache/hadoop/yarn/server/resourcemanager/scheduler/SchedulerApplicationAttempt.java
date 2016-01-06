@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -507,8 +508,10 @@ public class SchedulerApplicationAttempt {
   }
 
   public synchronized void addSchedulingOpportunity(Priority priority) {
-    schedulingOpportunities.setCount(priority,
-        schedulingOpportunities.count(priority) + 1);
+    int count = schedulingOpportunities.count(priority);
+    if (count < Integer.MAX_VALUE) {
+      schedulingOpportunities.setCount(priority, count + 1);
+    }
   }
   
   public synchronized void subtractSchedulingOpportunity(Priority priority) {
@@ -540,6 +543,11 @@ public class SchedulerApplicationAttempt {
       long currentTimeMs) {
     lastScheduledContainer.put(priority, currentTimeMs);
     schedulingOpportunities.setCount(priority, 0);
+  }
+
+  @VisibleForTesting
+  void setSchedulingOpportunities(Priority priority, int count) {
+    schedulingOpportunities.setCount(priority, count);
   }
 
   synchronized AggregateAppResourceUsage getRunningAggregateAppResourceUsage() {
