@@ -41,4 +41,6 @@ public class DataNodeFaultInjector {
   public void writeBlockAfterFlush() throws IOException {}
 
   public void sendShortCircuitShmResponse() throws IOException {}
+
+  public void noRegistration() throws IOException { }
 }
