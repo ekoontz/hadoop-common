@@ -260,9 +260,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   void registerSource(String name, String desc, MetricsSource source) {
     checkNotNull(config, "config");
     MetricsConfig conf = sourceConfigs.get(name);
-    MetricsSourceAdapter sa = new MetricsSourceAdapter(prefix, name, desc,
-        source, injectedTags, period * 1000L, conf != null ? conf
-            : config.subset(SOURCE_KEY));
+    MetricsSourceAdapter sa = conf != null
+        ? new MetricsSourceAdapter(prefix, name, desc, source,
+                                   injectedTags, period, conf)
+        : new MetricsSourceAdapter(prefix, name, desc, source,
+          injectedTags, period, config.subset(SOURCE_KEY));
     sources.put(name, sa);
     sa.start();
     LOG.debug("Registered source "+ name);
@@ -359,7 +361,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       return;
     }
     logicalTime = 0;
-    long millis = period * 1000L;
+    long millis = period * 1000;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
           public void run() {
@@ -552,7 +554,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   private void registerSystemSource() {
     MetricsConfig sysConf = sourceConfigs.get(MS_NAME);
     sysSource = new MetricsSourceAdapter(prefix, MS_STATS_NAME, MS_STATS_DESC,
-        MetricsAnnotations.makeSource(this), injectedTags, period * 1000L,
+        MetricsAnnotations.makeSource(this), injectedTags, period,
         sysConf == null ? config.subset(SOURCE_KEY) : sysConf);
     sysSource.start();
   }
