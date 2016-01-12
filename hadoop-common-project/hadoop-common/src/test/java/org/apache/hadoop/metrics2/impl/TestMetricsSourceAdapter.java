@@ -163,7 +163,7 @@ public class TestMetricsSourceAdapter {
     MetricsSourceBuilder sourceBuilder =
         MetricsAnnotations.newSourceBuilder(source);
 
-    final long JMX_CACHE_TTL = 250; // ms
+    final int JMX_CACHE_TTL = 250; // ms
     List<MetricsTag> injectedTags = new ArrayList<>();
     MetricsSourceAdapter sourceAdapter =
         new MetricsSourceAdapter("test", "test",

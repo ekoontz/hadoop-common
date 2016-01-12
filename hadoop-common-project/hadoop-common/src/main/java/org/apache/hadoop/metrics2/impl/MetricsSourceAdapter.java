@@ -242,6 +242,10 @@ class MetricsSourceAdapter implements DynamicMBean {
     return mbeanName;
   }
 
+  @VisibleForTesting
+  int getJmxCacheTTL() {
+    return jmxCacheTTL;
+  }
   
   private void updateInfoCache() {
     LOG.debug("Updating info cache...");
