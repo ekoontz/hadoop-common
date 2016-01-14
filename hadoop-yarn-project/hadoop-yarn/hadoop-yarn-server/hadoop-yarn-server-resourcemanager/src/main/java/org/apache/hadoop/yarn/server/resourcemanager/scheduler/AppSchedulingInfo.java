@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -65,6 +66,7 @@ public class AppSchedulingInfo {
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
   final Map<Priority, Map<String, ResourceRequest>> requests =
     new HashMap<Priority, Map<String, ResourceRequest>>();
+  private AtomicBoolean userBlacklistChanged = new AtomicBoolean(false);
   private Set<String> userBlacklist = new HashSet<>();
   private Set<String> amBlacklist = new HashSet<>();
 
@@ -200,10 +202,12 @@ public class AppSchedulingInfo {
    * @param blacklistAdditions resources to be added to the userBlacklist
    * @param blacklistRemovals resources to be removed from the userBlacklist
    */
-   public void updateBlacklist(
+  public void updateBlacklist(
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
-     updateUserOrAMBlacklist(userBlacklist, blacklistAdditions,
-         blacklistRemovals);
+    if (updateUserOrAMBlacklist(userBlacklist, blacklistAdditions,
+        blacklistRemovals)) {
+      userBlacklistChanged.set(true);
+    }
   }
 
   /**
@@ -217,17 +221,25 @@ public class AppSchedulingInfo {
         blacklistRemovals);
   }
 
-  void updateUserOrAMBlacklist(Set<String> blacklist,
+  boolean updateUserOrAMBlacklist(Set<String> blacklist,
       List<String> blacklistAdditions, List<String> blacklistRemovals) {
+    boolean changed = false;
     synchronized (blacklist) {
       if (blacklistAdditions != null) {
-        blacklist.addAll(blacklistAdditions);
+        changed = blacklist.addAll(blacklistAdditions);
       }
 
       if (blacklistRemovals != null) {
-        blacklist.removeAll(blacklistRemovals);
+        if (blacklist.removeAll(blacklistRemovals)) {
+          changed = true;
+        }
       }
     }
+    return changed;
+  }
+
+  public boolean getAndResetBlacklistChanged() {
+    return userBlacklistChanged.getAndSet(false);
   }
 
   synchronized public Collection<Priority> getPriorities() {
@@ -325,9 +337,6 @@ public class AppSchedulingInfo {
   /**
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
-   * 
-   * @param allocatedContainers
-   *          resources allocated to the application
    */
   synchronized private void allocateNodeLocal(SchedulerNode node,
       Priority priority, ResourceRequest nodeLocalRequest, Container container,
@@ -358,9 +367,6 @@ public class AppSchedulingInfo {
   /**
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
-   * 
-   * @param allocatedContainers
-   *          resources allocated to the application
    */
   synchronized private void allocateRackLocal(SchedulerNode node,
       Priority priority, ResourceRequest rackLocalRequest, Container container,
@@ -383,9 +389,6 @@ public class AppSchedulingInfo {
   /**
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
-   * 
-   * @param allocatedContainers
-   *          resources allocated to the application
    */
   synchronized private void allocateOffSwitch(SchedulerNode node,
       Priority priority, ResourceRequest offSwitchRequest, Container container,
