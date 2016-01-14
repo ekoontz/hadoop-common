@@ -222,6 +222,7 @@ public class TestOfflineImageViewerForAcl {
     PrintWriter o = new PrintWriter(output);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
+    o.flush();
     SAXParserFactory spf = SAXParserFactory.newInstance();
     SAXParser parser = spf.newSAXParser();
     final String xml = output.toString();
