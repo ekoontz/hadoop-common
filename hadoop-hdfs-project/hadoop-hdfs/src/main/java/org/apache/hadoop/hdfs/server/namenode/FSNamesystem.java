@@ -8339,8 +8339,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkOwner(pc, path);
       }
       dir.verifySnapshotName(snapshotNewName, path);
-      
-      snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
+      dir.writeLock();
+      try {
+        snapshotManager.renameSnapshot(path, snapshotOldName, snapshotNewName);
+      } finally {
+        dir.writeUnlock();
+      }
       getEditLog().logRenameSnapshot(path, snapshotOldName, snapshotNewName,
           cacheEntry != null);
       success = true;
