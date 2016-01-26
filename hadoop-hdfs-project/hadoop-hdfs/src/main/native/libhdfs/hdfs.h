@@ -56,6 +56,7 @@ extern  "C" {
         kObjectKindFile = 'F',
         kObjectKindDirectory = 'D',
     } tObjectKind;
+    struct hdfsStreamBuilder;
 
 
     /**
@@ -329,9 +330,11 @@ extern  "C" {
      */
     int hdfsDisconnect(hdfsFS fs);
         
-
     /** 
      * hdfsOpenFile - Open a hdfs file in given mode.
+     * @deprecated    Use the hdfsStreamBuilder functions instead.
+     * This function does not support setting block sizes bigger than 2 GB.
+     *
      * @param fs The configured filesystem handle.
      * @param path The full path to the file.
      * @param flags - an | of bits/fcntl.h file flags - supported flags are O_RDONLY, O_WRONLY (meaning create or overwrite i.e., implies O_TRUNCAT), 
@@ -341,11 +344,87 @@ extern  "C" {
      * @param replication Block replication - pass 0 if you want to use
      * the default configured values.
      * @param blocksize Size of block - pass 0 if you want to use the
-     * default configured values.
+     * default configured values.  Note that if you want a block size bigger
+     * than 2 GB, you must use the hdfsStreamBuilder API rather than this
+     * deprecated function.
      * @return Returns the handle to the open file or NULL on error.
      */
     hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
                           int bufferSize, short replication, tSize blocksize);
+
+     /**
+     * hdfsStreamBuilderAlloc - Allocate an HDFS stream builder.
+     *
+     * @param fs The configured filesystem handle.
+     * @param path The full path to the file.  Will be deep-copied.
+     * @param flags The open flags, as in hdfsOpenFile.
+     * @return Returns the hdfsStreamBuilder, or NULL on error.
+     */
+    struct hdfsStreamBuilder *hdfsStreamBuilderAlloc(hdfsFS fs,
+                                      const char *path, int flags);
+
+    /**
+     * hdfsStreamBuilderFree - Free an HDFS file builder.
+     *
+     * It is normally not necessary to call this function since
+     * hdfsStreamBuilderBuild frees the builder.
+     *
+     * @param bld The hdfsStreamBuilder to free.
+     */
+    void hdfsStreamBuilderFree(struct hdfsStreamBuilder *bld);
+
+    /**
+     * hdfsStreamBuilderSetBufferSize - Set the stream buffer size.
+     *
+     * @param bld The hdfs stream builder.
+     * @param bufferSize The buffer size to set.
+     *
+     * @return 0 on success, or -1 on error.  Errno will be set on error.
+     */
+    int hdfsStreamBuilderSetBufferSize(struct hdfsStreamBuilder *bld,
+                                       int32_t bufferSize);
+
+    /**
+     * hdfsStreamBuilderSetReplication - Set the replication for the stream.
+     * This is only relevant for output streams, which will create new blocks.
+     *
+     * @param bld The hdfs stream builder.
+     * @param replication The replication to set.
+     *
+     * @return 0 on success, or -1 on error.  Errno will be set on error.
+     *              If you call this on an input stream builder, you will get
+     *              EINVAL, because this configuration is not relevant to input
+     *              streams.
+     */
+    int hdfsStreamBuilderSetReplication(struct hdfsStreamBuilder *bld,
+                                        int16_t replication);
+
+    /**
+     * hdfsStreamBuilderSetDefaultBlockSize - Set the default block size for
+     * the stream.  This is only relevant for output streams, which will create
+     * new blocks.
+     *
+     * @param bld The hdfs stream builder.
+     * @param defaultBlockSize The default block size to set.
+     *
+     * @return 0 on success, or -1 on error.  Errno will be set on error.
+     *              If you call this on an input stream builder, you will get
+     *              EINVAL, because this configuration is not relevant to input
+     *              streams.
+     */
+    int hdfsStreamBuilderSetDefaultBlockSize(struct hdfsStreamBuilder *bld,
+                                       int64_t defaultBlockSize);
+
+    /**
+     * hdfsStreamBuilderBuild - Build the stream by calling open or create.
+     *
+     * @param bld The hdfs stream builder.  This pointer will be freed, whether
+     *            or not the open succeeds.
+     *
+     * @return the stream pointer on success, or NULL on error.  Errno will be
+     * set on error.
+     */
+    hdfsFile hdfsStreamBuilderBuild(struct hdfsStreamBuilder *bld);
 
     /**
      * hdfsUnbufferFile - Reduce the buffering done on a file.
