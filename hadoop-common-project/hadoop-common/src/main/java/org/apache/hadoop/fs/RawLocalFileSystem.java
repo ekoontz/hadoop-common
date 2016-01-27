@@ -33,6 +33,7 @@ import java.io.OutputStream;
 import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.StringTokenizer;
@@ -385,6 +386,10 @@ public class RawLocalFileSystem extends FileSystem {
 
     String[] names = localf.list();
     if (names == null) {
+      if (!localf.canRead()) {
+        throw new AccessDeniedException("cannot open directory " + f +
+            ": Permission denied");
+      }
       return null;
     }
     results = new FileStatus[names.length];
