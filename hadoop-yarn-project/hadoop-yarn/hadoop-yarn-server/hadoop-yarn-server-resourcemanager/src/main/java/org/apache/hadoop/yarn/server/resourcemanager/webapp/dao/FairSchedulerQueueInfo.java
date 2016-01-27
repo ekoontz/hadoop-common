@@ -67,6 +67,8 @@ public class FairSchedulerQueueInfo {
   
   private Collection<FairSchedulerQueueInfo> childQueues;
   
+  private boolean preemptable;
+
   public FairSchedulerQueueInfo() {
   }
   
@@ -112,6 +114,8 @@ public class FairSchedulerQueueInfo {
         childQueues.add(new FairSchedulerQueueInfo(child, scheduler));
       }
     }
+
+    preemptable = queue.isPreemptable();
   }
 
   public long getPendingContainers() {
@@ -207,5 +211,9 @@ public class FairSchedulerQueueInfo {
   
   public Collection<FairSchedulerQueueInfo> getChildQueues() {
     return childQueues;
+  }
+
+  public boolean isPreemptable() {
+    return preemptable;
   }
 }

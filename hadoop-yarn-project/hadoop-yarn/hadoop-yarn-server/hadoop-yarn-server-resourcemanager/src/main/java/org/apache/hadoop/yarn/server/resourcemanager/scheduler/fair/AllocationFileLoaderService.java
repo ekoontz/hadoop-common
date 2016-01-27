@@ -223,6 +223,7 @@ public class AllocationFileLoaderService extends AbstractService {
         new HashMap<String, Float>();
     Map<String, Map<QueueACL, AccessControlList>> queueAcls =
         new HashMap<String, Map<QueueACL, AccessControlList>>();
+    Set<String> nonPreemptableQueues = new HashSet<String>();
     int userMaxAppsDefault = Integer.MAX_VALUE;
     int queueMaxAppsDefault = Integer.MAX_VALUE;
     Resource queueMaxResourcesDefault = Resources.unbounded();
@@ -344,7 +345,8 @@ public class AllocationFileLoaderService extends AbstractService {
       loadQueue(parent, element, minQueueResources, maxQueueResources,
           queueMaxApps, userMaxApps, queueMaxAMShares, queueWeights,
           queuePolicies, minSharePreemptionTimeouts, fairSharePreemptionTimeouts,
-          fairSharePreemptionThresholds, queueAcls, configuredQueues);
+          fairSharePreemptionThresholds, queueAcls, configuredQueues,
+          nonPreemptableQueues);
     }
 
     // Load placement policy and pass it configured queues
@@ -379,8 +381,7 @@ public class AllocationFileLoaderService extends AbstractService {
         queueMaxResourcesDefault, queueMaxAMShareDefault, queuePolicies,
         defaultSchedPolicy, minSharePreemptionTimeouts,
         fairSharePreemptionTimeouts, fairSharePreemptionThresholds, queueAcls,
-        newPlacementPolicy, configuredQueues);
-
+        newPlacementPolicy, configuredQueues, nonPreemptableQueues);
     lastSuccessfulReload = clock.getTime();
     lastReloadAttemptFailed = false;
 
@@ -399,8 +400,9 @@ public class AllocationFileLoaderService extends AbstractService {
       Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Long> fairSharePreemptionTimeouts,
       Map<String, Float> fairSharePreemptionThresholds,
-      Map<String, Map<QueueACL, AccessControlList>> queueAcls, 
-      Map<FSQueueType, Set<String>> configuredQueues) 
+      Map<String, Map<QueueACL, AccessControlList>> queueAcls,
+      Map<FSQueueType, Set<String>> configuredQueues,
+      Set<String> nonPreemptableQueues)
       throws AllocationConfigurationException {
     String queueName = element.getAttribute("name").trim();
 
@@ -473,13 +475,18 @@ public class AllocationFileLoaderService extends AbstractService {
       } else if ("aclAdministerApps".equals(field.getTagName())) {
         String text = ((Text)field.getFirstChild()).getData();
         acls.put(QueueACL.ADMINISTER_QUEUE, new AccessControlList(text));
+      } else if ("allowPreemptionFrom".equals(field.getTagName())) {
+        String text = ((Text)field.getFirstChild()).getData().trim();
+        if (!Boolean.parseBoolean(text)) {
+          nonPreemptableQueues.add(queueName);
+        }
       } else if ("queue".endsWith(field.getTagName()) || 
           "pool".equals(field.getTagName())) {
         loadQueue(queueName, field, minQueueResources, maxQueueResources,
             queueMaxApps, userMaxApps, queueMaxAMShares, queueWeights,
             queuePolicies, minSharePreemptionTimeouts,
             fairSharePreemptionTimeouts, fairSharePreemptionThresholds,
-            queueAcls, configuredQueues);
+            queueAcls, configuredQueues, nonPreemptableQueues);
         configuredQueues.get(FSQueueType.PARENT).add(queueName);
         isLeaf = false;
       }

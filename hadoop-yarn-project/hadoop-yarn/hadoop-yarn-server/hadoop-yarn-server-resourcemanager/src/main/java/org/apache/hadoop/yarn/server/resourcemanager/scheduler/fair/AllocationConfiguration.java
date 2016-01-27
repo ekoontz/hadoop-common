@@ -91,7 +91,9 @@ public class AllocationConfiguration {
   //Configured queues in the alloc xml
   @VisibleForTesting
   Map<FSQueueType, Set<String>> configuredQueues;
-  
+
+  private final Set<String> nonPreemptableQueues;
+
   public AllocationConfiguration(Map<String, Resource> minQueueResources,
       Map<String, Resource> maxQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
@@ -106,7 +108,8 @@ public class AllocationConfiguration {
       Map<String, Float> fairSharePreemptionThresholds,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
       QueuePlacementPolicy placementPolicy,
-      Map<FSQueueType, Set<String>> configuredQueues) {
+      Map<FSQueueType, Set<String>> configuredQueues,
+      Set<String> nonPreemptableQueues) {
     this.minQueueResources = minQueueResources;
     this.maxQueueResources = maxQueueResources;
     this.queueMaxApps = queueMaxApps;
@@ -125,6 +128,7 @@ public class AllocationConfiguration {
     this.queueAcls = queueAcls;
     this.placementPolicy = placementPolicy;
     this.configuredQueues = configuredQueues;
+    this.nonPreemptableQueues = nonPreemptableQueues;
   }
   
   public AllocationConfiguration(Configuration conf) {
@@ -150,6 +154,7 @@ public class AllocationConfiguration {
     }
     placementPolicy = QueuePlacementPolicy.fromConfiguration(conf,
         configuredQueues);
+    nonPreemptableQueues = new HashSet<String>();
   }
   
   /**
@@ -197,6 +202,10 @@ public class AllocationConfiguration {
         fairSharePreemptionThresholds.get(queueName);
     return (fairSharePreemptionThreshold == null) ?
         -1f : fairSharePreemptionThreshold;
+  }
+
+  public boolean isPreemptable(String queueName) {
+    return !nonPreemptableQueues.contains(queueName);
   }
 
   public ResourceWeights getQueueWeight(String queue) {
