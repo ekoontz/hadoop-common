@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
@@ -142,6 +143,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      .addTransition(NodeState.NEW, NodeState.NEW,
          RMNodeEventType.RESOURCE_UPDATE, 
          new UpdateNodeResourceWhenUnusableTransition())
+     .addTransition(NodeState.NEW, NodeState.DECOMMISSIONED,
+         RMNodeEventType.DECOMMISSION,
+         new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
 
      //Transitions from RUNNING state
      .addTransition(NodeState.RUNNING,
@@ -463,6 +467,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       case UNHEALTHY:
         metrics.decrNumUnhealthyNMs();
         break;
+      case NEW:
+        break;
     }
 
     switch (finalState) {
@@ -516,12 +522,18 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       List<NMContainerStatus> containers = null;
 
       NodeId nodeId = rmNode.nodeId;
-      if (rmNode.context.getInactiveRMNodes().containsKey(nodeId)) {
-        // Old node rejoining
-        RMNode previouRMNode = rmNode.context.getInactiveRMNodes().get(nodeId);
-        rmNode.context.getInactiveRMNodes().remove(nodeId);
-        rmNode.updateMetricsForRejoinedNode(previouRMNode.getState());
+      RMNode previousRMNode =
+          rmNode.context.getInactiveRMNodes().remove(nodeId);
+      if (previousRMNode != null) {
+        rmNode.updateMetricsForRejoinedNode(previousRMNode.getState());
       } else {
+        NodesListManager.UnknownNodeId unknownNodeId =
+            new NodesListManager.UnknownNodeId(nodeId.getHost());
+        previousRMNode =
+            rmNode.context.getInactiveRMNodes().remove(unknownNodeId);
+        if (previousRMNode != null) {
+          ClusterMetrics.getMetrics().decrDecommisionedNMs();
+        }
         // Increment activeNodes explicitly because this is a new node.
         ClusterMetrics.getMetrics().incrNumActiveNodes();
         containers = startEvent.getNMContainerStatuses();
@@ -533,7 +545,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           }
         }
       }
-      
+
       if (null != startEvent.getRunningApplications()) {
         for (ApplicationId appId : startEvent.getRunningApplications()) {
           handleRunningAppOnNode(rmNode, rmNode.context, appId, rmNode.nodeId);
