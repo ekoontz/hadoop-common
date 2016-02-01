@@ -509,7 +509,7 @@ public class INodeFile extends INodeWithAdditionalFields
         blk.setBlockCollection(null);
       }
     }
-    setBlocks(null);
+    setBlocks(BlockInfo.EMPTY_ARRAY);
     clear();
     removedINodes.add(this);
     
