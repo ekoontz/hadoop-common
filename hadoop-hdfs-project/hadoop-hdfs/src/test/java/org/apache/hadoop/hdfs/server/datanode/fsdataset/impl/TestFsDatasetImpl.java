@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import com.google.common.collect.Lists;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -196,6 +197,32 @@ public class TestFsDatasetImpl {
       }
     }
     assertEquals(actualVolumes, expectedVolumes);
+  }
+
+  @Test
+  public void testAddVolumeWithSameStorageUuid() throws IOException {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      assertTrue(cluster.getDataNodes().get(0).isConnectedToNN(
+          cluster.getNameNode().getServiceRpcAddress()));
+
+      MiniDFSCluster.DataNodeProperties dn = cluster.stopDataNode(0);
+      File vol0 = cluster.getStorageDir(0, 0);
+      File vol1 = cluster.getStorageDir(0, 1);
+      Storage.StorageDirectory sd0 = new Storage.StorageDirectory(vol0);
+      Storage.StorageDirectory sd1 = new Storage.StorageDirectory(vol1);
+      FileUtils.copyFile(sd0.getVersionFile(), sd1.getVersionFile());
+
+      cluster.restartDataNode(dn, true);
+      cluster.waitActive();
+      assertFalse(cluster.getDataNodes().get(0).isConnectedToNN(
+          cluster.getNameNode().getServiceRpcAddress()));
+    } finally {
+      cluster.shutdown();
+    }
   }
 
   @Test(timeout = 30000)
