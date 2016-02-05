@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -249,7 +250,8 @@ public class TestLeaseRecovery {
         newdfs.append(file);
         fail("Append to a file(lease is held by another client) should fail");
     } catch (RemoteException e) {
-      assertTrue(e.getMessage().contains("file lease is currently owned"));
+      Exception inner = e.unwrapRemoteException();
+      assertTrue("Exception type is wrong! " + inner, inner instanceof AlreadyBeingCreatedException);
     }
 
     // Lease recovery on first try should be successful
