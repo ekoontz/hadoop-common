@@ -2974,7 +2974,8 @@ public class PBHelper {
 
   public static BlockReportContext convert(BlockReportContextProto proto) {
     return new BlockReportContext(proto.getTotalRpcs(),
-        proto.getCurRpc(), proto.getId(), proto.getLeaseId());
+        proto.getCurRpc(), proto.getId(), proto.getLeaseId(),
+        proto.getSorted());
   }
 
   public static BlockReportContextProto convert(BlockReportContext context) {
