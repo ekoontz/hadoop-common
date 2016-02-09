@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.NavigableMap;
@@ -194,7 +197,7 @@ public class EncryptionZoneManager {
    * Looks up the EncryptionZoneInt for a path within an encryption zone.
    * Returns null if path is not within an EZ.
    * <p/>
-   * Must be called while holding the manager lock.
+   * Called while holding the FSDirectory lock.
    */
   private EncryptionZoneInt getEncryptionZoneForPath(INodesInPath iip) {
     assert dir.hasReadLock();
@@ -202,6 +205,30 @@ public class EncryptionZoneManager {
     final INode[] inodes = iip.getINodes();
     for (int i = inodes.length - 1; i >= 0; i--) {
       final INode inode = inodes[i];
+      if (inode != null) {
+        final EncryptionZoneInt ezi = encryptionZones.get(inode.getId());
+        if (ezi != null) {
+          return ezi;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Looks up the nearest ancestor EncryptionZoneInt that contains the given
+   * path (excluding itself).
+   * Returns null if path is not within an EZ, or the path is the root dir '/'
+   * <p/>
+   * Called while holding the FSDirectory lock.
+   */
+  private EncryptionZoneInt getParentEncryptionZoneForPath(INodesInPath iip) {
+    assert dir.hasReadLock();
+    Preconditions.checkNotNull(iip);
+    List<INode> inodes = Collections.unmodifiableList(
+        Arrays.asList(iip.getINodes()));
+    for (int i = inodes.size() - 2; i >= 0; i--) {
+      final INode inode = inodes.get(i);
       if (inode != null) {
         final EncryptionZoneInt ezi = encryptionZones.get(inode.getId());
         if (ezi != null) {
@@ -231,7 +258,7 @@ public class EncryptionZoneManager {
 
   /**
    * Throws an exception if the provided path cannot be renamed into the
-   * destination because of differing encryption zones.
+   * destination because of differing parent encryption zones.
    * <p/>
    * Called while holding the FSDirectory lock.
    *
@@ -243,32 +270,24 @@ public class EncryptionZoneManager {
   void checkMoveValidity(INodesInPath srcIIP, INodesInPath dstIIP, String src)
       throws IOException {
     assert dir.hasReadLock();
-    final EncryptionZoneInt srcEZI = getEncryptionZoneForPath(srcIIP);
-    final EncryptionZoneInt dstEZI = getEncryptionZoneForPath(dstIIP);
-    final boolean srcInEZ = (srcEZI != null);
-    final boolean dstInEZ = (dstEZI != null);
-    if (srcInEZ) {
-      if (!dstInEZ) {
-        if (srcEZI.getINodeId() == srcIIP.getLastINode().getId()) {
-          // src is ez root and dest is not in an ez. Allow the rename.
-          return;
-        }
-        throw new IOException(
-            src + " can't be moved from an encryption zone.");
-      }
-    } else {
-      if (dstInEZ) {
-        throw new IOException(
-            src + " can't be moved into an encryption zone.");
-      }
+    final EncryptionZoneInt srcParentEZI =
+        getParentEncryptionZoneForPath(srcIIP);
+    final EncryptionZoneInt dstParentEZI =
+        getParentEncryptionZoneForPath(dstIIP);
+    final boolean srcInEZ = (srcParentEZI != null);
+    final boolean dstInEZ = (dstParentEZI != null);
+    if (srcInEZ && !dstInEZ) {
+      throw new IOException(
+          src + " can't be moved from an encryption zone.");
+    } else if (dstInEZ && !srcInEZ) {
+      throw new IOException(
+          src + " can't be moved into an encryption zone.");
     }
 
-    if (srcInEZ || dstInEZ) {
-      Preconditions.checkState(srcEZI != null, "couldn't find src EZ?");
-      Preconditions.checkState(dstEZI != null, "couldn't find dst EZ?");
-      if (srcEZI != dstEZI) {
-        final String srcEZPath = getFullPathName(srcEZI);
-        final String dstEZPath = getFullPathName(dstEZI);
+    if (srcInEZ) {
+      if (srcParentEZI != dstParentEZI) {
+        final String srcEZPath = getFullPathName(srcParentEZI);
+        final String dstEZPath = getFullPathName(dstParentEZI);
         final StringBuilder sb = new StringBuilder(src);
         sb.append(" can't be moved from encryption zone ");
         sb.append(srcEZPath);
@@ -289,21 +308,25 @@ public class EncryptionZoneManager {
       CryptoProtocolVersion version, String keyName)
       throws IOException {
     assert dir.hasWriteLock();
+
+    // Check if src is a valid path for new EZ creation
+    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
+    if (srcIIP == null || srcIIP.getLastINode() == null) {
+      throw new FileNotFoundException("cannot find " + src);
+    }
     if (dir.isNonEmptyDirectory(src)) {
       throw new IOException(
           "Attempt to create an encryption zone for a non-empty directory.");
     }
 
-    final INodesInPath srcIIP = dir.getINodesInPath4Write(src, false);
-    if (srcIIP != null &&
-        srcIIP.getLastINode() != null &&
-        !srcIIP.getLastINode().isDirectory()) {
+    INode srcINode = srcIIP.getLastINode();
+    if (!srcINode.isDirectory()) {
       throw new IOException("Attempt to create an encryption zone for a file.");
     }
-    EncryptionZoneInt ezi = getEncryptionZoneForPath(srcIIP);
-    if (ezi != null) {
-      throw new IOException("Directory " + src + " is already in an " +
-          "encryption zone. (" + getFullPathName(ezi) + ")");
+
+    if (encryptionZones.get(srcINode.getId()) != null) {
+      throw new IOException("Directory " + src + " is already an encryption " +
+          "zone.");
     }
 
     final HdfsProtos.ZoneEncryptionInfoProto proto =
