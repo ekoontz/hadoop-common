@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -45,6 +43,8 @@ import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -61,7 +61,8 @@ import static org.apache.hadoop.util.Time.now;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeManager {
-  static final Log LOG = LogFactory.getLog(DatanodeManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      DatanodeManager.class);
 
   private final Namesystem namesystem;
   private final BlockManager blockManager;
@@ -857,34 +858,40 @@ public class DatanodeManager {
   @InterfaceAudience.Private
   @VisibleForTesting
   public void startDecommission(DatanodeDescriptor node) {
-    if (!node.isDecommissionInProgress()) {
-      if (!node.isAlive) {
-        LOG.info("Dead node " + node + " is decommissioned immediately.");
-        node.setDecommissioned();
-      } else if (!node.isDecommissioned()) {
+    if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
+      // Update DN stats maintained by HeartbeatManager
+      heartbeatManager.startDecommission(node);
+      // heartbeatManager.startDecommission will set dead node to decommissioned.
+      if (node.isDecommissionInProgress()) {
         for (DatanodeStorageInfo storage : node.getStorageInfos()) {
-          LOG.info("Start Decommissioning " + node + " " + storage
-              + " with " + storage.numBlocks() + " blocks");
+          LOG.info("Starting decommission of {} {} with {} blocks",
+              node, storage, storage.numBlocks());
         }
-        heartbeatManager.startDecommission(node);
         node.decommissioningStatus.setStartTime(now());
 
         // all the blocks that reside on this node have to be replicated.
         checkDecommissionState(node);
       }
+    } else {
+      LOG.trace("startDecommission: Node {} in {}, nothing to do." +
+          node, node.getAdminState());
     }
   }
 
   /** Stop decommissioning the specified datanodes. */
-  void stopDecommission(DatanodeDescriptor node) {
+  @VisibleForTesting
+  public void stopDecommission(DatanodeDescriptor node) {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
-      LOG.info("Stop Decommissioning " + node);
+      LOG.info("Stopping decommissioning of node {}", node);
       heartbeatManager.stopDecommission(node);
-      // Over-replicated blocks will be detected and processed when 
+      // Over-replicated blocks will be detected and processed when
       // the dead node comes back and send in its full block report.
       if (node.isAlive) {
         blockManager.processOverReplicatedBlocksOnReCommission(node);
       }
+    } else {
+      LOG.trace("stopDecommission: Node {} in {}, nothing to do." +
+          node, node.getAdminState());
     }
   }
 

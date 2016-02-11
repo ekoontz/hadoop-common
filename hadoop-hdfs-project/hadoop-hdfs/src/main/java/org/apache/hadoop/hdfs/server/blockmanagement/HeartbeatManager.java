@@ -26,8 +26,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -39,6 +37,8 @@ import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StopWatch;
 import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -48,7 +48,7 @@ import com.google.common.annotations.VisibleForTesting;
  * by the heartbeat manager lock.
  */
 class HeartbeatManager implements DatanodeStatistics {
-  static final Log LOG = LogFactory.getLog(HeartbeatManager.class);
+  static final Logger LOG = LoggerFactory.getLogger(HeartbeatManager.class);
 
   /**
    * Stores a subset of the datanodeMap in DatanodeManager,
@@ -242,15 +242,26 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void startDecommission(final DatanodeDescriptor node) {
-    stats.subtract(node);
-    node.startDecommission();
-    stats.add(node);
+    if (!node.isAlive) {
+      LOG.info("Dead node {} is decommissioned immediately.", node);
+      node.setDecommissioned();
+    } else {
+      stats.subtract(node);
+      node.startDecommission();
+      stats.add(node);
+    }
   }
 
   synchronized void stopDecommission(final DatanodeDescriptor node) {
-    stats.subtract(node);
-    node.stopDecommission();
-    stats.add(node);
+    LOG.info("Stopping decommissioning of {} node {}",
+        node.isAlive ? "live" : "dead", node);
+    if (!node.isAlive) {
+      node.stopDecommission();
+    } else {
+      stats.subtract(node);
+      node.stopDecommission();
+      stats.add(node);
+    }
   }
 
   @VisibleForTesting
