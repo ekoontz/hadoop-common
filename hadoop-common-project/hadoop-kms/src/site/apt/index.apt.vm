@@ -154,6 +154,8 @@ hadoop-${project.version} $ sbin/kms.sh start
 
   * KMS_MAX_THREADS
 
+  * KMS_MAX_HTTP_HEADER_SIZE
+
   * KMS_LOG
 
   NOTE: You need to restart the KMS for the configuration changes to take
