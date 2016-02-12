@@ -54,7 +54,7 @@ public class Trash extends Configured {
    */
   public Trash(FileSystem fs, Configuration conf) throws IOException {
     super(conf);
-    trashPolicy = TrashPolicy.getInstance(conf, fs);
+    trashPolicy = TrashPolicy.getInstance(conf, fs, fs.getHomeDirectory());
   }
 
   /**
@@ -92,7 +92,12 @@ public class Trash extends Configured {
       throw new IOException("Failed to get server trash configuration", e);
     }
     Trash trash = new Trash(fullyResolvedFs, conf);
-    return trash.moveToTrash(fullyResolvedPath);
+    boolean success = trash.moveToTrash(fullyResolvedPath);
+    if (success) {
+      System.out.println("Moved: '" + p + "' to trash at: " +
+          trash.getCurrentTrashDir() );
+    }
+    return success;
   }
   
   /**
@@ -120,7 +125,7 @@ public class Trash extends Configured {
   }
 
   /** get the current working directory */
-  Path getCurrentTrashDir() throws IOException {
+  Path getCurrentTrashDir() {
     return trashPolicy.getCurrentTrashDir();
   }
 
@@ -134,9 +139,5 @@ public class Trash extends Configured {
    */
   public Runnable getEmptier() throws IOException {
     return trashPolicy.getEmptier();
-  }
-
-  public Path getCurrentTrashDir(Path path) throws IOException {
-    return trashPolicy.getCurrentTrashDir(path);
   }
 }
