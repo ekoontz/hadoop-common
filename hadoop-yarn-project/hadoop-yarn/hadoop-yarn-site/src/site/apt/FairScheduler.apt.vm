@@ -236,8 +236,7 @@ Allocation file format
      may be using those resources.
 
    * maxResources: maximum resources a queue is allowed, in the form
-     "X mb, Y vcores". For the single-resource fairness policy, the vcores
-     value is ignored. A queue will never be assigned a container that would
+     "X mb, Y vcores".  A queue will never be assigned a container that would
      put its aggregate usage over this limit.
 
    * maxRunningApps: limit the number of apps from the queue to run at once
