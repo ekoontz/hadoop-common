@@ -97,7 +97,8 @@ MapReduce Commands Guide
           | [-counter <job-id> <group-name> <counter-name>]
           | [-kill <job-id>]
           | [-events <job-id> <from-event-#> <#-of-events>]
-          | [-history [all] <jobOutputDir>] | [-list [all]]
+          | [-history [all] <jobHistoryFile> [-outfile <file>] [-format <human|json>]]
+          | [-list [all]]
           | [-kill-task <task-id>] | [-fail-task <task-id>]
           | [-set-priority <job-id> <priority>]>>>
 
@@ -116,11 +117,16 @@ MapReduce Commands Guide
 | -events <job-id> <from-event-#> <#-of-events> | Prints the events' details
                                | received by jobtracker for the given range.
 *------------------------------+---------------------------------------------+
-| -history [all]<jobOutputDir> | Prints job details, failed and killed tip
+| -history [all] <jobHistoryFile> [-outfile file] [-format human|json]> | Prints
+                               | job details, failed and killed task
                                | details.  More details about the job such as
-                               | successful tasks and task attempts made for
-                               | each task can be viewed by specifying the
-                               | [all] option.
+                               | successful tasks, task attempts made for
+                               | each task, task counters, etc can be viewed by
+                               | specifying the [all] option.  An optional file
+                               | output path (instead of stdout) can be
+                               | specified. The format defaults to
+                               | human-readable but can also be changed to JSON
+                               | with the [-format] option.
 *------------------------------+---------------------------------------------+
 | -list [all]                  | Displays jobs which are yet to complete.
                                | <<<-list all>>> displays all jobs.
