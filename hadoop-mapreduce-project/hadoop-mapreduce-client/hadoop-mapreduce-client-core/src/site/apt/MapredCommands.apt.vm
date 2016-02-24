@@ -117,7 +117,7 @@ MapReduce Commands Guide
 | -events <job-id> <from-event-#> <#-of-events> | Prints the events' details
                                | received by jobtracker for the given range.
 *------------------------------+---------------------------------------------+
-| -history [all] <jobHistoryFile|jobId> [-outfile file] [-format human\|json]> | Prints
+| -history [all] <jobHistoryFile\|jobId> [-outfile <file>] [-format <human\|json>] | Prints
                                | job details, failed and killed task
                                | details.  More details about the job such as
                                | successful tasks, task attempts made for
