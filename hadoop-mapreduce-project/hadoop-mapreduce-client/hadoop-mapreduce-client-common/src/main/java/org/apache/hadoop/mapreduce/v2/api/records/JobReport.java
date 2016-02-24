@@ -37,6 +37,7 @@ public interface JobReport {
   public abstract String getJobFile();
   public abstract List<AMInfo> getAMInfos();
   public abstract boolean isUber();
+  public abstract String getHistoryFile();
 
   public abstract void setJobId(JobId jobId);
   public abstract void setJobState(JobState jobState);
@@ -54,4 +55,5 @@ public interface JobReport {
   public abstract void setJobFile(String jobFile);
   public abstract void setAMInfos(List<AMInfo> amInfos);
   public abstract void setIsUber(boolean isUber);
+  public abstract void setHistoryFile(String historyFile);
 }

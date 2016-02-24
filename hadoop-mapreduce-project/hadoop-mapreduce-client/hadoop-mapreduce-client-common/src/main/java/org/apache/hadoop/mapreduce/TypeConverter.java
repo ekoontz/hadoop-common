@@ -299,11 +299,12 @@ public class TypeConverter {
   public static JobStatus fromYarn(JobReport jobreport, String trackingUrl) {
     JobPriority jobPriority = JobPriority.NORMAL;
     JobStatus jobStatus = new org.apache.hadoop.mapred.JobStatus(
-        fromYarn(jobreport.getJobId()), jobreport.getSetupProgress(), jobreport
-            .getMapProgress(), jobreport.getReduceProgress(), jobreport
-            .getCleanupProgress(), fromYarn(jobreport.getJobState()),
-        jobPriority, jobreport.getUser(), jobreport.getJobName(), jobreport
-            .getJobFile(), trackingUrl, jobreport.isUber());
+        fromYarn(jobreport.getJobId()), jobreport.getSetupProgress(),
+        jobreport.getMapProgress(), jobreport.getReduceProgress(),
+        jobreport.getCleanupProgress(), fromYarn(jobreport.getJobState()),
+        jobPriority, jobreport.getUser(), jobreport.getJobName(),
+        jobreport.getJobFile(), trackingUrl, jobreport.isUber(),
+        jobreport.getHistoryFile());
     jobStatus.setStartTime(jobreport.getStartTime());
     jobStatus.setFinishTime(jobreport.getFinishTime());
     jobStatus.setFailureInfo(jobreport.getDiagnostics());

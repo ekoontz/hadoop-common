@@ -85,6 +85,7 @@ public class TestJobHistoryEntities {
   public void testCompletedJob() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
+    when(info.getHistoryFile()).thenReturn(fulleHistoryPath);
     //Re-initialize to verify the delayed load.
     completedJob =
       new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
@@ -104,8 +105,9 @@ public class TestJobHistoryEntities {
     JobReport jobReport = completedJob.getReport();
     assertEquals("user", jobReport.getUser());
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
+    assertEquals(fulleHistoryPath.toString(), jobReport.getHistoryFile());
   }
-  
+
   @Test (timeout=10000)
   public void testCompletedTask() throws Exception {
     HistoryFileInfo info = mock(HistoryFileInfo.class);
