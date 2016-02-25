@@ -172,10 +172,14 @@ public class S3AFileSystem extends FileSystem {
 
     // Try to get our credentials or just connect anonymously
     // CLOUDERA-BUILD: deprecated keys are alias of supported keys.
-    String accessKey = conf.get(
-        ACCESS_KEY, conf.get(DEPRECATED_ACCESS_KEY, null));
-    String secretKey = conf.get(
-        SECRET_KEY, conf.get(DEPRECATED_SECRET_KEY, null));
+    String accessKey = conf.get(ACCESS_KEY, null);
+    if (accessKey == null) {
+      accessKey = conf.get(DEPRECATED_ACCESS_KEY, null);
+    }
+    String secretKey = conf.get(SECRET_KEY, null);
+    if (secretKey == null) {
+      secretKey = conf.get(DEPRECATED_SECRET_KEY, null);
+    }
 
     String userInfo = name.getUserInfo();
     if (userInfo != null) {
