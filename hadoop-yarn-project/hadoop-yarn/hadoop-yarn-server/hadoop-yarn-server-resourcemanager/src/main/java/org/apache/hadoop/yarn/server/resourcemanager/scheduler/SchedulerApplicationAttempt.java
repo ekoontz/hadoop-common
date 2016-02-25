@@ -205,7 +205,8 @@ public class SchedulerApplicationAttempt {
   }
 
   public synchronized int getTotalRequiredResources(Priority priority) {
-    return getResourceRequest(priority, ResourceRequest.ANY).getNumContainers();
+    ResourceRequest request = getResourceRequest(priority, ResourceRequest.ANY);
+    return request == null ? 0 : request.getNumContainers();
   }
 
   public synchronized Resource getResource(Priority priority) {
