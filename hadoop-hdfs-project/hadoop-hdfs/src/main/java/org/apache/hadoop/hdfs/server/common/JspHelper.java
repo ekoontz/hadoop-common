@@ -247,7 +247,7 @@ public class JspHelper {
             sock.connect(addr, HdfsServerConstants.READ_TIMEOUT);
             sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
             peer = TcpPeerServer.peerFromSocketAndKey(saslClient, sock, dfs,
-                blockToken, datanodeId);
+                blockToken, datanodeId, HdfsServerConstants.READ_TIMEOUT);
           } finally {
             if (peer == null) {
               IOUtils.closeSocket(sock);
