@@ -210,9 +210,16 @@ public class KilledHistoryService extends AbstractService {
 
     private JobIndexInfo buildJobIndexInfo(FileSystem fs, Path summaryFile,
         JobId jobId, String user) throws IOException {
-      FSDataInputStream in = fs.open(summaryFile);
-      String summaryString = in.readUTF();
-      in.close();
+      FSDataInputStream in = null; 
+      String summaryString = null;
+      try {
+        in = fs.open(summaryFile);
+        summaryString = in.readUTF();
+      } finally {
+        if (in != null) {
+          in.close();
+        }
+      }
       long submitTime =
           extractLong(SUBMIT_TIME_PATTERN, summaryString, "submitTime");
       long finishTime =
