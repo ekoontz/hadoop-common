@@ -33,15 +33,17 @@ which grind
 # Go to project root
 cd "$DIR/.."
 
-cat > .grind_deps << EOF
-{
-        "empty_dirs": ["test/data", "test-dir", "log"],
-        "file_patterns": ["*.so"]
-}
+cat > .grind_project.cfg << EOF
+[grind]
+empty_dirs = ["test/data", "test-dir", "log"]
+file_globs = []
+file_patterns = ["*.so"]
+artifact_archive_globs = [u'**/surefire-reports/TEST-*.xml']
 EOF
 
 # Invoke grind to run tests
 grind -c ${DIR}/supertest/grind.cfg config
+grind -c ${DIR}/supertest/grind.cfg pconfig
 grind -c ${DIR}/supertest/grind.cfg test --artifacts -r 3 -e TestRM -e TestWorkPreservingRMRestart -e TestRMRestart -e TestContainerAllocation -e TestMRJobClient -e TestCapacityScheduler -e TestDelegatingInputFormat -e TestMRCJCFileInputFormat -e TestJobHistoryEventHandler -e TestCombineFileInputFormat -e TestAMRMRPCResponseId -e TestSystemMetricsPublisher -e TestNodesListManager -e TestRMContainerImpl -e TestApplicationMasterLauncher -e TestRMWebApp -e TestContainerManagerSecurity -e TestResourceManager -e TestParameterParser -e TestNativeCodeLoader -e TestRMContainerAllocator -e TestMRIntermediateDataEncryption -e TestWebApp -e TestCryptoStreamsWithOpensslAesCtrCryptoCodec -e TestDNS
 # TestDNS fails only on supertest. CDH-37451
 
