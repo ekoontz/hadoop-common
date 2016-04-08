@@ -99,6 +99,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     <distMgmtStagingId>apache.staging.https</distMgmtStagingId>
     <distMgmtStagingName>Apache Release Distribution Repository</distMgmtStagingName>
     <distMgmtStagingUrl>https://repository.apache.org/service/local/staging/deploy/maven2</distMgmtStagingUrl>
+    <tomcat.mirror>http://archive.cloudera.com/tarballs/apache/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz</tomcat.mirror>
 
     <!-- platform encoding override -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

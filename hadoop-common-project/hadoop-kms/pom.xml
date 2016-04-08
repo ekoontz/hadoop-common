@@ -37,9 +37,7 @@
     <kms.tomcat.dist.dir>
       ${project.build.directory}/${project.artifactId}-${project.version}/share/hadoop/kms/tomcat
     </kms.tomcat.dist.dir>
-    <tomcat.download.url>
-      http://archive.apache.org/dist/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz
-    </tomcat.download.url>
+    <tomcat.download.url>${tomcat.mirror}</tomcat.download.url>
   </properties>
 
   <dependencies>
