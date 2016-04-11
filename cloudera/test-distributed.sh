@@ -38,7 +38,7 @@ cat > .grind_project.cfg << EOF
 empty_dirs = ["test/data", "test-dir", "log"]
 file_globs = []
 file_patterns = ["*.so"]
-artifact_archive_globs = [u'**/surefire-reports/TEST-*.xml']
+artifact_archive_globs = ["**/surefire-reports/TEST-*.xml"]
 EOF
 
 # Invoke grind to run tests
