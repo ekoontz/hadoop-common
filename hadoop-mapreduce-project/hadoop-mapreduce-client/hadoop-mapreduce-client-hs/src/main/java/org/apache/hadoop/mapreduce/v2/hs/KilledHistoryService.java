@@ -116,12 +116,12 @@ public class KilledHistoryService extends AbstractService {
               final Path intermediateDir = new Path(intermediateDirPrefix, user);
               final Path stagingDirForJob = new Path(
                   MRApps.getStagingAreaDir(conf, user), jobId.toString());
+              final Path inSummaryFile = new Path(stagingDirForJob,
+                  JobHistoryUtils.getIntermediateSummaryFileName(jobId));
+              UserGroupInformation ugi =
+                  UserGroupInformation.createProxyUser(user,
+                      UserGroupInformation.getCurrentUser());
               try {
-                final Path inSummaryFile = new Path(stagingDirForJob,
-                    JobHistoryUtils.getIntermediateSummaryFileName(jobId));
-                UserGroupInformation ugi =
-                    UserGroupInformation.createProxyUser(user,
-                        UserGroupInformation.getCurrentUser());
                 ugi.doAs(new PrivilegedExceptionAction<Void>() {
                   @Override
                   public Void run() throws IOException {
@@ -152,6 +152,16 @@ public class KilledHistoryService extends AbstractService {
                       // So that we don't leave an entry in the FileSystem cache.
                       // Also FileSystem close is idempotent
                       if (fromFs != null) {
+                        // When we get here we have copied the history info
+                        // or can not process the directory due to an error
+                        // clean up the dir
+                        try {
+                          fromFs.delete(stagingDirForJob, true);
+                        } catch (IOException io) {
+                          // nothing we can do we have tried to clean up
+                          LOG.error("Error cleaning up the staging" +
+                              " directory: ", io);
+                        }
                         fromFs.close();
                       }
                       if (toFs != null) {
