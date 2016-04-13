@@ -30,9 +30,14 @@ source ./supertest-env/bin/activate
 export PATH=`pwd`/grind/bin/:$PATH
 which grind
 
+# Fetch dist test credentials and add them to the environment
+wget http://staging.jenkins.cloudera.com/gerrit-artifacts/misc/hadoop/dist_test_cred.sh
+source dist_test_cred.sh
+
 # Go to project root
 cd "$DIR/.."
 
+# Populate the per-project grind cfg file
 cat > .grind_project.cfg << EOF
 [grind]
 empty_dirs = ["test/data", "test-dir", "log"]
