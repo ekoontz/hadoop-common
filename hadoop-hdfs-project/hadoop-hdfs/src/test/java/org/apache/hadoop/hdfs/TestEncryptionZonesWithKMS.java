@@ -70,7 +70,7 @@ public class TestEncryptionZonesWithKMS extends TestEncryptionZones {
   public void testCreateEZPopulatesEDEKCache() throws Exception {
     final Path zonePath = new Path("/TestEncryptionZone");
     fsWrapper.mkdir(zonePath, FsPermission.getDirDefault(), false);
-    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY);
+    dfsAdmin.createEncryptionZone(zonePath, TEST_KEY, NO_TRASH);
     assertTrue(((KMSClientProvider)fs.getClient().getKeyProvider()).
         getEncKeyQueueSize(TEST_KEY) > 0);
   }
